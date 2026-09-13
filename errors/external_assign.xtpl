@@ -1,0 +1,6 @@
+external cEmpAnt
+
+user function v()
+  local n := 0
+  cEmpAnt := "99"
+  return n

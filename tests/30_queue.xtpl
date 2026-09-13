@@ -1,0 +1,35 @@
+// 30_queue.xtpl -- a ring-buffer queue, and method names that collide.
+//
+// AdvPL arrays are already dynamic, so a stack is AAdd plus ATail plus aSize
+// and a linked list buys nothing. Taking from the FRONT is the gap: ADel then
+// aSize moves every remaining element, once per pop. A ring buffer moves
+// nothing.
+//
+// It also pins a bug the queue found: a method whose name matches a runtime
+// verb is not that verb. 'oFila:Count()' was being rewritten to
+// 'oFila:__xtpl_count()', and so was any object with a Map or First method.
+// --------------------------------------------------------------------------------
+
+user function testQueue(aPedidos, oModelo)
+  local oFila := queue()
+  local oGrande := queue(256)
+  local nTotal := 0
+  local xItem := Nil
+  local nOutro := 0
+
+  for oPedido in aPedidos
+    oFila:Push(oPedido)
+  next
+
+  while !oFila:IsEmpty()
+    xItem := oFila:Pop()
+    nTotal := nTotal + iif(xItem == Nil, 0, 1)
+  enddo
+
+  // methods, not verbs
+  nOutro := oModelo:Count() + oModelo:First(1) + oFila:Count()
+
+  return nTotal + nOutro + oGrande:Count()
+
+// --------------------------------------------------------------------------------
+// the end

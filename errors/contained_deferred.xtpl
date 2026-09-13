@@ -1,0 +1,18 @@
+// contained_deferred.xtpl -- <contained> and defer.
+//
+// A defer outlives the block, so it is a way for the variable to leave it --
+// the same as a code block capture. <contained> refuses all of them.
+// --------------------------------------------------------------------------------
+
+user function containedDeferred(nX)
+  local nT := 0
+
+  if nX > 0
+    local nA <contained> := 5
+    defer logIt(nA)
+  endif
+
+  return nT
+
+// --------------------------------------------------------------------------------
+// the end

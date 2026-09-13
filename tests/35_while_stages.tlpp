@@ -1,0 +1,176 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 35_while_stages.tlpp -- takewhile and dropwhile.
+//
+// takewhile stops at the first element that fails and looks no further, which
+// is what separates it from filter: filter keeps every match anywhere,
+// takewhile keeps the matching run at the front. Over an ordered source that
+// is the point -- the rest is known not to match.
+//
+// dropwhile skips the leading run and then passes everything, including
+// elements that would have matched. Hence the flag.
+//
+// rows() starts at the top unless given a key to seek. With one it is
+// positioned by the index, which is what makes takewhile worth having on a
+// large table: reach the group in one jump, then stop at its end.
+// --------------------------------------------------------------------------------
+
+user function testWhileStages(aRows, cNum)
+
+  Local aItens := {}
+  Local aDepois := {}
+  Local aFrente := {}
+  Local aGrupo := {}
+  Local aSeek := {}
+
+  Local __blk_0_r
+  Local __blk_1_r
+  Local __fuse_area_0_0
+  Local __fuse_area_1_0
+  Local __fuse_drop_0_0
+  Local __fuse_i_0_0
+  Local __fuse_out_0_0
+  Local __fuse_out_1_0
+  Local __fuse_rec_0_0
+  Local __fuse_rec_1_0
+  Local __fuse_src_0_0
+  Local __fuse_v_0_0
+  Local __fuse_v_1_0
+  Local __pipe_tmp_0_0
+  Local __stk_1_usearea
+  Local __stk_1_useord
+  Local __stk_1_userec
+
+
+  // over an ordered work area: stops when the key changes
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("SC6")
+  __fuse_rec_0_0 := SC6->(RecNo())
+  SC6->(DbGoTop())
+  __fuse_out_0_0 := {}
+  While !SC6->(Eof())
+    If !(SC6->C6_NUM == cNum)
+      Exit
+    EndIf
+    __fuse_v_0_0 := SC6->C6_PRODUTO
+    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    SC6->(DbSkip())
+  EndDo
+  SC6->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  aItens := __fuse_out_0_0
+
+  // skip the leading zeros, keep everything after -- zeros included
+  __fuse_src_0_0 := aRows
+  __fuse_drop_0_0 := .T.
+  __fuse_out_0_0 := {}
+  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
+    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
+    %r^0% := __fuse_v_0_0
+    If !(__fuse_drop_0_0 .And. (%r^0%:nSaldo == 0))
+      __fuse_drop_0_0 := .F.
+      %r^0% := __fuse_v_0_0
+      __fuse_v_0_0 := %r^0%:cCod
+      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    EndIf
+  Next
+  aDepois := __fuse_out_0_0
+
+  // one stage stays a call; the runtime version stops early too
+  __pipe_tmp_0_0 := u_xtpl_takewhile(aRows, {|%r^0%| %r^0%:nSaldo > 0})
+  aFrente := __pipe_tmp_0_0
+
+  // the two compose: skip to the group, take it, stop at its end. rows()
+  // starts at the top, so this reaches the group by reading rather than by
+  // seeking -- but it never reads past the group.
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("SC6")
+  __fuse_rec_0_0 := SC6->(RecNo())
+  SC6->(DbGoTop())
+  __fuse_drop_0_0 := .T.
+  __fuse_out_0_0 := {}
+  While !SC6->(Eof())
+    If !(__fuse_drop_0_0 .And. (SC6->C6_NUM != cNum))
+      __fuse_drop_0_0 := .F.
+      If !(SC6->C6_NUM == cNum)
+        Exit
+      EndIf
+      __fuse_v_0_0 := SC6->C6_PRODUTO
+      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    EndIf
+    SC6->(DbSkip())
+  EndDo
+  SC6->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  aGrupo := __fuse_out_0_0
+
+
+
+
+  // the way to actually do it: 'using alias' fixes the order, rows() seeks
+  // by the index rather than reading up to the group, and takewhile ends it
+  let usearea as __stk_1_usearea
+  let userec as __stk_1_userec
+  !usearea^1! := Alias()
+  DbSelectArea("SC6")
+  !userec^1! := SC6->(RecNo())
+  let useord as __stk_1_useord
+  !useord^1! := SC6->(IndexOrd())
+  SC6->(DbSetOrder(1))
+    __fuse_area_1_0 := Alias()
+    DbSelectArea("SC6")
+    __fuse_rec_1_0 := SC6->(RecNo())
+    SC6->(DbSeek(xFilial("SC6") + cNum))
+    __fuse_out_1_0 := {}
+    While !SC6->(Eof())
+      If !(SC6->C6_NUM == cNum)
+        Exit
+      EndIf
+      __fuse_v_1_0 := SC6->C6_PRODUTO
+      AAdd(__fuse_out_1_0, __fuse_v_1_0)
+      SC6->(DbSkip())
+    EndDo
+    SC6->(DbGoto(__fuse_rec_1_0))
+    If !Empty(__fuse_area_1_0)
+      DbSelectArea(__fuse_area_1_0)
+    EndIf
+    aSeek := __fuse_out_1_0
+
+
+  SC6->(DbSetOrder(!useord^1!))
+  SC6->(DbGoto(!userec^1!))
+  If !Empty(!usearea^1!)
+    DbSelectArea(!usearea^1!)
+  EndIf
+
+  return len(aItens) + len(aDepois) + len(aFrente) + len(aGrupo) + len(aSeek)
+
+// --------------------------------------------------------------------------------
+// the end

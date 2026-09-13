@@ -1,0 +1,57 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 19_defer_pinning.tlpp -- a defer keeps its variable alive.
+//
+// A deferred body runs at an exit from the function, long after the block
+// holding the variable has gone. Recycling that slot to a sibling block in
+// between left the defer reading whatever the sibling had put there -- and
+// the origin comment still said the original name.
+// --------------------------------------------------------------------------------
+
+user function testDeferPinning(nX)
+
+  Local nT := 0
+
+  Local __blk_1_nA
+  Local __stk_1_cB
+
+
+  if nX > 0
+    let nA as __blk_1_nA
+    %nA^1% := 5
+  endif
+
+  if nX > 0
+    let cB as __stk_1_cB
+    !cB^1! := "sibling"  // would have taken the same slot
+    nT := len(!cB^1!)
+  endif
+
+  logIt(%nA^1%)  // captured: nA gets private storage
+  return nT
+
+// --------------------------------------------------------------------------------
+// the end

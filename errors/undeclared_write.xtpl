@@ -1,0 +1,4 @@
+user function v()
+  local n := 1
+  nOutro := 2
+  return n

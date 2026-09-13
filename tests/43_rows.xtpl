@@ -1,0 +1,29 @@
+// 43_rows.xtpl -- a chain over a work area.
+//
+// A work area is already a lazy sequence with an ugly calling convention:
+// DbGoTop to start, Eof to test, DbSkip to advance. Fusing over one walks the
+// table without loading it, which on a real SA1 is the difference between
+// possible and impossible rather than an optimisation.
+//
+// The element is the current record, not a value, so 'r:A1_COD' compiles to a
+// field reference and the name cannot be used for anything else.
+// --------------------------------------------------------------------------------
+
+user function testRows(cAlias, nLimit)
+  local nTotal := 0
+  local aCodes := {}
+  local aFirst := {}
+
+  // a literal alias is written out, because SA1->A1_COD is what gets read
+  nTotal := rows("SA1") |> filter([r] r:A1_SALDO > 0) |> map([r] r:A1_VALOR) |> asum
+
+  // anything else is bound once and reached through the parenthesised form
+  aCodes := rows(cAlias) |> map([r] r:A1_COD)
+
+  // take stops the walk rather than reading to Eof
+  aFirst := rows("SA1") |> filter([r] r:A1_SALDO > 0) |> map([r] r:A1_COD) |> take(nLimit)
+
+  return nTotal + len(aCodes) + len(aFirst)
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,45 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 13_operand_span.tlpp -- where an infix operator's operand ends.
+//
+// 'in' and '%%' both have to know where their right-hand side stops. A comma
+// at the same level ends it; a comma inside braces does not. The scanner
+// these replace looked ahead by position, so 'f(cCod in aCodes, nX)' took the
+// sibling argument into the collection and emitted a three-argument call.
+// --------------------------------------------------------------------------------
+
+user function testOperandSpan(aCodes, cCod, nValor, oUser, aOut)
+
+  Local lHit := .F.
+  Local cCity := ""
+  Local nR := 0
+
+
+
+  // a comma at this level ends the collection
+  lHit := checkBoth(u_xtpl_in(cCod, aCodes), nValor)
+  lHit := outer(inner(u_xtpl_in(cCod, aCodes)), nValor)
+
+  // a comma inside braces does not
+  lHit := u_xtpl_in(nValor, {1, 2, 3})
+
+  // a connective ends it too, and both sides are rewritten
+  lHit := u_xtpl_in(cCod, aCodes) .or. u_xtpl_in(nValor, {9, 8})
+  lHit := (nValor >= 1 .And. nValor <= 100)
+
+  // '%%' over a parenthesised expression
+  nR := ((nValor + 1) % 3) == 0
+  nR := (nValor % 3) == 0
+
+  // optional chaining to any depth
+  cCity := If(oUser != Nil, oUser:cNome, Nil)
+  cCity := If(oUser != Nil .And. oUser:oAddress != Nil, oUser:oAddress:cCity, Nil)
+  cCity := If(oUser != Nil .And. oUser:oA != Nil .And. oUser:oA:oB != Nil, oUser:oA:oB:cCity, Nil)
+
+  aadd(aOut, lHit)
+
+  return nR
+
+// --------------------------------------------------------------------------------
+// the end

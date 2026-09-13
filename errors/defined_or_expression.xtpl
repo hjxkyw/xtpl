@@ -1,0 +1,15 @@
+// defined_or_expression.xtpl -- '?=' onde só '?:' serve.
+//
+// '?=' atribui a uma variável e só existe como comando isolado. Dentro de uma
+// expressão nada o reescrevia, e ele chegava à saída como estava, que não é
+// AdvPL.
+// --------------------------------------------------------------------------------
+
+user function definedOrExpression(cAlvo)
+
+  (PtInternal(12, "COVERAGE") ?= {}) |> tap([r] VarInfo("X", r))
+
+  return
+
+// --------------------------------------------------------------------------------
+// the end

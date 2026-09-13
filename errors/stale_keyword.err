@@ -1,0 +1,1 @@
+SyntaxError: Line 3: 'with', 'orwith', 'without', 'given' and 'when' were removed; use 'do case with [local] x := expr' and ordinary 'case' conditions, or '?:' for first-non-Nil.

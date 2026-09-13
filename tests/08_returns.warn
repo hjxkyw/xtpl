@@ -1,0 +1,2 @@
+warning: line 14: this returns nothing, but the function returns a value on line 11
+warning: line 24: the function can reach its end without a return, but returns a value on line 20

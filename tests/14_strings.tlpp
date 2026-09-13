@@ -1,0 +1,89 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 14_strings.tlpp -- string verbs and interpolation.
+//
+// The runtime only carries what AdvPL lacks. Upper, AllTrim, PadL and the
+// rest already take their subject first, so they compose with '|>' as they
+// stand -- wrapping them would shadow the originals on every existing call.
+// --------------------------------------------------------------------------------
+
+user function testStrings(cNome, nTotal, hCfg, aLinhas)
+
+  Local aPartes := {}
+  Local cOut := ""
+  Local lHit := .F.
+
+  Local __blk_0_p
+  Local __fuse_first_0_0
+  Local __fuse_i_0_0
+  Local __fuse_out_0_0
+  Local __fuse_src_0_0
+  Local __fuse_v_0_0
+  Local __hash_tmp_0_0
+  Local __pipe_tmp_0_0
+  Local __pipe_tmp_0_1
+
+
+  aPartes := u_xtpl_split(cNome, ",")
+  __fuse_src_0_0 := aPartes
+  __fuse_first_0_0 := .T.
+  __fuse_out_0_0 := ""
+  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
+    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
+    %p^0% := __fuse_v_0_0
+    __fuse_v_0_0 := alltrim(%p^0%)
+    If __fuse_first_0_0
+      __fuse_first_0_0 := .F.
+    Else
+      __fuse_out_0_0 := __fuse_out_0_0 + "; "
+    EndIf
+    __fuse_out_0_0 := __fuse_out_0_0 + cValToChar(__fuse_v_0_0)
+  Next
+  cOut := __fuse_out_0_0
+
+  // AdvPL's own functions need nothing from the runtime
+  __pipe_tmp_0_0 := alltrim(cNome)
+  __pipe_tmp_0_1 := upper(__pipe_tmp_0_0)
+  cOut := __pipe_tmp_0_1
+
+  lHit := u_xtpl_starts(cNome, "SA") .or. u_xtpl_ends(cNome, "01") .or. u_xtpl_contains(cNome, "X")
+
+  // interpolation: the literal becomes a concatenation before anything else
+  // sees it, so a hash read inside one is an ordinary subscript
+  cOut := ("total = " + cValToChar(nTotal) + " itens")
+  cOut := ("ola " + cValToChar(cNome))
+  cOut := cValToChar(cNome)
+  __hash_tmp_0_0 := Nil
+  hCfg:Get('t', @__hash_tmp_0_0)
+  cOut := ("taxa " + cValToChar(__hash_tmp_0_0) + " fim")
+  cOut := "nada para trocar"
+
+  conout(("a " + cValToChar(nTotal) + " b"))
+
+  return cOut + cValToChar(lHit) + cValToChar(len(aLinhas))
+
+// --------------------------------------------------------------------------------
+// the end

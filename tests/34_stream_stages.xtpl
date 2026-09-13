@@ -1,0 +1,34 @@
+// 34_stream_stages.xtpl -- scan, expand, tap and pairwise.
+//
+// All four are steps: the value carries on down the chain. expand is the
+// structurally odd one -- it opens a For inside the fused loop, so the rest
+// of the chain runs once per inner element, and that block closes with Next
+// rather than EndIf. Tracking what closes a block, instead of counting how
+// many are open, is what makes that possible.
+// --------------------------------------------------------------------------------
+
+user function testStreamStages(aMovs, aRows, aLeituras)
+  local aSaldos := {}
+  local aCodigos := {}
+  local aDeltas := {}
+  local aProdutos := {}
+
+  // the balance after each movement, not just the closing one
+  aSaldos := aMovs |> map([m] m:nValor) |> scan([acc, x] acc + x, 0)
+
+  // look into the chain without taking it apart: the value is untouched
+  aCodigos := aRows ;
+              |> filter([r] r:nSaldo > 0) ;
+              |> tap([r] conout("passou: " + r:cCod)) ;
+              |> map([r] r:cCod)
+
+  // each reading with the one before it: n readings give n-1 deltas
+  aDeltas := aLeituras |> map([l] l:nMedidor) |> pairwise |> map([p] p[2] - p[1])
+
+  // one order becomes its items, and the chain carries on with the items
+  aProdutos := rows("SC5") |> expand([r] itensDoPedido(r:C5_NUM)) |> map([i] i:cProduto)
+
+  return len(aSaldos) + len(aCodigos) + len(aDeltas) + len(aProdutos)
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,14 @@
+// 18_defer_only.xtpl -- a function whose body is only defers.
+//
+// Declarations are hoisted, so a body of declarations and defers leaves no
+// statement to insert after. The defers used to be dropped without a word.
+// --------------------------------------------------------------------------------
+
+user function testDeferOnly(nX)
+  local nCount := nX
+
+  defer closeCursor()
+  defer logExit(nCount)
+
+// --------------------------------------------------------------------------------
+// the end

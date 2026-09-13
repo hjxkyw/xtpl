@@ -1,0 +1,31 @@
+// 21_using.xtpl -- scoped work areas.
+//
+// Forgetting to restore an alias is a classic Protheus bug, and its damage
+// appears somewhere else entirely. The area, the index order and the record
+// pointer are put back at every way out of the block, early returns included
+// -- which is the defer machinery, so the two have to agree on order:
+// deferred statements first, since they may still want the area, then the
+// work areas, innermost block first.
+// --------------------------------------------------------------------------------
+
+user function testUsing(cAlias, nX)
+  local nT := 0
+  local aC := {}
+
+  using alias SA1 order 1 do
+    nT := SA1->A1_SALDO
+    return nT if nX > 100              // restored before the return
+    nT := nT + 1
+
+    using alias cAlias do              // a variable holds the alias here
+      nT := nT + 1
+    end using
+  end using
+
+  // a chain walks its own area and restores it the same way
+  aC := rows("SA1") |> filter([r] r:A1_SALDO > 0) |> map([r] r:A1_COD)
+
+  return nT + len(aC)
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,96 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 43_rows.tlpp -- a chain over a work area.
+//
+// A work area is already a lazy sequence with an ugly calling convention:
+// DbGoTop to start, Eof to test, DbSkip to advance. Fusing over one walks the
+// table without loading it, which on a real SA1 is the difference between
+// possible and impossible rather than an optimisation.
+//
+// The element is the current record, not a value, so 'r:A1_COD' compiles to a
+// field reference and the name cannot be used for anything else.
+// --------------------------------------------------------------------------------
+
+user function testRows(cAlias, nLimit)
+
+  Local nTotal := 0
+  Local aCodes := {}
+  Local aFirst := {}
+
+  Local __blk_0_r
+  Local __fuse_alias_0_0
+  Local __fuse_area_0_0
+  Local __fuse_lim_0_0
+  Local __fuse_n_0_0
+  Local __fuse_out_0_0
+  Local __fuse_rec_0_0
+  Local __fuse_v_0_0
+
+
+  // a literal alias is written out, because SA1->A1_COD is what gets read
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("SA1")
+  __fuse_rec_0_0 := SA1->(RecNo())
+  SA1->(DbGoTop())
+  __fuse_out_0_0 := 0
+  While !SA1->(Eof())
+    If SA1->A1_SALDO > 0
+      __fuse_v_0_0 := SA1->A1_VALOR
+      __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+    EndIf
+    SA1->(DbSkip())
+  EndDo
+  SA1->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  nTotal := __fuse_out_0_0
+
+  // anything else is bound once and reached through the parenthesised form
+  __fuse_alias_0_0 := cAlias
+  __fuse_area_0_0 := Alias()
+  DbSelectArea(__fuse_alias_0_0)
+  __fuse_rec_0_0 := (__fuse_alias_0_0)->(RecNo())
+  (__fuse_alias_0_0)->(DbGoTop())
+  __fuse_out_0_0 := {}
+  While !(__fuse_alias_0_0)->(Eof())
+    __fuse_v_0_0 := (__fuse_alias_0_0)->A1_COD
+    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    (__fuse_alias_0_0)->(DbSkip())
+  EndDo
+  (__fuse_alias_0_0)->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  aCodes := __fuse_out_0_0
+
+  // take stops the walk rather than reading to Eof
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("SA1")
+  __fuse_rec_0_0 := SA1->(RecNo())
+  SA1->(DbGoTop())
+  __fuse_lim_0_0 := nLimit
+  __fuse_n_0_0 := 0
+  __fuse_out_0_0 := {}
+  While !SA1->(Eof())
+    If SA1->A1_SALDO > 0
+      __fuse_v_0_0 := SA1->A1_COD
+      If __fuse_n_0_0 >= __fuse_lim_0_0
+        Exit
+      EndIf
+      __fuse_n_0_0 := __fuse_n_0_0 + 1
+      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    EndIf
+    SA1->(DbSkip())
+  EndDo
+  SA1->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  aFirst := __fuse_out_0_0
+
+  return nTotal + len(aCodes) + len(aFirst)
+
+// --------------------------------------------------------------------------------
+// the end

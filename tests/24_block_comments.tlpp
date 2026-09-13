@@ -1,0 +1,40 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 24_block_comments.tlpp -- what /* */ does, and what it does not touch.
+//
+// A block comment taking up whole lines is kept EXACTLY as written: a
+// Protheus.doc block is read by other tools, and rewriting '/*/' into '//'
+// would quietly destroy it. Nothing scans those lines, and the checks that
+// ask what the last statement was do not count them.
+//
+// One that ends part-way through a line still folds, since '//' runs to the
+// end and the text has nowhere else to go.
+//
+// Block comments span lines; mask_literals works one line at a time and knew
+// only '//', so a block comment's body was scanned as code and reported
+// whatever it contained as an undeclared name. They are folded before
+// anything else runs, keeping the line count so every line number still
+// points where it did.
+// --------------------------------------------------------------------------------
+
+user function testBlockComments(nX)
+
+  Local nA := 0
+  Local cS := ""
+
+
+
+  /* a block comment spanning lines,
+     with local nGhost := 1 inside it, which is
+     text and not a declaration */
+
+  nA :=  nX + 1  // ending part-way through: the text moves to the end
+  cS := "a /* not a comment */ b"
+  nA := nA + 1  // and a trailing one
+  nA := nA + 1  // a // b
+
+  return nA + len(cS)
+
+// --------------------------------------------------------------------------------
+// the end

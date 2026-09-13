@@ -1,0 +1,198 @@
+// 53_kitchen_sink.xtpl
+// --------------------------------------------------------------------------------
+
+user function testKitchenSink()
+  // 1. Function-level initialization (Unmangled, native declarations)
+  local nTotal := 100
+  local aHandlers := {}
+  local nCount := 0
+  local i
+  local aList
+  local aLoopList
+  local cCache
+  local cName
+  local cPick
+
+  // 2. Traditional for loop (Passes safety check because 'i' is declared above)
+  for i := 1 to 3
+    nCount := nCount + i
+  next
+
+  // 3. Block-scoped for loop (loop counter takes a depth-1 stack slot)
+  for local idx := 1 to 5
+    conout("Index: " + cValToChar(idx))
+  next
+
+  // 4. Block-scoped shadowing (First block)
+  if nTotal > 50
+    local nDiscount := 10
+    nTotal := nTotal - nDiscount
+    conout("Discount A: " + cValToChar(nDiscount))
+  endif
+
+  // 5. Block-scoped shadowing (Second block - isolated from the first)
+  if nTotal > 20
+    local nDiscount := 5
+    nTotal := nTotal - nDiscount
+    conout("Discount B: " + cValToChar(nDiscount))
+  endif
+
+  // 6. 'if local' conditional binding with explicit condition after comma
+  if local lSuccess := myAction("param1, with comma"), lSuccess == .T.
+    conout("Action succeeded!")
+  endif
+
+  // 7. 'while local' loop binding with explicit condition after comma
+  while local cNode := getNextNode(), cNode != Nil
+    conout("Processing: " + cNode)
+  enddo
+
+  // 8. Block-scoped array built in place
+  if nTotal > 10
+    local subList := {}
+    aadd(subList, "X")
+    aadd(subList, "Y")
+  endif
+
+  // 9. Function-level array (depth 0, so private storage)
+  aList := {}
+  aadd(aList, "A")
+  aadd(aList, "B")
+  if nTotal > 80
+    aadd(aList, "C")
+  endif
+
+  // 10. Conditional appends inside an 'if' block
+  if nTotal > 50
+    local conditionalList := {}
+    aadd(conditionalList, "DefaultItem")
+    if nTotal > 75
+      aadd(conditionalList, "HighValueItem")
+    endif
+  endif
+
+  // 11. Appends from inside a 'for' loop, some behind an inner 'if'
+  aLoopList := {}
+  for local k := 1 to 4
+    aadd(aLoopList, "Item_" + cValToChar(k))
+    if k % 2 == 0
+      aadd(aLoopList, "EvenBonus_" + cValToChar(k))
+    endif
+  next
+
+  // 12. Block locals: two sibling blocks share one slot
+  if nTotal > 0
+    local nSlotA := 1
+    conout("Slot A: " + cValToChar(nSlotA))
+  endif
+
+  if nTotal > 0
+    local cSlotB := "reuses the same storage"
+    conout("Slot B: " + cSlotB)
+  endif
+
+  // 13. Shadowing: 'local' hides the function-level nCount inside the block only
+  if nTotal > 0
+    local nCount := 999
+    conout("Shadowed: " + cValToChar(nCount))
+  endif
+  conout("Restored: " + cValToChar(nCount))
+
+  // 14. Nesting: the inner block sits one level deeper, so it gets its own slot
+  if nTotal > 0
+    local nOuter := 1
+    if nTotal > 1
+      local nInner := 2
+      conout("Sum: " + cValToChar(nOuter + nInner))
+    endif
+  endif
+
+  // 15. 'for local' counter, plus a body slot recycled on every iteration
+  for local j := 1 to 3
+    local nSquare := j * j
+    conout("Square: " + cValToChar(nSquare))
+  next
+
+  // 16. 'if local' binding, with an array built inside the block
+  if local lReady := checkReady(), lReady
+    local aBatch := {}
+    aadd(aBatch, "batch1")
+    aadd(aBatch, "batch2")
+    conout("Batch: " + cValToChar(len(aBatch)))
+  endif
+
+  // 17. Bare 'local' is cleared on entry so no sibling value leaks in
+  if nTotal > 0
+    local nScratch
+    nScratch := nTotal * 2
+    conout("Scratch: " + cValToChar(nScratch))
+  endif
+
+  // 18. Captured by a code block: nFactor outlives the block, so it keeps
+  //     private storage instead of a recycled slot
+  if nTotal > 0
+    local nFactor := 10
+    aadd(aHandlers, {|| nFactor * 2})
+  endif
+
+  // 19. Value variable passed with @: the callee writes back during the call
+  //     and cannot keep the binding, so it still shares a slot
+  if nTotal > 0
+    local cBuffer := ""
+    fillBuffer(@cBuffer)
+    conout("Buffer: " + cBuffer)
+  endif
+
+  // 20. Escapes: aRows is an array handed to a user function, which may keep it
+  if nTotal > 0
+    local aRows := {}
+    processRows(aRows)
+  endif
+
+  // 21. Contained: built up and read in place, so it still shares a slot
+  if nTotal > 0
+    local aLocalOnly := {}
+    aadd(aLocalOnly, "kept in the block")
+    conout("Rows: " + cValToChar(len(aLocalOnly)))
+  endif
+
+  // 22. Escapes transitively: aInner never reaches processRows directly, but
+  //     storing it into aCarrier is itself the escape -- no need to prove
+  //     where aCarrier goes afterwards
+  if nTotal > 0
+    local aInner := {}
+    local aCarrier := {}
+    aadd(aCarrier, aInner)
+    processRows(aCarrier)
+  endif
+
+  // 23. Scalar passed to a user function: copied, so sharing is safe
+  if nTotal > 0
+    local nRowCount := 5
+    processRows(nRowCount)
+  endif
+
+  // 24. Value variable, never captured, so it shares a slot
+  if nTotal > 0
+    local nPlain := 42
+    conout("Plain: " + cValToChar(nPlain))
+  endif
+
+  // 25. '?=' as an operator: fill in a value only if nothing landed there.
+  //     Not a declaration form -- a fresh local is always Nil.
+  if nTotal > 90
+    cCache := loadFromCache()
+  endif
+  cCache ?= "empty"
+  conout("Cache: " + cCache)
+
+  // 26. Elvis: same idea inline, with the left side evaluated exactly once
+  cName := lookupName(nTotal) ?: "anonymous"
+
+  // 27. Chained elvis: each fallback runs only if the one before came back Nil
+  cPick := firstChoice() ?: secondChoice() ?: "last resort"
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

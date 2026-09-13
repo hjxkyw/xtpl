@@ -1,0 +1,6 @@
+warning: line 25: declaration of 'cNome' is not in a prologue
+warning: line 32: 'cNaoDeclarado' is not declared, so this creates a PRIVATE
+warning: line 35: 'MOSTRE' is not declared
+legacy: 1 declaration outside a prologue, 1 use of 1 undeclared name
+legacy: 1 implicit PRIVATE -- cNaoDeclarado
+legacy: most used undeclared -- MOSTRE (1)

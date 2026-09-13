@@ -1,0 +1,54 @@
+// 32_fusion.xtpl -- element-wise chains become one loop.
+//
+// Each stage is otherwise a call that walks its input and builds a new array.
+// Fused, the stages are the body of a single loop: no array between them, and
+// 'take' becomes an Exit rather than a function that runs after everything
+// else has already been computed and thrown away.
+// --------------------------------------------------------------------------------
+
+user function testFusion(aRows, nLimit)
+  local aTop := {}
+  local aRest := {}
+  local nSum := 0
+  local nBest := 0
+  local aOne := {}
+  local aSorted := {}
+  local cJoined := ""
+  local cBare := ""
+  local nFold := 0
+  local cLong := ""
+
+  // filter, map and take: one pass, and it stops at ten
+  aTop := aRows |> filter([r] r:nSaldo > 0) |> map([r] r:cCod) |> take(10)
+
+  // drop with a bound limit, and reject
+  aRest := aRows |> drop(nLimit) |> reject([r] r:lCancelled)
+
+  // a fold as the last stage: no array is built at all
+  nSum := aRows |> filter([r] r:lPago) |> map([r] r:nValor) |> asum
+  nBest := aRows |> map([r] r:nValor) |> amax
+
+  // one stage on its own stays an ordinary call -- a loop either way
+  aOne := aRows |> filter([r] r:nSaldo > 0)
+
+  // the leading run fuses; sort carries on from the array it built
+  aSorted := aRows |> filter([r] r:nSaldo > 0) |> map([r] r:cCod) |> sort
+
+  // join is the one terminal that takes an argument -- the separator. A flag
+  // marks the first element, because testing the accumulator for emptiness
+  // would lose the separator after a legitimately empty first element.
+  cJoined := aRows |> map([r] r:cCod) |> join("; ")
+  cBare := aRows |> map([r] r:cCod) |> join
+
+  // reduce carries its own combining step, so it needs no name known in
+  // advance -- which is what stops the fusable terminals being a closed list.
+  // fold is the seedless form: the first element is the starting value.
+  nFold := aRows |> map([r] r:nValor) |> reduce([acc, x] acc + x * 2, 0)
+  cLong := aRows |> map([r] r:cCod) |> fold([acc, x] Iif(len(x) > len(acc), x, acc))
+
+  return len(aTop) + len(aRest) + nSum + nBest + len(aOne) + len(aSorted) ;
+         + nFold + len(cLong) ;
+         + len(cJoined) + len(cBare)
+
+// --------------------------------------------------------------------------------
+// the end

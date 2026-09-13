@@ -1,0 +1,3 @@
+user function v()
+  local if := 1
+  return if

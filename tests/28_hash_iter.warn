@@ -1,0 +1,1 @@
+warning: line 26: this chain does not fuse -- 'sort' stops it, because it needs the whole collection, so it and every stage after it builds an array

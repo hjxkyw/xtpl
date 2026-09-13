@@ -1,0 +1,1 @@
+SyntaxError: Line 10: a bare 'function' is not allowed by Protheus. Write 'user function', 'static function' or 'main function'.

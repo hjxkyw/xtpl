@@ -1,0 +1,99 @@
+// 02_reuse.xtpl -- when a block local shares a slot and when it cannot
+// --------------------------------------------------------------------------------
+
+user function testReuse(lFlag)
+  local nTotal := 100
+  local aHandlers := {}
+  local aCarrier := {}
+
+  // Sibling blocks at the same depth reuse one slot: each writes before it
+  // reads, so nothing can leak across.
+  if nTotal > 0
+    local nFirst := 1
+    conout("first: " + cValToChar(nFirst))
+  endif
+
+  if nTotal > 0
+    local cSecond := "same storage, different type"
+    conout("second: " + cSecond)
+  endif
+
+  // Nesting is not sharing: the inner block is one level deeper.
+  if nTotal > 0
+    local nOuter := 1
+    if nTotal > 1
+      local nInner := 2
+      conout("sum: " + cValToChar(nOuter + nInner))
+    endif
+  endif
+
+  // A loop body re-enters its block on every pass, so the slot is cleared
+  // each time rather than carrying the previous iteration's value.
+  for local i := 1 to 3
+    local nSquare
+    nSquare := i * i
+    conout("square: " + cValToChar(nSquare))
+  next
+
+  // PINNED 1 -- captured by a code block, which outlives the block.
+  if nTotal > 0
+    local nFactor := 10
+    aadd(aHandlers, {|| nFactor * 2})
+  endif
+
+  // PINNED 2 -- a reference handed to a function we cannot see into.
+  if nTotal > 0
+    local aRows := {}
+    processRows(aRows)
+  endif
+
+  // PINNED 3 -- escapes at the store, without ever being passed itself.
+  if nTotal > 0
+    local aInner := {}
+    aadd(aCarrier, aInner)
+  endif
+
+  // NOT pinned, and CHECKED -- [contained] is a promise the compiler enforces:
+  // aWork may not be passed, captured or aliased anywhere in the function.
+  // Unlike , breaking it is a compile error rather than silent risk.
+  if nTotal > 0
+    local aWork <contained> := {}
+    aadd(aWork, "contained")
+    conout("first row: " + aWork[1])
+  endif
+
+  // NOT pinned -- a reference built and read entirely in place.
+  if nTotal > 0
+    local aScratch := {}
+    aadd(aScratch, "stays home")
+    conout("kept: " + cValToChar(len(aScratch)))
+  endif
+
+  // NOT pinned --  is a promise that processRows will not keep aLent,
+  // so the slot can be shared. aLent stays usable to the end of the block.
+  if nTotal > 0
+    local aLent := {}
+    aadd(aLent, "borrowed")
+    processRows(aLent)
+    conout("still ours: " + cValToChar(len(aLent)))
+  endif
+
+  // give it up: the reference is dropped and aGiven is dead for the rest of
+  // the block. Reading it below this line is a compile error.
+  if nTotal > 0
+    local aGiven := {}
+    aadd(aGiven, "handed off")
+  endif
+
+  // NOT pinned -- a value passed by reference is copied back during the
+  // call, so the callee cannot keep the binding.
+  if nTotal > 0
+    local cBuffer := ""
+    fillBuffer(@cBuffer)
+    conout("buffer: " + cBuffer)
+  endif
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,71 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 25_continuation.tlpp -- ';' continuations meeting the other passes.
+//
+// The lines are folded into one before any pass runs, so a construct may be
+// split across them. A comment on a continued line has nowhere to sit once
+// they are joined, so it moves to the end of the statement.
+// --------------------------------------------------------------------------------
+
+user function testContinuation(cUrl, cBody, aNums, hCfg)
+
+  Local nTimeout := 30
+  Local cReply := ""
+  Local aBig := {}
+  Local nT := 0
+  Local nA := 1
+  Local nB := 2
+
+  Local __blk_0_x
+  Local __hash_tmp_0_0
+  Local __hash_tmp_0_1
+  Local __pipe_tmp_0_0
+  Local __pipe_tmp_0_1
+
+
+
+  cReply := u_xtpl_safe_pipe({|| HttpPost(cUrl, "", cBody, nTimeout, {"Content-Type: application/json"})}, {|| ""})
+
+
+  __pipe_tmp_0_0 := u_xtpl_filter(aNums, {|%x^0%| %x^0% > 10})
+  __pipe_tmp_0_1 := u_xtpl_distinct(__pipe_tmp_0_0)
+  aBig := __pipe_tmp_0_1  // a comment on a continued line
+
+
+
+  __hash_tmp_0_0 := Nil
+  hCfg:Get("a", @__hash_tmp_0_0)
+  __hash_tmp_0_1 := Nil
+  hCfg:Get("b", @__hash_tmp_0_1)
+  nT := __hash_tmp_0_0 + __hash_tmp_0_1
+
+
+  conout(cReply + cValToChar(len(aBig)))
+
+  return nT + nA + nB
+
+// --------------------------------------------------------------------------------
+// the end

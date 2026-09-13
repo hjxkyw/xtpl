@@ -1,0 +1,114 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 05_initialisers.tlpp -- xtpl constructs in declarations and headers.
+//
+// Declarations and block headers are handled by branches that return to the
+// top of the main loop before the expression passes run, so their values used
+// to reach the undeclared-name check with nothing rewritten: '|>' reported
+// its verb as an undeclared function, '?.' reported the member, 'fallback'
+// reported itself, and 'h{key}', '?:', 'in' and '%%' were emitted with their
+// own syntax intact. They all go through the same passes now.
+// --------------------------------------------------------------------------------
+
+user function testInitialisers(aNums, hCfg, cC, aC, oUser, nX, aRows, oModel)
+
+  Local nA
+  Local nB
+  Local cD
+  Local lE
+  Local lF
+  Local cG
+  Local nH
+  Local hM
+  Local nT := 0
+
+  Local __stk_1_0        // __each, __times, nS, nD, __obj
+  Local __stk_1_1        // oIt, __ntimes
+  Local __elvis_tmp_0_0
+  Local __hash_tmp_0_0
+  Local __hash_tmp_1_0
+  Local __hash_tmp_2_0
+  Local __pipe_tmp_0_0
+  Local __stk_1_eachi
+
+  __hash_tmp_0_0 := Nil
+  hCfg:Get("id", @__hash_tmp_0_0)
+  nA := __hash_tmp_0_0  // a hash read lifts a Get above it
+  __pipe_tmp_0_0 := u_xtpl_distinct(aNums)
+  nB := u_xtpl_asum(__pipe_tmp_0_0)  // a chain, one temp per stage
+  __elvis_tmp_0_0 := lookupName(1)
+  cD := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, "anon")  // elvis
+  lE := (nX % 3) == 0  // divisible-by
+  lF := u_xtpl_in(cC, aC)  // membership
+  cG := If(oUser != Nil .And. oUser:oA != Nil, oUser:oA:cB, Nil)  // optional chaining
+  nH := u_xtpl_safe_pipe({|| riskyCall(1)}, {|| 0})  // guarded
+  hM := THashMap():New()
+  hM:Set("a", 1)  // a literal, with a comment after it
+
+  let each as __stk_1_0
+  let oIt as __stk_1_1
+  let eachi as __stk_1_eachi
+  !each^1^0! := u_xtpl_distinct(aRows)
+  For !eachi^1! := 1 To Len(!each^1^0!)  // a chain in the source
+    !oIt^1^1! := !each^1^0![!eachi^1!]
+    nT := nT + !oIt^1^1!:nValue
+  next
+
+  let times as __stk_1_0
+  __hash_tmp_1_0 := Nil
+  hCfg:Get("n", @__hash_tmp_1_0)
+  let ntimes as __stk_1_1
+  !ntimes^1^1! := __hash_tmp_1_0
+  For !times^1^0! := 1 To !ntimes^1^1!  // a hash read in the count
+    nT := nT + 1
+  next
+
+  let nS as __stk_1_0
+  !nS^1^0! := u_xtpl_asum(aNums)
+  If !nS^1^0! > 0  // a chain in a conditional binding
+    nT := nT + !nS^1^0!
+  endif
+
+  let nD as __stk_1_0
+  !nD^1^0! := u_xtpl_amax(aNums)  // and in a do-case subject
+  Do Case
+    case !nD^1^0! > 5
+      nT := 1
+  endcase
+
+  let obj as __stk_1_0
+  __hash_tmp_2_0 := Nil
+  hCfg:Get("id", @__hash_tmp_2_0)
+  !obj^1^0! := oModel:GetModel(__hash_tmp_2_0)  // and in a with-object subject
+    !obj^1^0!:SetValue("A1_COD", nT)
+
+  conout(cValToChar(nA + nB + nH + len(hM)) + cD + cG)
+  conout(cValToChar(lE) + cValToChar(lF))
+
+  return nT
+
+// --------------------------------------------------------------------------------
+// the end

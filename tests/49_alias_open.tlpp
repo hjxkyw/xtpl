@@ -1,0 +1,72 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 49_alias_open.tlpp -- is this alias even open?
+//
+// A field reference against an alias nothing in the function opened. It only
+// became checkable once 'using alias' and 'rows()' existed, because those are
+// what let a function say which areas it opens.
+//
+// Reported once per alias, not per use: a function naming SA1 twenty times
+// has one problem, not twenty. Off under --legacy, where an alias opened by
+// the caller is the norm rather than the exception.
+// --------------------------------------------------------------------------------
+
+
+user function testAliasOpen(nX)
+
+  Local nT := 0
+
+  Local __stk_1_usearea
+  Local __stk_1_userec
+
+
+  // opened here, so both uses are fine
+  let usearea as __stk_1_usearea
+  let userec as __stk_1_userec
+  !usearea^1! := Alias()
+  DbSelectArea("SA1")
+  !userec^1! := SA1->(RecNo())
+    nT := SA1->A1_SALDO + SA1->A1_VALOR
+  SA1->(DbGoto(!userec^1!))
+  If !Empty(!usearea^1!)
+    DbSelectArea(!usearea^1!)
+  EndIf
+
+  // opened by DbSelectArea, which counts too
+  DbSelectArea("SC5")
+  nT := nT + SC5->C5_NUM
+
+  // promised by the external declaration above
+  nT := nT + SB1->B1_COD
+
+  // nothing opened this one, and it is used twice
+  nT := nT + SD1->D1_QUANT
+  nT := nT + SD1->D1_TOTAL
+
+  return nT
+
+// --------------------------------------------------------------------------------
+// the end

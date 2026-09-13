@@ -1,0 +1,35 @@
+// 37_chunkby.xtpl -- grouping consecutive elements by a key.
+//
+// It cuts the sequence where the key changes rather than gathering scattered
+// matches, which is what lets it run in one pass holding only one group at a
+// time. Over unsorted input it will return the same key more than once --
+// this is not GROUP BY.
+//
+// A flag marks whether a group is open, rather than comparing the key against
+// Nil: Nil is a legitimate key, and the first element has to open the first
+// group either way.
+// --------------------------------------------------------------------------------
+
+user function testChunkby(aRows, cNum)
+  local aPedidos := {}
+  local aGrupos := {}
+  local aTamanhos := {}
+
+  // one stage on its own stays a call
+  aPedidos := aRows |> chunkby([r] r:cPedido)
+
+  // the header/detail walk: seek to the range, group by the key, one pass
+  using alias SC6 order 1 do
+    aGrupos := rows("SC6", xFilial("SC6") + cNum) ;
+               |> map([r] {r:C6_NUM, r:C6_PRODUTO}) ;
+               |> chunkby([x] x[1])
+  end using
+
+  // the key block reads the mapped value, not the record: after a map the
+  // element is whatever the map produced
+  aTamanhos := aRows |> map([r] r:cPedido) |> chunkby([c] c)
+
+  return len(aPedidos) + len(aGrupos) + len(aTamanhos)
+
+// --------------------------------------------------------------------------------
+// the end

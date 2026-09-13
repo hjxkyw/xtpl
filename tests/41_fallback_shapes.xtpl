@@ -1,0 +1,34 @@
+// 41_fallback_shapes.xtpl -- what a guard can and cannot hold.
+//
+// 'fallback' folds everything the line generates into one code block, as
+// comma-separated expressions. A fused loop is not an expression, so a chain
+// under a guard goes unfused, back to the runtime calls -- which are.
+//
+// This was emitting 'For ... Next' inside a code block, and the golden file
+// agreed with it, because a golden records what was produced rather than what
+// AdvPL accepts.
+// --------------------------------------------------------------------------------
+
+user function testFallbackShapes(aNums, hCfg)
+  local nSafe := 0
+  local nHash := 0
+  local aList := {}
+
+  // a bare call
+  nSafe := riskyCall(1) fallback 0
+
+  // a chain: unfused under the guard, so every step is an expression -- and
+  // xtpl says so, because losing a pass is invisible in the source
+  nSafe := aNums |> filter([x] x > 100) |> map([x] x * 2) |> asum fallback 0
+
+  // the guard on the part that can fail, and the chain left to fuse
+  aList := (riskyCall(2) fallback {}) |> filter([x] x > 1) |> map([x] x * 2)
+
+  // a hash read lifts statements, and they are expressions too
+  nHash := hCfg{"taxa"} fallback 0
+
+
+  return nSafe + nHash + len(aList)
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,6 @@
+user function v(n)
+  if n > 0
+    local nTmp := 5
+    local nTmp := 6
+  endif
+  return n

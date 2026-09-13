@@ -1,0 +1,1 @@
+SyntaxError: Line 10: distinctAdjacent over rows() needs a key -- the record is not a value to compare against the previous one. Give it one, as distinctAdjacent([r] r:C6_NUM), or map first.

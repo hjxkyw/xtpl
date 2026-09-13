@@ -1,0 +1,27 @@
+// 17_defer.xtpl -- deferred bodies are ordinary statements.
+//
+// A body runs through the same passes as any other line, so a chain, a hash
+// read or an xconout in one is translated. It may become several physical
+// lines, and they stay together wherever the block is spliced.
+//
+// It is also resolved once, at the point it is written, so the same names
+// appear whether the exit is a 'return' or the end of the body -- and a
+// variable read only by a defer counts as read.
+// --------------------------------------------------------------------------------
+
+user function testDefer(aRows, nX, hCfg)
+  local nCount := 0
+
+  defer reportTotal(nCount)             // read only here: not 'never read'
+  defer xconout("rows=", nX)            // translated, not spliced as written
+  defer closeItem(hCfg{"id"})           // a hash read lifts a Get above it
+  defer aRows |> validate() |> flush()  // a chain becomes one line per stage
+
+  nCount := 99
+
+  return nCount if nX > 100
+  return 0
+
+
+// --------------------------------------------------------------------------------
+// the end

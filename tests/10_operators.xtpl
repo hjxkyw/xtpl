@@ -1,0 +1,55 @@
+// 10_operators.xtpl -- in, %%, the folds, and external
+// --------------------------------------------------------------------------------
+
+// CRLF and the STR constants come from headers this transpiler cannot read
+external CRLF, dDataBase
+
+user function testOperators(nValor, cCodigo, aCodigos, aNums)
+  local nTotal := 0
+  local lAchou := .F.
+  local cMsg := ""
+
+  // folds: named functions, not operators, so they chain too
+  nTotal := asum(aNums)
+  nTotal := aprod(aNums)
+  nTotal := amax(aNums)
+  nTotal := amin(aNums)
+  nTotal := aNums |> filter([n] n > 10) |> asum
+
+  // fold() for anything the four do not cover
+  nTotal := fold(aNums, [acc, n] Max(acc, n * 2))
+
+  // membership: '$' searches a string only, so an array needs aScan
+  lAchou := cCodigo in aCodigos
+
+  // a range is two comparisons and needs no runtime
+  lAchou := nValor in 1..100
+
+  // o lado esquerdo pode ser um literal, nao so um nome -- vale para os dois
+  lAchou := 9 %% 3
+  lAchou := 5 in aNums
+  lAchou := "ABC" in aCodigos
+  lAchou := 7 in 1..100
+
+  if cCodigo in aCodigos .and. nValor in 1..100
+    cMsg := dtoc(dDataBase)
+  endif
+
+  // divisible by
+  if nValor %% 3
+    nTotal := nTotal + 1
+  endif
+
+  if nTotal %% 2 .and. nValor in aNums
+    nTotal := nTotal + 2
+  endif
+
+  // '%' itself is AdvPL's own modulo and passes through
+  nTotal := nTotal + (nValor % 7)
+
+  conout(cMsg + CRLF + cValToChar(lAchou))
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

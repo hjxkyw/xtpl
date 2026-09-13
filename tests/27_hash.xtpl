@@ -1,0 +1,42 @@
+// 27_hash.xtpl -- dictionaries over THashMap
+//
+// A brace group whose parts are all 'k => v' is a hash literal; anything
+// else is an array. A '{' directly after a name is a hash subscript, which
+// AdvPL never has, so arrays keep '[' and no type tracking is needed.
+// --------------------------------------------------------------------------------
+
+user function testHash(nBase, cChave)
+  local hCfg := {"taxa" => 0.05, "limite" => 1000}
+  local hVazio := {=>}
+  local aLista := {1, 2, 3}
+  local nTotal := 0
+  local xValor
+
+  // read: Get leaves the variable alone on a miss, so the temp is cleared
+  // first and an absent key reads back as Nil
+  nTotal := nBase * hCfg{"taxa"}
+  xValor := hCfg{cChave}
+
+  // write
+  hCfg{"limite"} := 2000
+  hVazio{"novo"} := "valor"
+
+  // two reads in one statement need two temps
+  nTotal := hCfg{"taxa"} + hCfg{"limite"}
+
+  // arrays are untouched
+  nTotal := nTotal + aLista[1]
+
+  // 'has' rides on Get's logical return
+  if hCfg has "taxa"
+    conout("tem taxa")
+  endif
+
+  if hCfg has "a" .and. hCfg has "b"
+    conout("tem as duas")
+  endif
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,33 @@
+// 44_lines.xtpl -- a chain over the lines of a file.
+//
+// The same source protocol as rows(), over text: FT_FUse opens, FT_FReadLn
+// reads one line, FT_FSkip advances, FT_FUse() with no argument closes. The
+// file is never held in memory, so a 'take' really does stop the read rather
+// than trimming something already loaded.
+//
+// Unlike rows(), the element here IS a value -- the line -- so a lambda
+// parameter binds to it in the ordinary way.
+// --------------------------------------------------------------------------------
+
+user function testLines(cPath)
+  local aTop := {}
+  local aAll := {}
+  local nBytes := 0
+  local aSorted := {}
+
+  // filter, map and take: one pass, and it stops after ten lines
+  aTop := lines("dados.txt") |> filter([l] !empty(l)) |> map([l] alltrim(l)) |> take(10)
+
+  // no stages at all is still a chain: every line of the file
+  aAll := lines(cPath)
+
+  // a fold as the last stage builds no array
+  nBytes := lines(cPath) |> map([l] len(l)) |> asum
+
+  // sort cannot be fused, so the walk collects and sort carries on from there
+  aSorted := lines(cPath) |> sort
+
+  return nBytes + len(aTop) + len(aAll) + len(aSorted)
+
+// --------------------------------------------------------------------------------
+// the end

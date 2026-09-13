@@ -1,0 +1,39 @@
+// 13_operand_span.xtpl -- where an infix operator's operand ends.
+//
+// 'in' and '%%' both have to know where their right-hand side stops. A comma
+// at the same level ends it; a comma inside braces does not. The scanner
+// these replace looked ahead by position, so 'f(cCod in aCodes, nX)' took the
+// sibling argument into the collection and emitted a three-argument call.
+// --------------------------------------------------------------------------------
+
+user function testOperandSpan(aCodes, cCod, nValor, oUser, aOut)
+  local lHit := .F.
+  local cCity := ""
+  local nR := 0
+
+  // a comma at this level ends the collection
+  lHit := checkBoth(cCod in aCodes, nValor)
+  lHit := outer(inner(cCod in aCodes), nValor)
+
+  // a comma inside braces does not
+  lHit := nValor in {1, 2, 3}
+
+  // a connective ends it too, and both sides are rewritten
+  lHit := cCod in aCodes .or. nValor in {9, 8}
+  lHit := nValor in 1..100
+
+  // '%%' over a parenthesised expression
+  nR := (nValor + 1) %% 3
+  nR := nValor %% 3
+
+  // optional chaining to any depth
+  cCity := oUser?.cNome
+  cCity := oUser?.oAddress?.cCity
+  cCity := oUser?.oA?.oB?.cCity
+
+  aadd(aOut, lHit)
+
+  return nR
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,36 @@
+// 50_dictionary.xtpl -- field references checked against an exported SX3.
+//
+// SA1->A1_NMOE when the field is A1_NOME is a runtime error today, found in
+// production. It is invisible to AdvPL and to the preprocessor, and it is
+// exactly the shape a transpiler can catch.
+//
+// Checked on the emitted line rather than the source, so a field named
+// through a rows() chain is checked too: by then it has become an ordinary
+// SA1->A1_VALOR, and that is the one place the alias and the field are known
+// together beyond doubt.
+//
+// Warnings, not errors: a field being added may not be in an export yet, and
+// a stale dictionary should not stop a build. --dict-strict for CI.
+// --------------------------------------------------------------------------------
+
+external alias SA1, SAX
+
+user function testDictionary(cAlias)
+  local nT := 0
+  local aC := {}
+  local aV := {}
+
+  nT := SA1->A1_SALDO                    // known
+  nT := nT + SA1->A1_NMOE                // a typo for A1_NOME
+  nT := nT + SAX->X_QUALQUER             // no such table
+
+  // caught through the chain: r:A1_NMOE becomes SA1->A1_NMOE
+  aC := rows("SA1") |> filter([r] r:A1_SALDO > 0) |> map([r] r:A1_NMOE)
+
+  // the alias is a variable, so there is nothing to check it against
+  aV := rows(cAlias) |> map([r] r:B1_DESC)
+
+  return nT + len(aC) + len(aV)
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,45 @@
+// 26_raw.xtpl -- handing lines to the AdvPL preprocessor untouched
+//
+// A #command or #xtranslate rewrites syntax, not identifiers, so a line like
+// '@ 10, 5 SAY ... GET ...' is not AdvPL yet -- it becomes AdvPL only after
+// the preprocessor runs, which is after xtpl. 'raw' says: do not try to
+// understand this line.
+//
+// Declared variables are still renamed inside raw, so block locals work.
+// Every other word is left alone instead of being reported as undeclared.
+// --------------------------------------------------------------------------------
+
+#xtranslate MOSTRE <x> QUANDO <c> => If <c> ; conout(<x>) ; EndIf
+#xtranslate ANOTE <x> => conout("nota: " + <x>)
+
+user function testRaw(oDlg)
+  local cNome := ""
+  local nTotal := 0
+  local cSql := ""
+
+  // one line
+  raw MOSTRE cValToChar(nTotal) QUANDO nTotal > 0
+
+  // a block, for a screen or a dialog
+  raw
+    ANOTE "primeira"
+    ANOTE "segunda"
+  end raw
+
+  // a block local used inside raw: renamed like anywhere else, and pinned,
+  // because GET passes it by reference and the dialog outlives the block
+  if nTotal > 0
+    local cAux := ""
+    raw ANOTE cAux
+  endif
+
+  // normal xtpl carries on around it
+  nTotal := nTotal + 1
+  cSql := "SELECT * FROM SA1"
+
+  conout(cSql)
+
+  return cNome
+
+// --------------------------------------------------------------------------------
+// the end

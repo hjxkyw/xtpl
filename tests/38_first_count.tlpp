@@ -1,0 +1,146 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 38_first_count.tlpp -- the first match, and how many match.
+//
+// Both replace 'filter(...) then look at the result', which builds an array
+// to answer a question that does not need one -- and in first's case keeps
+// searching after the answer is known.
+//
+// count reads the element, so a chain over rows() needs no map before it.
+// first does not: it hands the element back, and a work-area record is not a
+// value, so it needs something a map has made.
+// --------------------------------------------------------------------------------
+
+user function testFirstCount(aRows, cNum)
+
+  Local oAtrasado := Nil
+  Local nGrandes := 0
+  Local nItens := 0
+  Local nComSaldo := 0
+
+  Local __blk_0_p
+  Local __blk_0_r
+  Local __blk_0_v
+  Local __blk_1_r
+  Local __fuse_area_1_0
+  Local __fuse_i_0_0
+  Local __fuse_out_0_0
+  Local __fuse_out_1_0
+  Local __fuse_rec_1_0
+  Local __fuse_src_0_0
+  Local __fuse_v_0_0
+  Local __fuse_v_1_0
+  Local __stk_1_usearea
+  Local __stk_1_useord
+  Local __stk_1_userec
+
+
+  // stops at the first match instead of collecting every one
+  __fuse_src_0_0 := aRows
+  __fuse_out_0_0 := Nil
+  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
+    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
+    %r^0% := __fuse_v_0_0
+    __fuse_v_0_0 := %r^0%:oPed
+    %p^0% := __fuse_v_0_0
+    If %p^0%:lAtraso
+      __fuse_out_0_0 := __fuse_v_0_0
+      Exit
+    EndIf
+  Next
+  oAtrasado := __fuse_out_0_0
+
+  __fuse_src_0_0 := aRows
+  __fuse_out_0_0 := 0
+  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
+    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
+    %r^0% := __fuse_v_0_0
+    __fuse_v_0_0 := %r^0%:nValor
+    %v^0% := __fuse_v_0_0
+    If %v^0% > 100
+      __fuse_out_0_0 := __fuse_out_0_0 + 1
+    EndIf
+  Next
+  nGrandes := __fuse_out_0_0
+
+  let usearea as __stk_1_usearea
+  let userec as __stk_1_userec
+  !usearea^1! := Alias()
+  DbSelectArea("SC6")
+  !userec^1! := SC6->(RecNo())
+  let useord as __stk_1_useord
+  !useord^1! := SC6->(IndexOrd())
+  SC6->(DbSetOrder(1))
+    // how many items in this order, without building the array of them
+    __fuse_area_1_0 := Alias()
+    DbSelectArea("SC6")
+    __fuse_rec_1_0 := SC6->(RecNo())
+    SC6->(DbSeek(xFilial("SC6") + cNum))
+    __fuse_out_1_0 := 0
+    While !SC6->(Eof())
+      If !(SC6->C6_NUM == cNum)
+        Exit
+      EndIf
+      __fuse_out_1_0 := __fuse_out_1_0 + 1
+      SC6->(DbSkip())
+    EndDo
+    SC6->(DbGoto(__fuse_rec_1_0))
+    If !Empty(__fuse_area_1_0)
+      DbSelectArea(__fuse_area_1_0)
+    EndIf
+    nItens := __fuse_out_1_0
+
+
+
+    // a predicate reads the record directly
+    __fuse_area_1_0 := Alias()
+    DbSelectArea("SC6")
+    __fuse_rec_1_0 := SC6->(RecNo())
+    SC6->(DbGoTop())
+    __fuse_out_1_0 := 0
+    While !SC6->(Eof())
+      If SC6->C6_QUANT > 0
+        __fuse_out_1_0 := __fuse_out_1_0 + 1
+      EndIf
+      SC6->(DbSkip())
+    EndDo
+    SC6->(DbGoto(__fuse_rec_1_0))
+    If !Empty(__fuse_area_1_0)
+      DbSelectArea(__fuse_area_1_0)
+    EndIf
+    nComSaldo := __fuse_out_1_0
+  SC6->(DbSetOrder(!useord^1!))
+  SC6->(DbGoto(!userec^1!))
+  If !Empty(!usearea^1!)
+    DbSelectArea(!usearea^1!)
+  EndIf
+
+  conout(cValToChar(oAtrasado != Nil))
+
+  return nGrandes + nItens + nComSaldo
+
+// --------------------------------------------------------------------------------
+// the end

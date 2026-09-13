@@ -1,0 +1,43 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 16_postfix_return.tlpp -- the shapes of a postfix return.
+//
+// 'return(x) if c' is a return, not a plain statement that happens to start
+// with the word. Getting that wrong loses the pending defers, and the line
+// reached the output untouched.
+// --------------------------------------------------------------------------------
+
+user function testPostfixReturn(nX, lSkip)
+
+  Local nTotal := 0
+
+
+
+
+  If nX > 100  // parenthesised, no space
+    closeCursor()
+    Return (nTotal)
+  EndIf
+  If nX > 50  // the ordinary form
+    closeCursor()
+    Return nTotal
+  EndIf
+  If lSkip  // bare
+    closeCursor()
+    Return
+  EndIf
+
+  nTotal := 1
+  while nTotal < 10
+    nTotal := nTotal + 1
+    If nX == 0  // not a block word: still a modifier
+      exit
+    EndIf
+  enddo
+
+  closeCursor()
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

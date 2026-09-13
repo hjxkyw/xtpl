@@ -1,0 +1,35 @@
+// 28_hash_iter.xtpl -- keys, values and pairs.
+//
+// 'for' walks arrays, so a hash could not be iterated at all -- it was
+// invisible to the whole pipeline. These return arrays, so nothing else
+// needed changing: 'for', the chain, the verbs and interpolation all compose
+// with them as they stand.
+//
+// They go through THashMap:List(), which fills an array with one row per
+// entry, key in column 1 and value in column 2.
+// --------------------------------------------------------------------------------
+
+user function testHashIter(hCfg, hSaldos)
+  local aMv := {}
+  local nTotal := 0
+  local cLista := ""
+  local lVazio := .F.
+  local aPares := {}
+
+  // a hash can be walked now
+  for cChave in keys(hCfg)
+    conout("${cChave} = ${hCfg{cChave}}")
+  next
+
+  nTotal := values(hSaldos) |> asum
+  aMv := keys(hCfg) |> filter([k] starts(k, "MV_"))
+  cLista := keys(hCfg) |> sort |> join(", ")
+  lVazio := keys(hCfg) |> noneof([k] .T.)
+
+  // pairs keeps them together: {chave, valor} per row
+  aPares := pairs(hCfg) |> reject([p] p[2] == Nil)
+
+  return nTotal + len(aMv) + len(cLista) + len(aPares) + iif(lVazio, 1, 0)
+
+// --------------------------------------------------------------------------------
+// the end

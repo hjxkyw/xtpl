@@ -1,0 +1,34 @@
+// 39_predicates.xtpl -- does any / do all / does none of them match.
+//
+// There was no way to ask this without building a filtered array and testing
+// its length, which reads the whole collection to answer a question that is
+// usually settled by the first element.
+//
+// Fused, the loop leaves as soon as it knows -- and over rows() that means
+// the walk stops rather than reading the rest of the table.
+// --------------------------------------------------------------------------------
+
+user function testPredicates(aRows, aNums)
+  local lAlguem := .F.
+  local lTodos := .F.
+  local lNenhum := .F.
+  local lNegativo := .F.
+  local lOrdenado := .F.
+
+  // one stage on its own stays a call -- the runtime version stops early too
+  lAlguem := aRows |> anyof([r] !r:lPago)
+
+  // fused: map then the predicate, leaving at the first answer
+  lTodos := aRows |> map([r] r:nValor) |> allof([v] v > 0)
+  lNenhum := aRows |> map([r] r:cCod) |> noneof([c] empty(c))
+
+  // over a work area, and no map is needed: a predicate reads the record
+  lNegativo := rows("SA1") |> anyof([r] r:A1_SALDO < 0)
+
+  // sort cannot be fused, so the predicate runs as an ordinary call
+  lOrdenado := aNums |> sort |> noneof([n] n == 0)
+
+  return lAlguem .and. lTodos .and. lNenhum .and. lNegativo .and. lOrdenado
+
+// --------------------------------------------------------------------------------
+// the end

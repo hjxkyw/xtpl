@@ -1,0 +1,39 @@
+// 12_elvis.xtpl -- the '?:' operator
+//
+// 'a ?: b' yields a when a is not Nil, otherwise b. The left side is bound to
+// a temp first, so it is evaluated exactly once even though the result
+// mentions it twice.
+// --------------------------------------------------------------------------------
+
+user function testElvis(oUser)
+  local cName
+  local cPick
+  local nPort
+  local cCity
+  local aItems
+
+  // Two operands: compact form.
+  cName := lookupName(1) ?: "anonymous"
+  conout("name: " + cName)
+
+  // Chained: each fallback runs only if the one before came back Nil.
+  cPick := firstChoice() ?: secondChoice() ?: thirdChoice() ?: "last resort"
+  conout("pick: " + cPick)
+
+  // The fallback can be any expression, including a call with arguments.
+  nPort := readPort() ?: defaultPort(8080)
+  conout("port: " + cValToChar(nPort))
+
+  // Combines with optional chaining: a missing object yields the fallback.
+  cCity := oUser?.cCity ?: "unknown"
+  conout("city: " + cCity)
+
+  // Works as a plain expression too, not only on the right of ':='.
+  aItems := {}
+  aadd(aItems, loadItem(1) ?: "placeholder")
+  conout("items: " + cValToChar(len(aItems)))
+
+  return cName
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,1 @@
+SyntaxError: Line 9: '${' in a string is never closed. An interpolated expression cannot use the same quote as the string around it -- write '...' inside "...".

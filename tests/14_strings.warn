@@ -1,0 +1,1 @@
+warning: line 17: this chain does not fuse -- 'alltrim' stops it, because xtpl cannot see inside it, so it and every stage after it builds an array

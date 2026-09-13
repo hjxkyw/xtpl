@@ -1,0 +1,21 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 18_defer_only.tlpp -- a function whose body is only defers.
+//
+// Declarations are hoisted, so a body of declarations and defers leaves no
+// statement to insert after. The defers used to be dropped without a word.
+// --------------------------------------------------------------------------------
+
+user function testDeferOnly(nX)
+
+  Local nCount
+
+
+  nCount := nX
+  logExit(nCount)
+  closeCursor()
+
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,47 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 17_defer.tlpp -- deferred bodies are ordinary statements.
+//
+// A body runs through the same passes as any other line, so a chain, a hash
+// read or an xconout in one is translated. It may become several physical
+// lines, and they stay together wherever the block is spliced.
+//
+// It is also resolved once, at the point it is written, so the same names
+// appear whether the exit is a 'return' or the end of the body -- and a
+// variable read only by a defer counts as read.
+// --------------------------------------------------------------------------------
+
+user function testDefer(aRows, nX, hCfg)
+
+  Local nCount := 0
+
+  Local __hash_tmp_0_0
+  Local __pipe_tmp_0_0
+
+
+
+  nCount := 99
+
+  If nX > 100
+    __pipe_tmp_0_0 := validate(aRows)
+    flush(__pipe_tmp_0_0)  // a chain becomes one line per stage
+    __hash_tmp_0_0 := Nil
+    hCfg:Get("id", @__hash_tmp_0_0)
+    closeItem(__hash_tmp_0_0)  // a hash read lifts a Get above it
+    conout("rows=" + cValToChar(nX))  // translated, not spliced as written
+    reportTotal(nCount)  // read only here: not 'never read'
+    Return nCount
+  EndIf
+  __pipe_tmp_0_0 := validate(aRows)
+  flush(__pipe_tmp_0_0)  // a chain becomes one line per stage
+  __hash_tmp_0_0 := Nil
+  hCfg:Get("id", @__hash_tmp_0_0)
+  closeItem(__hash_tmp_0_0)  // a hash read lifts a Get above it
+  conout("rows=" + cValToChar(nX))  // translated, not spliced as written
+  reportTotal(nCount)  // read only here: not 'never read'
+  return 0
+
+
+// --------------------------------------------------------------------------------
+// the end

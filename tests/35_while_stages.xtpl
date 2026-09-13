@@ -1,0 +1,51 @@
+// 35_while_stages.xtpl -- takewhile and dropwhile.
+//
+// takewhile stops at the first element that fails and looks no further, which
+// is what separates it from filter: filter keeps every match anywhere,
+// takewhile keeps the matching run at the front. Over an ordered source that
+// is the point -- the rest is known not to match.
+//
+// dropwhile skips the leading run and then passes everything, including
+// elements that would have matched. Hence the flag.
+//
+// rows() starts at the top unless given a key to seek. With one it is
+// positioned by the index, which is what makes takewhile worth having on a
+// large table: reach the group in one jump, then stop at its end.
+// --------------------------------------------------------------------------------
+
+user function testWhileStages(aRows, cNum)
+  local aItens := {}
+  local aDepois := {}
+  local aFrente := {}
+  local aGrupo := {}
+  local aSeek := {}
+
+  // over an ordered work area: stops when the key changes
+  aItens := rows("SC6") |> takewhile([r] r:C6_NUM == cNum) |> map([r] r:C6_PRODUTO)
+
+  // skip the leading zeros, keep everything after -- zeros included
+  aDepois := aRows |> dropwhile([r] r:nSaldo == 0) |> map([r] r:cCod)
+
+  // one stage stays a call; the runtime version stops early too
+  aFrente := aRows |> takewhile([r] r:nSaldo > 0)
+
+  // the two compose: skip to the group, take it, stop at its end. rows()
+  // starts at the top, so this reaches the group by reading rather than by
+  // seeking -- but it never reads past the group.
+  aGrupo := rows("SC6") ;
+            |> dropwhile([r] r:C6_NUM != cNum) ;
+            |> takewhile([r] r:C6_NUM == cNum) ;
+            |> map([r] r:C6_PRODUTO)
+
+  // the way to actually do it: 'using alias' fixes the order, rows() seeks
+  // by the index rather than reading up to the group, and takewhile ends it
+  using alias SC6 order 1 do
+    aSeek := rows("SC6", xFilial("SC6") + cNum) ;
+             |> takewhile([r] r:C6_NUM == cNum) ;
+             |> map([r] r:C6_PRODUTO)
+  end using
+
+  return len(aItens) + len(aDepois) + len(aFrente) + len(aGrupo) + len(aSeek)
+
+// --------------------------------------------------------------------------------
+// the end

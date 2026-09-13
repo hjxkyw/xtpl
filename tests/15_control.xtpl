@@ -1,0 +1,76 @@
+// 15_control.xtpl -- constructs that lower to plain AdvPL, no runtime needed
+// --------------------------------------------------------------------------------
+
+user function testControl(oUser, nLimit, aItens)
+  local nTotal := 0
+  local cCity
+  local lDone
+
+  defer closeCursor()
+  defer logExit("finished")
+
+  // conditional binding: the value is bound, then tested
+  if local lReady := checkReady(), lReady
+    conout("ready")
+  endif
+
+  while local cNode := nextNode(), cNode != Nil
+    conout("node: " + cNode)
+  enddo
+
+  for local i := 1 to 3
+    nTotal := nTotal + i
+  next
+
+  // 'for' binds the element; the index is optional and only generated
+  // when you name it. Both are ordinary block locals of the loop.
+  for oItem in aItens
+    nTotal := nTotal + oItem:nValor
+  next
+
+  for oItem, nIndice in aItens
+    conout(cValToChar(nIndice) + ": " + oItem:cCodigo)
+  next
+
+  // 'for <n> times' repeats without inventing a counter you never read
+  for 3 times
+    conout("linha")
+  next
+
+  for len(aItens) times
+    nTotal := nTotal + 1
+  next
+
+  // 'do case with' names the subject and evaluates it once. The conditions
+  // are ordinary AdvPL, and the variable is an ordinary block local.
+  do case with local nSubject := calcTotal(nTotal)
+    case nSubject == 6
+      conout("exactly six")
+    case nSubject > 3
+      conout("more than three: " + cValToChar(nSubject))
+    case isReady(nSubject)
+      conout("ready")
+    otherwise
+      conout("small")
+  endcase
+
+  // plain 'do case' is untouched
+  do case
+    case nTotal == 0
+      conout("zero")
+  endcase
+
+  // optional chaining: a missing link yields Nil rather than crashing
+  cCity := oUser?.oAddress?.cCity
+
+  // postfix modifiers
+  lDone := .T. if nTotal > 5
+  exec resetAll() if nTotal == 0
+  conout("counting") while nTotal < 0
+
+  return nTotal if nTotal > 100
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

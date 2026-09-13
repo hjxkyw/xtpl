@@ -1,0 +1,6 @@
+warning: line 14: SA1->A1_NOME is character, assigned a numeric value.
+warning: line 15: SA1->A1_SALDO is numeric, assigned a character value.
+warning: line 16: SA1->A1_DTCAD is date, assigned a numeric value.
+warning: line 19: SA1->A1_SALDO is numeric, compared with a character value.
+warning: line 20: SA1->A1_SALDO is numeric, compared with a character value.
+warning: line 33: SA1->A1_COD holds 6 characters, but is assigned 7.

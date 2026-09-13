@@ -1,0 +1,4 @@
+user function v(aH)
+  local aWork <contained> := {}
+  aadd(aH, {|| aWork})
+  return 0

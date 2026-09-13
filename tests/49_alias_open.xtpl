@@ -1,0 +1,36 @@
+// 49_alias_open.xtpl -- is this alias even open?
+//
+// A field reference against an alias nothing in the function opened. It only
+// became checkable once 'using alias' and 'rows()' existed, because those are
+// what let a function say which areas it opens.
+//
+// Reported once per alias, not per use: a function naming SA1 twenty times
+// has one problem, not twenty. Off under --legacy, where an alias opened by
+// the caller is the norm rather than the exception.
+// --------------------------------------------------------------------------------
+
+external alias SB1              // the caller opens this one
+
+user function testAliasOpen(nX)
+  local nT := 0
+
+  // opened here, so both uses are fine
+  using alias SA1 do
+    nT := SA1->A1_SALDO + SA1->A1_VALOR
+  end using
+
+  // opened by DbSelectArea, which counts too
+  DbSelectArea("SC5")
+  nT := nT + SC5->C5_NUM
+
+  // promised by the external declaration above
+  nT := nT + SB1->B1_COD
+
+  // nothing opened this one, and it is used twice
+  nT := nT + SD1->D1_QUANT
+  nT := nT + SD1->D1_TOTAL
+
+  return nT
+
+// --------------------------------------------------------------------------------
+// the end

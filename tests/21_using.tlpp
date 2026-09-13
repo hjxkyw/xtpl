@@ -1,0 +1,113 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 21_using.tlpp -- scoped work areas.
+//
+// Forgetting to restore an alias is a classic Protheus bug, and its damage
+// appears somewhere else entirely. The area, the index order and the record
+// pointer are put back at every way out of the block, early returns included
+// -- which is the defer machinery, so the two have to agree on order:
+// deferred statements first, since they may still want the area, then the
+// work areas, innermost block first.
+// --------------------------------------------------------------------------------
+
+user function testUsing(cAlias, nX)
+
+  Local nT := 0
+  Local aC := {}
+
+  Local __blk_0_r
+  Local __fuse_area_0_0
+  Local __fuse_out_0_0
+  Local __fuse_rec_0_0
+  Local __fuse_v_0_0
+  Local __stk_1_usearea
+  Local __stk_1_useord
+  Local __stk_1_userec
+  Local __stk_2_usealias
+  Local __stk_2_usearea
+  Local __stk_2_userec
+
+
+  let usearea as __stk_1_usearea
+  let userec as __stk_1_userec
+  !usearea^1! := Alias()
+  DbSelectArea("SA1")
+  !userec^1! := SA1->(RecNo())
+  let useord as __stk_1_useord
+  !useord^1! := SA1->(IndexOrd())
+  SA1->(DbSetOrder(1))
+    nT := SA1->A1_SALDO
+    If nX > 100  // restored before the return
+      SA1->(DbSetOrder(!useord^1!))
+      SA1->(DbGoto(!userec^1!))
+      If !Empty(!usearea^1!)
+        DbSelectArea(!usearea^1!)
+      EndIf
+      Return nT
+    EndIf
+    nT := nT + 1
+
+    let usearea as __stk_2_usearea
+    let userec as __stk_2_userec
+    let usealias as __stk_2_usealias
+    !usealias^2! := cAlias
+    !usearea^2! := Alias()
+    DbSelectArea(!usealias^2!)  // a variable holds the alias here
+    !userec^2! := (!usealias^2!)->(RecNo())
+      nT := nT + 1
+    (!usealias^2!)->(DbGoto(!userec^2!))
+    If !Empty(!usearea^2!)
+      DbSelectArea(!usearea^2!)
+    EndIf
+  SA1->(DbSetOrder(!useord^1!))
+  SA1->(DbGoto(!userec^1!))
+  If !Empty(!usearea^1!)
+    DbSelectArea(!usearea^1!)
+  EndIf
+
+  // a chain walks its own area and restores it the same way
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("SA1")
+  __fuse_rec_0_0 := SA1->(RecNo())
+  SA1->(DbGoTop())
+  __fuse_out_0_0 := {}
+  While !SA1->(Eof())
+    If SA1->A1_SALDO > 0
+      __fuse_v_0_0 := SA1->A1_COD
+      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    EndIf
+    SA1->(DbSkip())
+  EndDo
+  SA1->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  aC := __fuse_out_0_0
+
+  return nT + len(aC)
+
+// --------------------------------------------------------------------------------
+// the end

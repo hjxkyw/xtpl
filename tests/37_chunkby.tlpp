@@ -1,0 +1,155 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 37_chunkby.tlpp -- grouping consecutive elements by a key.
+//
+// It cuts the sequence where the key changes rather than gathering scattered
+// matches, which is what lets it run in one pass holding only one group at a
+// time. Over unsorted input it will return the same key more than once --
+// this is not GROUP BY.
+//
+// A flag marks whether a group is open, rather than comparing the key against
+// Nil: Nil is a legitimate key, and the first element has to open the first
+// group either way.
+// --------------------------------------------------------------------------------
+
+user function testChunkby(aRows, cNum)
+
+  Local aPedidos := {}
+  Local aGrupos := {}
+  Local aTamanhos := {}
+
+  Local __blk_0_c
+  Local __blk_0_r
+  Local __blk_1_r
+  Local __blk_1_x
+  Local __fuse_area_1_0
+  Local __fuse_chunk_0_0
+  Local __fuse_chunk_1_0
+  Local __fuse_i_0_0
+  Local __fuse_key_0_0
+  Local __fuse_key_1_0
+  Local __fuse_open_0_0
+  Local __fuse_open_1_0
+  Local __fuse_out_0_0
+  Local __fuse_out_1_0
+  Local __fuse_rec_1_0
+  Local __fuse_seen_0_0
+  Local __fuse_seen_1_0
+  Local __fuse_src_0_0
+  Local __fuse_v_0_0
+  Local __fuse_v_1_0
+  Local __pipe_tmp_0_0
+  Local __stk_1_usearea
+  Local __stk_1_useord
+  Local __stk_1_userec
+
+
+  // one stage on its own stays a call
+  __pipe_tmp_0_0 := u_xtpl_chunkby(aRows, {|%r^0%| %r^0%:cPedido})
+  aPedidos := __pipe_tmp_0_0
+
+  // the header/detail walk: seek to the range, group by the key, one pass
+  let usearea as __stk_1_usearea
+  let userec as __stk_1_userec
+  !usearea^1! := Alias()
+  DbSelectArea("SC6")
+  !userec^1! := SC6->(RecNo())
+  let useord as __stk_1_useord
+  !useord^1! := SC6->(IndexOrd())
+  SC6->(DbSetOrder(1))
+    __fuse_area_1_0 := Alias()
+    DbSelectArea("SC6")
+    __fuse_rec_1_0 := SC6->(RecNo())
+    SC6->(DbSeek(xFilial("SC6") + cNum))
+    __fuse_chunk_1_0 := {}
+    __fuse_key_1_0 := Nil
+    __fuse_open_1_0 := .F.
+    __fuse_seen_1_0 := Nil
+    __fuse_out_1_0 := {}
+    While !SC6->(Eof())
+      __fuse_v_1_0 := {SC6->C6_NUM, SC6->C6_PRODUTO}
+      %x^1% := __fuse_v_1_0
+      __fuse_seen_1_0 := %x^1%[1]
+      If !__fuse_open_1_0
+        __fuse_open_1_0 := .T.
+        __fuse_key_1_0 := __fuse_seen_1_0
+      ElseIf !(__fuse_seen_1_0 == __fuse_key_1_0)
+        AAdd(__fuse_out_1_0, __fuse_chunk_1_0)
+        __fuse_chunk_1_0 := {}
+        __fuse_key_1_0 := __fuse_seen_1_0
+      EndIf
+      AAdd(__fuse_chunk_1_0, __fuse_v_1_0)
+      SC6->(DbSkip())
+    EndDo
+    If __fuse_open_1_0
+      AAdd(__fuse_out_1_0, __fuse_chunk_1_0)
+    EndIf
+    SC6->(DbGoto(__fuse_rec_1_0))
+    If !Empty(__fuse_area_1_0)
+      DbSelectArea(__fuse_area_1_0)
+    EndIf
+    aGrupos := __fuse_out_1_0
+
+
+  SC6->(DbSetOrder(!useord^1!))
+  SC6->(DbGoto(!userec^1!))
+  If !Empty(!usearea^1!)
+    DbSelectArea(!usearea^1!)
+  EndIf
+
+  // the key block reads the mapped value, not the record: after a map the
+  // element is whatever the map produced
+  __fuse_src_0_0 := aRows
+  __fuse_chunk_0_0 := {}
+  __fuse_key_0_0 := Nil
+  __fuse_open_0_0 := .F.
+  __fuse_seen_0_0 := Nil
+  __fuse_out_0_0 := {}
+  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
+    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
+    %r^0% := __fuse_v_0_0
+    __fuse_v_0_0 := %r^0%:cPedido
+    %c^0% := __fuse_v_0_0
+    __fuse_seen_0_0 := %c^0%
+    If !__fuse_open_0_0
+      __fuse_open_0_0 := .T.
+      __fuse_key_0_0 := __fuse_seen_0_0
+    ElseIf !(__fuse_seen_0_0 == __fuse_key_0_0)
+      AAdd(__fuse_out_0_0, __fuse_chunk_0_0)
+      __fuse_chunk_0_0 := {}
+      __fuse_key_0_0 := __fuse_seen_0_0
+    EndIf
+    AAdd(__fuse_chunk_0_0, __fuse_v_0_0)
+  Next
+  If __fuse_open_0_0
+    AAdd(__fuse_out_0_0, __fuse_chunk_0_0)
+  EndIf
+  aTamanhos := __fuse_out_0_0
+
+  return len(aPedidos) + len(aGrupos) + len(aTamanhos)
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,84 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 41_fallback_shapes.tlpp -- what a guard can and cannot hold.
+//
+// 'fallback' folds everything the line generates into one code block, as
+// comma-separated expressions. A fused loop is not an expression, so a chain
+// under a guard goes unfused, back to the runtime calls -- which are.
+//
+// This was emitting 'For ... Next' inside a code block, and the golden file
+// agreed with it, because a golden records what was produced rather than what
+// AdvPL accepts.
+// --------------------------------------------------------------------------------
+
+user function testFallbackShapes(aNums, hCfg)
+
+  Local nSafe := 0
+  Local nHash := 0
+  Local aList := {}
+
+  Local __blk_0_x
+  Local __fuse_i_0_0
+  Local __fuse_out_0_0
+  Local __fuse_src_0_0
+  Local __fuse_v_0_0
+  Local __guard_tmp_0_0
+  Local __hash_tmp_0_0
+  Local __pipe_tmp_0_0
+  Local __pipe_tmp_0_1
+  Local __pipe_tmp_0_2
+
+
+  // a bare call
+  nSafe := u_xtpl_safe_pipe({|| riskyCall(1)}, {|| 0})
+
+  // a chain: unfused under the guard, so every step is an expression -- and
+  // xtpl says so, because losing a pass is invisible in the source
+  nSafe := u_xtpl_safe_pipe({|| __pipe_tmp_0_0 := u_xtpl_filter(aNums, {|%x^0%| %x^0% > 100}), __pipe_tmp_0_1 := u_xtpl_map(__pipe_tmp_0_0, {|%x^0%| %x^0% * 2}), __pipe_tmp_0_2 := u_xtpl_asum(__pipe_tmp_0_1), __pipe_tmp_0_2}, {|| 0})
+
+  // the guard on the part that can fail, and the chain left to fuse
+  __guard_tmp_0_0 := u_xtpl_safe_pipe({|| riskyCall(2)}, {|| {}})
+  __fuse_src_0_0 := __guard_tmp_0_0
+  __fuse_out_0_0 := {}
+  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
+    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
+    %x^0% := __fuse_v_0_0
+    If %x^0% > 1
+      %x^0% := __fuse_v_0_0
+      __fuse_v_0_0 := %x^0% * 2
+      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    EndIf
+  Next
+  aList := __fuse_out_0_0
+
+  // a hash read lifts statements, and they are expressions too
+  nHash := u_xtpl_safe_pipe({|| __hash_tmp_0_0 := Nil, hCfg:Get("taxa", @__hash_tmp_0_0), __hash_tmp_0_0}, {|| 0})
+
+
+  return nSafe + nHash + len(aList)
+
+// --------------------------------------------------------------------------------
+// the end

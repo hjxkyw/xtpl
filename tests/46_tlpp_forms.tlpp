@@ -1,0 +1,46 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 46_tlpp_forms.tlpp -- formas de TLPP que o xtpl não conhecia.
+//
+// Todas as três vieram de um programa real. A primeira falhava em silêncio:
+// 'main function' não era reconhecido como cabeçalho, então nenhuma função era
+// reconhecida, nada ficava dentro de uma, e o arquivo inteiro era copiado sem
+// alteração — sem erro e sem aviso. O 'main function' em si está em
+// test_main_form, onde o nome da função bate com o do arquivo.
+//
+// 'as object' é a anotação de tipo do próprio TLPP, mantida e reemitida.
+//
+// Um namespace pontuado se distingue de 'nA.And.nB' — lexicamente idênticos —
+// por o caminho inteiro terminar em uma chamada.
+// --------------------------------------------------------------------------------
+
+user function tlppForms(nX)
+
+  Local oTool as object
+  Local nTotal := 0 as numeric
+  Local aItens := {}
+  Local oOutro as object
+
+
+
+  oTool := totvs.tools.Alguma.Coisa():New()
+  oOutro := outro.pacote.Classe():New()
+
+  nTotal := nTotal + iif(nX > 0 .And. nX < 10, 1, 0)
+
+  aadd(aItens, oTool)
+  aadd(aItens, oOutro)
+
+  return nTotal + len(aItens)
+
+static function auxiliar()
+
+  return 1
+
+user function tambem()
+
+  return auxiliar()
+
+// --------------------------------------------------------------------------------
+// the end

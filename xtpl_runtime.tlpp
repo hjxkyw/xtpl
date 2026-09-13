@@ -1,0 +1,690 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// xtpl_runtime.tlpp -- support functions for xtpl-generated code
+//
+// Compile into a custom RPO.
+//
+// USER FUNCTION, and the names here carry NO prefix: the compiler adds the
+// 'U_' itself, so 'User Function xtpl_map' is what a caller writes as
+// 'u_xtpl_map'. Declaring 'User Function u_xtpl_map' would make it
+// 'U_u_xtpl_map', which is not what anything calls.
+//
+// USER FUNCTION, not Function: the Protheus compiler rejects a bare
+// 'Function' outright --
+//
+//   Regular functions are not allowed in code. Use USER FUNCTION or
+//   STATIC FUNCTION.
+//
+// and Static is not an option either, since a static function is visible only
+// inside its own compilation unit and generated files elsewhere would fail to
+// link. So every one of these is a User Function, and the names carry the u_
+// prefix that goes with it.
+// --------------------------------------------------------------------------------
+
+User Function xtpl_map(aData, bExpr)
+  Local aRes := Array(Len(aData))
+  Local nX
+  For nX := 1 To Len(aData)
+    aRes[nX] := Eval(bExpr, aData[nX])
+  Next
+Return aRes
+
+User Function xtpl_filter(aData, bCond)
+  Local aRes := {}
+  Local nX
+  For nX := 1 To Len(aData)
+    If Eval(bCond, aData[nX])
+      AAdd(aRes, aData[nX])
+    EndIf
+  Next
+Return aRes
+
+User Function xtpl_reject(aData, bBlock)
+  Local aRes := {}
+  Local nX, xItem
+  For nX := 1 To Len(aData)
+    xItem := aData[nX]
+    If !Eval(bBlock, xItem)
+      AAdd(aRes, xItem)
+    EndIf
+  Next
+Return aRes
+
+User Function xtpl_reduce(aData, bBlock, xInit)
+  Local xAcc := xInit
+  Local nX
+  For nX := 1 To Len(aData)
+    xAcc := Eval(bBlock, xAcc, aData[nX])
+  Next
+Return xAcc
+
+// Seedless fold: starts from the first element. Used by [max], [min], [-]
+// and [/], which have no neutral value. Nil for an empty array, so the
+// caller never indexes into nothing.
+User Function xtpl_fold(aData, bBlock)
+  Local xAcc, nX
+  If Len(aData) == 0
+    Return Nil
+  EndIf
+  xAcc := aData[1]
+  For nX := 2 To Len(aData)
+    xAcc := Eval(bBlock, xAcc, aData[nX])
+  Next
+Return xAcc
+
+// Both arguments are code blocks so the fallback is only evaluated on error.
+User Function xtpl_safe_pipe(bBlock, bFallback)
+  Local xResult
+  Local bOld := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    xResult := Eval(bBlock)
+  RECOVER
+    xResult := Eval(bFallback)
+  END SEQUENCE
+  ErrorBlock(bOld)
+Return xResult
+
+// Folds with a fixed operator. Named with the 'a' prefix of aScan and aSort
+// because plain max/min would capture AdvPL's own two-argument Max and Min.
+User Function xtpl_asum(aData)
+  Local nAcc := 0
+  Local nX
+  For nX := 1 To Len(aData)
+    nAcc += aData[nX]
+  Next
+Return nAcc
+
+User Function xtpl_aprod(aData)
+  Local nAcc := 1
+  Local nX
+  For nX := 1 To Len(aData)
+    nAcc *= aData[nX]
+  Next
+Return nAcc
+
+// Nil for an empty array: there is no neutral value to start from.
+User Function xtpl_amax(aData)
+  Local xAcc, nX
+  If Len(aData) == 0
+    Return Nil
+  EndIf
+  xAcc := aData[1]
+  For nX := 2 To Len(aData)
+    xAcc := Max(xAcc, aData[nX])
+  Next
+Return xAcc
+
+User Function xtpl_amin(aData)
+  Local xAcc, nX
+  If Len(aData) == 0
+    Return Nil
+  EndIf
+  xAcc := aData[1]
+  For nX := 2 To Len(aData)
+    xAcc := Min(xAcc, aData[nX])
+  Next
+Return xAcc
+
+// Membership. '$' only searches a string, so an array needs this.
+User Function xtpl_in(xValue, aData)
+Return aScan(aData, xValue) > 0
+
+User Function xtpl_take(aData, nCount)
+  Local nLen := Min(Len(aData), Max(0, nCount))
+  Local aRes := Array(nLen)
+  Local nX
+  For nX := 1 To nLen
+    aRes[nX] := aData[nX]
+  Next
+Return aRes
+
+User Function xtpl_drop(aData, nCount)
+  Local nLen := Len(aData)
+  Local nSkip := Min(nLen, Max(0, nCount))
+  Local nKeep := nLen - nSkip
+  Local aRes := Array(nKeep)
+  Local nX
+  For nX := 1 To nKeep
+    aRes[nX] := aData[nSkip + nX]
+  Next
+Return aRes
+
+User Function xtpl_distinct(aData)
+  Local aRes := {}
+  Local nX, nY, lFound
+  For nX := 1 To Len(aData)
+    lFound := .F.
+    For nY := 1 To Len(aRes)
+      If aRes[nY] == aData[nX]
+        lFound := .T.
+        Exit
+      EndIf
+    Next
+    If !lFound
+      AAdd(aRes, aData[nX])
+    EndIf
+  Next
+Return aRes
+
+// Copies first: every other function here leaves its input alone, and aSort
+// would otherwise reorder the caller's array -- and inside a '=>' chain, the
+// array feeding this stage.
+User Function xtpl_sort(aData, bCompare)
+  Local aRes := AClone(aData)
+  If bCompare == Nil
+    aSort(aRes)
+  Else
+    aSort(aRes, , , bCompare)
+  EndIf
+Return aRes
+
+// Sorts by an extracted key rather than a comparator, which is both the
+// commoner case and the harder one to get backwards.
+User Function xtpl_sortby(aData, bKey, lDesc)
+  Local aRes := AClone(aData)
+  lDesc := Iif(lDesc == Nil, .F., lDesc)
+  If lDesc
+    aSort(aRes, , , {|x, y| Eval(bKey, x) > Eval(bKey, y)})
+  Else
+    aSort(aRes, , , {|x, y| Eval(bKey, x) < Eval(bKey, y)})
+  EndIf
+Return aRes
+
+User Function xtpl_reverse(aData)
+  Local nLen := Len(aData)
+  Local aRes := Array(nLen)
+  Local nX
+  For nX := 1 To nLen
+    aRes[nX] := aData[nLen - nX + 1]
+  Next
+Return aRes
+
+// Recursive: nested arrays are flattened all the way down, not one level.
+User Function xtpl_flatten(aData)
+  Local aRes := {}
+  Local nX, nY, xSub, aInner
+  For nX := 1 To Len(aData)
+    xSub := aData[nX]
+    If ValType(xSub) == "A"
+      aInner := u_xtpl_flatten(xSub)
+      For nY := 1 To Len(aInner)
+        AAdd(aRes, aInner[nY])
+      Next
+    Else
+      AAdd(aRes, xSub)
+    EndIf
+  Next
+Return aRes
+
+User Function xtpl_enumerate(aData)
+  Local nLen := Len(aData)
+  Local aRes := Array(nLen)
+  Local nX
+  For nX := 1 To nLen
+    aRes[nX] := { nX, aData[nX] }
+  Next
+Return aRes
+
+User Function xtpl_chunks(aData, nSize)
+  Local aRes := {}
+  Local nLen := Len(aData)
+  Local nX, nY, aChunk
+  If nSize <= 0
+    Return aRes
+  EndIf
+  nX := 1
+  While nX <= nLen
+    aChunk := {}
+    For nY := 0 To nSize - 1
+      If nX + nY <= nLen
+        AAdd(aChunk, aData[nX + nY])
+      EndIf
+    Next
+    AAdd(aRes, aChunk)
+    nX += nSize
+  EndDo
+Return aRes
+
+// Left side arrives already evaluated, right side stays a block, so the
+// fallback only runs when it is needed. Used by the '?:' translation, which
+// has no way to bind a temp the way the transpiler does.
+User Function xtpl_elvis(xValue, bElse)
+Return Iif(xValue != Nil, xValue, Eval(bElse))
+
+// Takes two to six arrays, with an optional combiner block in any position.
+// Stops at the shortest input, discarding the tails of the longer ones.
+User Function xtpl_zip(xA, xB, xC, xD, xE, xF)
+  Local aArgs := {xA, xB, xC, xD, xE, xF}
+  Local aLists := {}
+  Local bWith := Nil
+  Local aRes := {}
+  Local nX, nY, nLen, nCount, aRow
+
+  For nX := 1 To Min(PCount(), 6)
+    If ValType(aArgs[nX]) == "B"
+      bWith := aArgs[nX]
+    ElseIf ValType(aArgs[nX]) == "A"
+      AAdd(aLists, aArgs[nX])
+    EndIf
+  Next
+
+  nCount := Len(aLists)
+  If nCount == 0
+    Return aRes
+  EndIf
+
+  nLen := Len(aLists[1])
+  For nX := 2 To nCount
+    nLen := Min(nLen, Len(aLists[nX]))
+  Next
+
+  For nX := 1 To nLen
+    aRow := Array(nCount)
+    For nY := 1 To nCount
+      aRow[nY] := aLists[nY][nX]
+    Next
+    If bWith == Nil
+      AAdd(aRes, aRow)
+    Else
+      // Eval takes a fixed argument count, so the arity is spelled out.
+      Do Case
+        Case nCount == 2 ; AAdd(aRes, Eval(bWith, aRow[1], aRow[2]))
+        Case nCount == 3 ; AAdd(aRes, Eval(bWith, aRow[1], aRow[2], aRow[3]))
+        Case nCount == 4 ; AAdd(aRes, Eval(bWith, aRow[1], aRow[2], aRow[3], aRow[4]))
+        Case nCount == 5 ; AAdd(aRes, Eval(bWith, aRow[1], aRow[2], aRow[3], aRow[4], aRow[5]))
+        Case nCount == 6 ; AAdd(aRes, Eval(bWith, aRow[1], aRow[2], aRow[3], aRow[4], aRow[5], aRow[6]))
+        Otherwise        ; AAdd(aRes, Eval(bWith, aRow[1]))
+      EndCase
+    EndIf
+  Next
+Return aRes
+
+// --------------------------------------------------------------------------------
+// Hashes.
+//
+// THashMap:List() fills an array by reference with one row per entry. The
+// documentation does not spell out the columns; a worked example concatenates
+// aList[3][1] onto a string, which only compiles if column 1 is character --
+// and in that example every key is a string while the values include .T., a
+// date and a number. So column 1 is the key and column 2 the value.
+//
+// That is an inference from an example rather than something documented,
+// which is why keys() and values() both go through here: if it turns out to
+// be the other way round, this is the only function to correct.
+// --------------------------------------------------------------------------------
+
+User Function xtpl_pairs(oHash)
+  Local aList := {}
+  oHash:List(@aList)
+Return aList
+
+User Function xtpl_keys(oHash)
+  Local aList := u_xtpl_pairs(oHash)
+  Local aRes := Array(Len(aList))
+  Local nX
+  For nX := 1 To Len(aList)
+    aRes[nX] := aList[nX][1]
+  Next
+Return aRes
+
+User Function xtpl_values(oHash)
+  Local aList := u_xtpl_pairs(oHash)
+  Local aRes := Array(Len(aList))
+  Local nX
+  For nX := 1 To Len(aList)
+    aRes[nX] := aList[nX][2]
+  Next
+Return aRes
+
+// takewhile stops at the first element that fails and looks no further --
+// which is what separates it from filter. Over an ordered source that is the
+// point: the rest is known not to match.
+User Function xtpl_takewhile(aData, bCond)
+  Local aRes := {}
+  Local nX
+  For nX := 1 To Len(aData)
+    If !Eval(bCond, aData[nX])
+      Exit
+    EndIf
+    AAdd(aRes, aData[nX])
+  Next
+Return aRes
+
+// dropwhile skips the leading run and then passes everything, including
+// elements that would have matched.
+User Function xtpl_dropwhile(aData, bCond)
+  Local aRes := {}
+  Local lDrop := .T.
+  Local nX
+  For nX := 1 To Len(aData)
+    If lDrop .And. Eval(bCond, aData[nX])
+      Loop
+    EndIf
+    lDrop := .F.
+    AAdd(aRes, aData[nX])
+  Next
+Return aRes
+
+// Groups CONSECUTIVE elements sharing a key -- it cuts the sequence where the
+// key changes rather than gathering scattered matches, which is what lets it
+// work in one pass and hold only one group at a time. Over unsorted input it
+// will happily return the same key more than once.
+User Function xtpl_chunkby(aData, bKey)
+  Local aRes := {}
+  Local aChunk := {}
+  Local xLast, xKey, lFirst := .T.
+  Local nX
+  For nX := 1 To Len(aData)
+    xKey := Eval(bKey, aData[nX])
+    If lFirst
+      lFirst := .F.
+      xLast := xKey
+    ElseIf !(xKey == xLast)
+      AAdd(aRes, aChunk)
+      aChunk := {}
+      xLast := xKey
+    EndIf
+    AAdd(aChunk, aData[nX])
+  Next
+  If !lFirst
+    AAdd(aRes, aChunk)
+  EndIf
+Return aRes
+
+// The first match, or Nil. Stops there -- unlike filter, which keeps going to
+// find matches nobody asked for.
+User Function xtpl_first(aData, bCond)
+  Local nX
+  For nX := 1 To Len(aData)
+    If Eval(bCond, aData[nX])
+      Return aData[nX]
+    EndIf
+  Next
+Return Nil
+
+// How many match, without building the array of them first. With no condition
+// it is just the length, which is what makes it usable at the end of a walk
+// over something that has no length until it has been read.
+User Function xtpl_count(aData, bCond)
+  Local nCount := 0
+  Local nX
+  If bCond == Nil
+    Return Len(aData)
+  EndIf
+  For nX := 1 To Len(aData)
+    If Eval(bCond, aData[nX])
+      nCount++
+    EndIf
+  Next
+Return nCount
+
+// Adjacent duplicates only: it compares each element against the previous,
+// where distinct compares against everything kept so far. It compares each element against the previous, so it is one pass
+// and holds one value, where distinct compares against everything kept so far.
+// Over unsorted input the two give different answers, and this is the one
+// that matches the name it borrows.
+User Function xtpl_distinctadjacent(aData, bKey)
+  Local aRes := {}
+  Local xLast, xKey, lSeen := .F.
+  Local nX
+  For nX := 1 To Len(aData)
+    xKey := Iif(bKey == Nil, aData[nX], Eval(bKey, aData[nX]))
+    If !lSeen .Or. !(xKey == xLast)
+      lSeen := .T.
+      xLast := xKey
+      AAdd(aRes, aData[nX])
+    EndIf
+  Next
+Return aRes
+
+// The largest ELEMENT by an extracted key, not the largest key. Getting the
+// row itself otherwise means sorting everything to look at one of them.
+User Function xtpl_maxby(aData, bKey)
+  Local xRes, xBest, xKey
+  Local lSeen := .F.
+  Local nX
+  For nX := 1 To Len(aData)
+    xKey := Eval(bKey, aData[nX])
+    If !lSeen .Or. xKey > xBest
+      lSeen := .T.
+      xBest := xKey
+      xRes := aData[nX]
+    EndIf
+  Next
+Return xRes
+
+User Function xtpl_minby(aData, bKey)
+  Local xRes, xBest, xKey
+  Local lSeen := .F.
+  Local nX
+  For nX := 1 To Len(aData)
+    xKey := Eval(bKey, aData[nX])
+    If !lSeen .Or. xKey < xBest
+      lSeen := .T.
+      xBest := xKey
+      xRes := aData[nX]
+    EndIf
+  Next
+Return xRes
+
+// reduce that keeps its working: the accumulator after every element rather
+// than only the last. A running balance is the reason it exists.
+User Function xtpl_scan(aData, bBlock, xInit)
+  Local aRes := Array(Len(aData))
+  Local xAcc := xInit
+  Local nX
+  For nX := 1 To Len(aData)
+    xAcc := Eval(bBlock, xAcc, aData[nX])
+    aRes[nX] := xAcc
+  Next
+Return aRes
+
+// One element becomes however many the block returns. The inverse of filter,
+// which turns one into zero or one.
+User Function xtpl_expand(aData, bBlock)
+  Local aRes := {}
+  Local aInner
+  Local nX, nY
+  For nX := 1 To Len(aData)
+    aInner := Eval(bBlock, aData[nX])
+    For nY := 1 To Len(aInner)
+      AAdd(aRes, aInner[nY])
+    Next
+  Next
+Return aRes
+
+// Runs the block for its effect and hands the element back untouched, so a
+// chain can be looked into without being taken apart.
+User Function xtpl_tap(aData, bBlock)
+  Local nX
+  For nX := 1 To Len(aData)
+    Eval(bBlock, aData[nX])
+  Next
+Return aData
+
+// Each element with the one before it. The first has no predecessor and
+// produces nothing, so n elements give n-1 pairs.
+User Function xtpl_pairwise(aData)
+  Local aRes := {}
+  Local nX
+  For nX := 2 To Len(aData)
+    AAdd(aRes, {aData[nX - 1], aData[nX]})
+  Next
+Return aRes
+
+// Predicates over a collection. They stop at the first answer, which is the
+// whole point -- asking whether any row is unpaid should not read the rest of
+// the rows once one is found.
+User Function xtpl_anyof(aData, bCond)
+  Local nX
+  For nX := 1 To Len(aData)
+    If Eval(bCond, aData[nX])
+      Return .T.
+    EndIf
+  Next
+Return .F.
+
+User Function xtpl_allof(aData, bCond)
+  Local nX
+  For nX := 1 To Len(aData)
+    If !Eval(bCond, aData[nX])
+      Return .F.
+    EndIf
+  Next
+Return .T.
+
+User Function xtpl_noneof(aData, bCond)
+  Local nX
+  For nX := 1 To Len(aData)
+    If Eval(bCond, aData[nX])
+      Return .F.
+    EndIf
+  Next
+Return .T.
+
+// --------------------------------------------------------------------------------
+// Strings.
+//
+// Only what AdvPL does not already have. Upper, Lower, AllTrim, PadL, PadR,
+// StrTran and the rest are one-argument-first functions already, so they
+// compose with '|>' as they stand -- 'cNome |> alltrim |> upper' needs
+// nothing from here, and wrapping them would only shadow the originals.
+// --------------------------------------------------------------------------------
+
+// Splits on a separator of any length. An empty separator would loop, so it
+// returns the whole string rather than pretending.
+User Function xtpl_split(cText, cSep)
+  Local aRes := {}
+  Local nAt, nWidth
+  If Empty(cSep)
+    Return {cText}
+  EndIf
+  nWidth := Len(cSep)
+  nAt := At(cSep, cText)
+  While nAt > 0
+    AAdd(aRes, SubStr(cText, 1, nAt - 1))
+    cText := SubStr(cText, nAt + nWidth)
+    nAt := At(cSep, cText)
+  EndDo
+  AAdd(aRes, cText)
+Return aRes
+
+User Function xtpl_join(aParts, cSep)
+  Local cRes := ""
+  Local nX
+  cSep := Iif(cSep == Nil, "", cSep)
+  For nX := 1 To Len(aParts)
+    cRes += Iif(nX == 1, "", cSep) + cValToChar(aParts[nX])
+  Next
+Return cRes
+
+User Function xtpl_starts(cText, cWhat)
+Return Len(cWhat) <= Len(cText) .And. SubStr(cText, 1, Len(cWhat)) == cWhat
+
+User Function xtpl_ends(cText, cWhat)
+Return Len(cWhat) <= Len(cText) .And. Right(cText, Len(cWhat)) == cWhat
+
+// '$' reads backwards -- needle first -- which is the usual way to get it
+// wrong. This one takes the collection first, like everything else here.
+User Function xtpl_contains(cText, cWhat)
+Return cWhat $ cText
+
+// --------------------------------------------------------------------------------
+// A queue.
+//
+// The one data structure worth adding: AdvPL arrays are already dynamic, so a
+// stack is AAdd plus ATail plus aSize and a linked list buys nothing, but
+// taking from the FRONT of an array means ADel then aSize -- which moves
+// every remaining element, once per pop, and is easy to get subtly wrong.
+//
+// A ring buffer instead: head and tail chase each other around a fixed array
+// that doubles when it fills, so a pop moves nothing.
+//
+// The name is taken, like the runtime verbs. A class of your own called
+// XtplQueue would collide.
+// --------------------------------------------------------------------------------
+
+Class XtplQueue
+  // PUBLIC on every one of them. Without it a method is private to the class
+  // and calling it from outside fails at RUN time, not at compile time:
+  //   Invalid call to a PRIVATE method named NEW on XTPLQUEUE:NEW
+  // Grow() stays private, since nothing outside has business calling it.
+  Public Data aBuf
+  Public Data nHead
+  Public Data nTail
+  Public Data nUsed
+
+  Public Method New(nSize) Constructor
+  Public Method Push(xItem)
+  Public Method Pop()
+  Public Method Peek()
+  Public Method Count()
+  Public Method IsEmpty()
+  Method Grow()
+EndClass
+
+Method New(nSize) Class XtplQueue
+  Default nSize := 16
+  ::aBuf  := Array(Max(1, nSize))
+  ::nHead := 1
+  ::nTail := 0
+  ::nUsed := 0
+Return Self
+
+Method Push(xItem) Class XtplQueue
+  If ::nUsed == Len(::aBuf)
+    ::Grow()
+  EndIf
+  ::nTail := Iif(::nTail == Len(::aBuf), 1, ::nTail + 1)
+  ::aBuf[::nTail] := xItem
+  ::nUsed += 1
+Return Self
+
+// Nil when there is nothing to take. Ask IsEmpty() first if Nil is a value
+// you might legitimately have queued.
+Method Pop() Class XtplQueue
+  Local xItem
+  If ::nUsed == 0
+    Return Nil
+  EndIf
+  xItem := ::aBuf[::nHead]
+  // Released, or the buffer keeps the object alive after it has been taken.
+  ::aBuf[::nHead] := Nil
+  ::nHead := Iif(::nHead == Len(::aBuf), 1, ::nHead + 1)
+  ::nUsed -= 1
+Return xItem
+
+Method Peek() Class XtplQueue
+  If ::nUsed == 0
+    Return Nil
+  EndIf
+Return ::aBuf[::nHead]
+
+Method Count() Class XtplQueue
+Return ::nUsed
+
+Method IsEmpty() Class XtplQueue
+Return ::nUsed == 0
+
+// Doubles, unrolling the ring so the copy starts at 1 again.
+Method Grow() Class XtplQueue
+  Local aBigger := Array(Len(::aBuf) * 2)
+  Local nX, nAt
+  For nX := 1 To ::nUsed
+    nAt := ::nHead + nX - 1
+    If nAt > Len(::aBuf)
+      nAt -= Len(::aBuf)
+    EndIf
+    aBigger[nX] := ::aBuf[nAt]
+  Next
+  ::aBuf  := aBigger
+  ::nHead := 1
+  ::nTail := ::nUsed
+Return Self
+
+User Function xtpl_queue(nSize)
+Return XtplQueue():New(nSize)
+
+// --------------------------------------------------------------------------------
+// the end

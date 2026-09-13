@@ -1,0 +1,53 @@
+// 03_pinning.xtpl -- pinning is decided per declaration, not per name
+//
+// Two blocks may each declare a variable called aTmp. They are different
+// variables that never coexist, so one of them escaping says nothing about
+// the other. Each declaration is checked only against the lines its own
+// variable is live for.
+// --------------------------------------------------------------------------------
+
+user function testPinning(lFlag)
+  local aKeep := {}
+  local nTotal := 0
+
+  // ESCAPES -- keepIt receives this aTmp and may hold it past the block,
+  // so this declaration gets private storage.
+  if nTotal > 0
+    local aTmp := {}
+    aadd(aTmp, "handed over")
+    keepIt(aKeep, aTmp)
+  endif
+
+  // CONTAINED -- a different variable that happens to share the name.
+  // Built and read in place, so it takes a shared slot.
+  if nTotal > 0
+    local aTmp := {}
+    aadd(aTmp, "stays home")
+    conout("rows: " + cValToChar(len(aTmp)))
+  endif
+
+  // CONTAINED -- same usage under a different name, to show the two agree.
+  if nTotal > 0
+    local aOther := {}
+    aadd(aOther, "stays home")
+    conout("rows: " + cValToChar(len(aOther)))
+  endif
+
+  // The name is reused a third time inside a loop, still contained.
+  for local i := 1 to 3
+    local aTmp := {}
+    aadd(aTmp, i)
+    conout("pass " + cValToChar(len(aTmp)))
+  next
+
+  // A value variable named like the escaping one is unaffected either way,
+  // since values are copied when passed.
+  if nTotal > 0
+    local cTmp := "value"
+    keepIt(aKeep, cTmp)
+  endif
+
+  return aKeep
+
+// --------------------------------------------------------------------------------
+// the end

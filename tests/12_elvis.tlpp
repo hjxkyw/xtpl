@@ -1,0 +1,63 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 12_elvis.tlpp -- the '?:' operator
+//
+// 'a ?: b' yields a when a is not Nil, otherwise b. The left side is bound to
+// a temp first, so it is evaluated exactly once even though the result
+// mentions it twice.
+// --------------------------------------------------------------------------------
+
+user function testElvis(oUser)
+
+  Local cName
+  Local cPick
+  Local nPort
+  Local cCity
+  Local aItems
+
+  Local __elvis_tmp_0_0
+
+
+  // Two operands: compact form.
+  __elvis_tmp_0_0 := lookupName(1)
+  cName := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, "anonymous")
+  conout("name: " + cName)
+
+  // Chained: each fallback runs only if the one before came back Nil.
+  __elvis_tmp_0_0 := firstChoice()
+  If __elvis_tmp_0_0 == Nil
+    __elvis_tmp_0_0 := secondChoice()
+    If __elvis_tmp_0_0 == Nil
+      __elvis_tmp_0_0 := thirdChoice()
+      If __elvis_tmp_0_0 == Nil
+        __elvis_tmp_0_0 := "last resort"
+      EndIf
+    EndIf
+  EndIf
+  cPick := __elvis_tmp_0_0
+  conout("pick: " + cPick)
+
+  // The fallback can be any expression, including a call with arguments.
+  __elvis_tmp_0_0 := readPort()
+  nPort := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, defaultPort(8080))
+  conout("port: " + cValToChar(nPort))
+
+  // Combines with optional chaining: a missing object yields the fallback.
+  __elvis_tmp_0_0 := If(oUser != Nil, oUser:cCity, Nil)
+  cCity := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, "unknown")
+  conout("city: " + cCity)
+
+  // Works as a plain expression too, not only on the right of ':='.
+  aItems := {}
+  __elvis_tmp_0_0 := loadItem(1)
+  If __elvis_tmp_0_0 == Nil
+    __elvis_tmp_0_0 := "placeholder"
+  EndIf
+  aadd(aItems,__elvis_tmp_0_0)
+  conout("items: " + cValToChar(len(aItems)))
+
+  return cName
+
+// --------------------------------------------------------------------------------
+// the end

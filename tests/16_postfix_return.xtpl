@@ -1,0 +1,26 @@
+// 16_postfix_return.xtpl -- the shapes of a postfix return.
+//
+// 'return(x) if c' is a return, not a plain statement that happens to start
+// with the word. Getting that wrong loses the pending defers, and the line
+// reached the output untouched.
+// --------------------------------------------------------------------------------
+
+user function testPostfixReturn(nX, lSkip)
+  local nTotal := 0
+
+  defer closeCursor()
+
+  return(nTotal) if nX > 100         // parenthesised, no space
+  return nTotal if nX > 50           // the ordinary form
+  return if lSkip                    // bare
+
+  nTotal := 1
+  while nTotal < 10
+    nTotal := nTotal + 1
+    exit if nX == 0                  // not a block word: still a modifier
+  enddo
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

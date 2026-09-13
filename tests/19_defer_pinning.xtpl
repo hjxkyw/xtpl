@@ -1,0 +1,25 @@
+// 19_defer_pinning.xtpl -- a defer keeps its variable alive.
+//
+// A deferred body runs at an exit from the function, long after the block
+// holding the variable has gone. Recycling that slot to a sibling block in
+// between left the defer reading whatever the sibling had put there -- and
+// the origin comment still said the original name.
+// --------------------------------------------------------------------------------
+
+user function testDeferPinning(nX)
+  local nT := 0
+
+  if nX > 0
+    local nA := 5
+    defer logIt(nA)                   // captured: nA gets private storage
+  endif
+
+  if nX > 0
+    local cB := "sibling"             // would have taken the same slot
+    nT := len(cB)
+  endif
+
+  return nT
+
+// --------------------------------------------------------------------------------
+// the end

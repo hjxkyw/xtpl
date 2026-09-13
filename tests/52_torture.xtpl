@@ -1,0 +1,48 @@
+// 52_torture.xtpl -- constructs that meet each other in unusual ways.
+//
+// Written adversarially rather than to demonstrate anything: nested walks,
+// chains inside arguments and conditions, comments and continuations cutting
+// constructs in half, and a source inside a defer. Six bugs came out of
+// writing it, and each line below is one of the shapes that found one.
+// --------------------------------------------------------------------------------
+
+user function testTorture(hCfg, cNum, aRows, cPath, nX)
+  local nT := 0
+  local aOut := {}
+  local cMsg := ""
+  local aQ := {}
+  local aX := {}
+
+  defer conout("saindo")
+
+  // a string literal inside an interpolated expression
+  cMsg := "moeda ${hCfg{'moeda'}} fim"
+
+  // nested using, both restored at an early return, with a hash in the key
+  using alias SA1 order 1 do
+    using alias SC6 order 2 do
+      aOut := rows("SC6", hCfg{"chave"}) ;   // split mid-chain
+              |> takewhile([r] r:C6_NUM == cNum) ; /* and a block comment */
+              |> map([r] r:C6_PRODUTO) ;
+              |> distinctAdjacent
+      return len(aOut) if hCfg{"parar"}
+      nT := SA1->A1_SALDO + SC6->C6_QUANT
+    end using
+  end using
+
+  // a chain inside a stage's own argument
+  aX := aRows |> take(len(aRows |> distinct)) |> map([r] r:cCod)
+
+  // a terminal that is not the last stage
+  aQ := aRows |> expand([r] r:aItens) |> chunkby([i] i:cGrupo) |> map([g] len(g))
+
+  // two chains on one line, and one in a postfix condition
+  nT := nT + len(aRows |> distinct) + len(aRows |> reverse)
+  nT := 99 if len(aRows |> distinct) > 3
+
+  conout(cMsg + cValToChar(len(aX)) + cValToChar(len(aQ)))
+
+  return nT
+
+// --------------------------------------------------------------------------------
+// the end

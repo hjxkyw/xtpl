@@ -1,0 +1,84 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 04_const.tlpp -- <const>, and what it does not promise
+//
+// <const> fixes the BINDING. For a scalar that is full immutability, because
+// the value is the binding. For an array or object it is shallow: the name
+// cannot be pointed somewhere else, but the contents are still open -- the
+// same guarantee as const in JavaScript or final in Java.
+// --------------------------------------------------------------------------------
+
+user function testConst(aH)
+
+  Local nLimite := 1000
+  Local cAlias := "SA1"
+  Local aTaxas := {10, 20, 30}
+  // <const> fixes the name, not the contents: a callee given this array can still change its elements
+  Local nTotal := 0
+
+  Local __stk_1_nBase
+  Local __stk_1_nContador
+
+
+  // reading is what a const is for
+  nTotal := nLimite * 2
+  conout(cAlias + ": " + cValToChar(aTaxas[1]))
+
+  // element assignment is allowed: the name is protected, not the contents
+  aTaxas[1] := 15
+
+  // passing is allowed too, and the callee could change the elements
+  recalcula(aTaxas)
+
+  // a code block may read a const -- only a write would be a violation,
+  // and a write is visible in the source
+  aadd(aH, {|| nLimite * 2})
+
+  // an attribute list, and a const beside an ordinary declarator
+  if nTotal > 0
+    let nBase as __stk_1_nBase
+    let nContador as __stk_1_nContador
+    !nBase^1! := 50
+    !nContador^1! := Nil
+    !nContador^1! := !nBase^1! + 1
+    conout(cValToChar(!nContador^1!))
+  endif
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// Rejected at compile time:
+//
+//   nLimite := 2000            assignment
+//   nLimite ?= 500             '?=' assigns too
+//   recalcula(@nLimite)        the callee could write through the reference
+//   local nOutro <const>       a const with no value can never be given one
+//
+// Warned about, because it cannot be checked:
+//
+//   raw @ 1,1 SAY "x" GET nLimite
+//
+// the end

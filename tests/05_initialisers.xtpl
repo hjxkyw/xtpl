@@ -1,0 +1,49 @@
+// 05_initialisers.xtpl -- xtpl constructs in declarations and headers.
+//
+// Declarations and block headers are handled by branches that return to the
+// top of the main loop before the expression passes run, so their values used
+// to reach the undeclared-name check with nothing rewritten: '|>' reported
+// its verb as an undeclared function, '?.' reported the member, 'fallback'
+// reported itself, and 'h{key}', '?:', 'in' and '%%' were emitted with their
+// own syntax intact. They all go through the same passes now.
+// --------------------------------------------------------------------------------
+
+user function testInitialisers(aNums, hCfg, cC, aC, oUser, nX, aRows, oModel)
+  local nA := hCfg{"id"}                  // a hash read lifts a Get above it
+  local nB := aNums |> distinct |> asum   // a chain, one temp per stage
+  local cD := lookupName(1) ?: "anon"     // elvis
+  local lE := nX %% 3                     // divisible-by
+  local lF := cC in aC                    // membership
+  local cG := oUser?.oA?.cB               // optional chaining
+  local nH := riskyCall(1) fallback 0     // guarded
+  local hM := {"a" => 1}                  // a literal, with a comment after it
+  local nT := 0
+
+  for oIt in aRows |> distinct       // a chain in the source
+    nT := nT + oIt:nValue
+  next
+
+  for hCfg{"n"} times                     // a hash read in the count
+    nT := nT + 1
+  next
+
+  if local nS := aNums |> asum, nS > 0    // a chain in a conditional binding
+    nT := nT + nS
+  endif
+
+  do case with local nD := aNums |> amax  // and in a do-case subject
+    case nD > 5
+      nT := 1
+  endcase
+
+  with object oModel:GetModel(hCfg{"id"}) // and in a with-object subject
+    :SetValue("A1_COD", nT)
+  end with
+
+  conout(cValToChar(nA + nB + nH + len(hM)) + cD + cG)
+  conout(cValToChar(lE) + cValToChar(lF))
+
+  return nT
+
+// --------------------------------------------------------------------------------
+// the end

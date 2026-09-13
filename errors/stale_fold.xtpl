@@ -1,0 +1,4 @@
+user function v(a)
+  local n := 0
+  n := [+]a
+  return n

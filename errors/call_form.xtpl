@@ -1,0 +1,23 @@
+// call_form.xtpl -- chamar uma static com o prefixo 'u_'.
+//
+// O compilador poe o 'U_' na declaracao de uma User Function, entao ela e
+// alcancada como 'u_nome'. Uma Static Function e chamada pelo nome simples.
+// Trocar os dois compila, linka, e so falha rodando:
+//
+//   InterFunctionCall: cannot find function U_AJUDA in AppMap
+//
+// O xtpl ja sabe como cada funcao do arquivo foi declarada, entao confere.
+// --------------------------------------------------------------------------------
+
+user function callForm(nX)
+  local nTotal := 0
+
+  nTotal := u_ajuda(nX)
+
+  return nTotal
+
+static function ajuda(nX)
+  return nX + 1
+
+// --------------------------------------------------------------------------------
+// the end

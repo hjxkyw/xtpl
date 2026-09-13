@@ -1,0 +1,32 @@
+// 45_foreach_lines.xtpl -- 'for' over the lines of a file.
+//
+// This works where 'for' over rows() would not: the element here IS a
+// value -- the line -- so it binds to a name in the ordinary way and the body
+// needs no rewriting. A work-area record is not a value, which is why the
+// same shape was refused there.
+//
+// FT_FSkip() sits straight after the read rather than at the foot of the
+// loop. The body is the programmer's, so it may contain a 'Loop', and a Loop
+// over a skip at the foot would never advance the file.
+//
+// Closing the file is an exit-path job, like restoring a work area: an early
+// return has to close it too.
+// --------------------------------------------------------------------------------
+
+user function testForeachLines(cPath)
+  local nTotal := 0
+
+  for cLinha, nNumero in lines(cPath)
+    if empty(cLinha)
+      loop                            // safe: the file has already advanced
+    endif
+
+    nTotal := nTotal + len(cLinha)
+
+    return nNumero if nTotal > 1000   // closes the file on the way out
+  next
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

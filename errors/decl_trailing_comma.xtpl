@@ -1,0 +1,13 @@
+// decl_trailing_comma.xtpl -- a stray comma ends a declarator list.
+//
+// 'local a := 1,' is a typo, not a list of one. A real continuation is
+// written with a trailing ';'.
+// --------------------------------------------------------------------------------
+
+user function declTrailingComma()
+  local nA := 1,
+
+  return nA
+
+// --------------------------------------------------------------------------------
+// the end

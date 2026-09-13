@@ -1,0 +1,47 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 08_returns.tlpp -- a value on one path, nothing on another.
+//
+// The caller gets Nil and finds out somewhere else and later. AdvPL says
+// nothing about it.
+// --------------------------------------------------------------------------------
+
+user function comValor(nX)
+
+  Local nT := 0
+
+
+
+  if nX > 5
+    return nT
+  endif
+
+  return  // returns nothing on this path
+
+user function caiNoFim(nX)
+
+  Local nT := 0
+
+
+
+  if nX > 5
+    return nT
+  endif
+
+  nT := 1  // and reaches the end without returning
+
+user function consistente(nX)
+
+  Local nT := 0
+
+
+
+  if nX > 5
+    return nT
+  endif
+
+  return 0
+
+// --------------------------------------------------------------------------------
+// the end

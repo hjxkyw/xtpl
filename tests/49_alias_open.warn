@@ -1,0 +1,1 @@
+warning: line 30: nothing in this function opened SD1. Wrap the use in 'using alias SD1 do', or declare 'external alias SD1' if the caller opens it.

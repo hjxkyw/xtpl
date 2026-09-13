@@ -1,0 +1,285 @@
+// 55_envtest.xtpl -- rows(), lines(), using alias e raw, contra dados proprios.
+//
+// 54_selftest cobre o que e computacao pura. Estas quatro precisam de
+// ambiente: uma area de trabalho, um arquivo, o pre-processador. Em vez de
+// depender de uma tabela do dicionario, este arquivo CRIA o que precisa, usa,
+// e apaga no fim.
+//
+// Rode com:  appserver.exe -env=SeuAmbiente -run=u_envtest
+//
+//    envtest: 23 ok, 0 falhas
+//
+// Cada bloco e guardado por si, entao uma parte que falhe nao impede as
+// outras de rodar -- a fila no 54_selftest ensinou isso.
+//
+// A tabela se chama ZXTPL e o texto ZXTPL.TXT, nomes que nao devem colidir
+// com nada. Os dois sao apagados no fim, inclusive se algo falhar no meio.
+// --------------------------------------------------------------------------------
+
+#xtranslate ANOTE <x> => envNota(<x>)
+
+external CRLF                      // vem de totvs.ch
+
+// A tabela e aberta por envTabela() e usada pelas outras: e exatamente para
+// isto que 'external alias' existe.
+external alias ZXTPL
+
+user function envtest()
+  local nOk := 0
+  local nBad := 0
+  local aEstr := {}
+  local cDir := ""
+  local nTmp := 0
+  local cTmp := ""
+  local aTmp := {}
+  local lTmp := .F.
+
+  // O comando raw escreve aqui. Uma PRIVATE vive enquanto a funcao que a
+  // declarou estiver na pilha -- declarada num auxiliar que retorna na hora,
+  // ela some antes de alguem ler. Entao e declarada AQUI.
+  private cEnvNota := ""
+
+  cDir := ""
+
+  if !envConecta()
+    return 1
+  endif
+
+  defer envLimpa(cDir)
+
+  // ---- monta a tabela ----------------------------------------------------
+  aadd(aEstr, {"ZX_COD", "C", 3, 0})
+  aadd(aEstr, {"ZX_NOME", "C", 20, 0})
+  aadd(aEstr, {"ZX_VALOR", "N", 10, 2})
+
+  if !envTabela(aEstr)
+    conout("envtest: nao consegui criar a tabela, nada mais pode rodar")
+    return 1
+  endif
+
+  // ---- rows(): percorrer, filtrar, somar ---------------------------------
+  nTmp := rows("ZXTPL") |> map([r] r:ZX_VALOR) |> asum
+  check("rows soma tudo", nTmp == 60, nTmp, @nOk, @nBad)
+
+  nTmp := rows("ZXTPL") |> filter([r] r:ZX_VALOR > 15) |> map([r] r:ZX_VALOR) |> asum
+  check("rows filtra", nTmp == 45, nTmp, @nOk, @nBad)   // 20 + 25
+
+  nTmp := rows("ZXTPL") |> count
+  check("rows conta", nTmp == 4, nTmp, @nOk, @nBad)
+
+  nTmp := rows("ZXTPL") |> count([r] r:ZX_COD == "002")
+  check("rows conta com teste", nTmp == 1, nTmp, @nOk, @nBad)
+
+  aTmp := rows("ZXTPL") |> map([r] alltrim(r:ZX_COD))
+  check("rows na ordem", len(aTmp) == 4 .and. aTmp[1] == "001", len(aTmp), @nOk, @nBad)
+
+  lTmp := rows("ZXTPL") |> anyof([r] r:ZX_VALOR > 20)   // o maior e 25
+  check("rows anyof acha", lTmp, 0, @nOk, @nBad)
+
+  lTmp := rows("ZXTPL") |> anyof([r] r:ZX_VALOR > 999)
+  check("rows anyof nao acha", !lTmp, 0, @nOk, @nBad)
+
+  nTmp := rows("ZXTPL") |> map([r] r:ZX_VALOR) |> take(2) |> asum
+  check("rows para cedo", nTmp == 15, nTmp, @nOk, @nBad)
+
+  nTmp := rows("ZXTPL") |> takewhile([r] r:ZX_VALOR < 20) |> count
+  check("rows takewhile", nTmp == 2, nTmp, @nOk, @nBad)
+
+  // ---- rows() deixa a area como achou ------------------------------------
+  DbSelectArea("ZXTPL")
+  ZXTPL->(DbGoTop())
+  ZXTPL->(DbSkip())
+  nTmp := ZXTPL->(RecNo())
+  aTmp := rows("ZXTPL") |> map([r] r:ZX_COD)
+  check("rows devolve o registro", ZXTPL->(RecNo()) == nTmp, ZXTPL->(RecNo()), @nOk, @nBad)
+
+  // ---- using alias -------------------------------------------------------
+  ZXTPL->(DbGoTop())
+  nTmp := ZXTPL->(RecNo())
+  using alias ZXTPL do
+    ZXTPL->(DbSkip())
+    ZXTPL->(DbSkip())
+  end using
+  check("using devolve o registro", ZXTPL->(RecNo()) == nTmp, ZXTPL->(RecNo()), @nOk, @nBad)
+
+  cTmp := envUsingSai()
+  check("using devolve no return", cTmp == "ZXTPL", cTmp, @nOk, @nBad)
+
+  // ---- lines(): o arquivo texto ------------------------------------------
+  if !envTexto(cDir)
+    conout("envtest: nao consegui escrever o texto")
+  else
+    aTmp := lines(cDir + "ZXTPL.TXT")
+    check("lines le tudo", len(aTmp) == 5, len(aTmp), @nOk, @nBad)
+
+    nTmp := lines(cDir + "ZXTPL.TXT") |> count
+    check("lines conta", nTmp == 5, nTmp, @nOk, @nBad)
+
+    aTmp := lines(cDir + "ZXTPL.TXT") |> filter([l] !empty(l)) |> map([l] alltrim(l))
+    check("lines filtra vazias", len(aTmp) == 4, len(aTmp), @nOk, @nBad)
+
+    aTmp := lines(cDir + "ZXTPL.TXT") |> take(2)
+    check("lines para cedo", len(aTmp) == 2 .and. alltrim(aTmp[1]) == "um", len(aTmp), @nOk, @nBad)
+
+    cTmp := lines(cDir + "ZXTPL.TXT") |> map([l] alltrim(l)) |> first([l] l == "tres")
+    check("lines first", cTmp == "tres", cTmp, @nOk, @nBad)
+
+    // for sobre lines, com loop e return antecipado
+    nTmp := 0
+    for cLinha in lines(cDir + "ZXTPL.TXT")
+      if empty(cLinha)
+        loop
+      endif
+      nTmp := nTmp + 1
+    next
+    check("for sobre lines, com loop", nTmp == 4, nTmp, @nOk, @nBad)
+
+    nTmp := envLinhaAte(cDir, "tres")
+    check("for sobre lines, return", nTmp == 4, nTmp, @nOk, @nBad)  // a vazia conta
+
+    aTmp := lines(cDir + "NAOEXISTE.TXT")
+    check("lines de arquivo ausente", len(aTmp) == 0, len(aTmp), @nOk, @nBad)
+  endif
+
+  // ---- raw ---------------------------------------------------------------
+  envZeraNota()
+  raw ANOTE "de uma linha raw"
+  check("raw de uma linha", envNotaFoi() == "de uma linha raw", envNotaFoi(), @nOk, @nBad)
+
+  envZeraNota()
+  raw
+    ANOTE "de um bloco raw"
+  end raw
+  check("raw em bloco", envNotaFoi() == "de um bloco raw", envNotaFoi(), @nOk, @nBad)
+
+  // uma variavel declarada continua renomeada dentro do raw
+  if .T.
+    local cDentro := "vem do bloco"
+    envZeraNota()
+    raw ANOTE cDentro
+    check("raw renomeia o que e declarado", envNotaFoi() == "vem do bloco", ;
+          envNotaFoi(), @nOk, @nBad)
+  endif
+
+  conout("envtest: " + cValToChar(nOk) + " ok, " + cValToChar(nBad) + " falhas")
+
+return nBad
+
+// --------------------------------------------------------------------------------
+
+static function check(cNome, lOk, xVisto, nOk, nBad)
+  if lOk
+    nOk := nOk + 1
+  else
+    nBad := nBad + 1
+    conout("FALHA  " + cNome + "  (visto: " + cValToChar(xVisto) + ")")
+  endif
+return nil
+
+// A conexao com o banco. Um job iniciado por '-run=' comeca sem nenhuma, e
+// tudo que toca uma tabela falha ate isto rodar.
+static function envConecta()
+  local nErro := TCLink()
+
+  if nErro < 0
+    conout("envtest: TCLink falhou com " + cValToChar(nErro))
+    return .F.
+  endif
+
+return .T.
+
+// Cria a tabela se nao existir, esvazia, e poe quatro linhas em ordem
+// crescente de valor. 'TOPCONN' e obrigatorio no DbCreate; sem ele erra.
+static function envTabela(aEstr)
+
+  if !TCCanOpen("ZXTPL")
+    DbCreate("ZXTPL", aEstr, "TOPCONN")
+  endif
+
+  if !TCCanOpen("ZXTPL")
+    conout("envtest: nao consegui criar ZXTPL")
+    return .F.
+  endif
+
+  DbUseArea(.T., "TOPCONN", "ZXTPL", "ZXTPL", .F., .F.)
+
+  if select("ZXTPL") == 0
+    conout("envtest: ZXTPL nao abriu")
+    return .F.
+  endif
+
+  __DbZap()
+
+  envPoe("001", "primeiro", 5)
+  envPoe("002", "segundo", 10)
+  envPoe("003", "terceiro", 20)
+  envPoe("004", "quarto", 25)
+
+  ZXTPL->(DbGoTop())
+
+return .T.
+
+// DbAppend(.F.) e a forma que funciona aqui; RecLock e do ERP.
+static function envPoe(cCod, cNome, nValor)
+  ZXTPL->(DbAppend(.F.))
+  ZXTPL->ZX_COD := cCod
+  ZXTPL->ZX_NOME := cNome
+  ZXTPL->ZX_VALOR := nValor
+  ZXTPL->(DbCommit())
+return nil
+
+// Cinco linhas, uma delas vazia.
+static function envTexto(cDir)
+  local cTexto := "um" + CRLF + "dois" + CRLF + "" + CRLF + "tres" + CRLF + "quatro"
+return MemoWrite(cDir + "ZXTPL.TXT", cTexto)
+
+// Um return antecipado de dentro de um for sobre lines: o arquivo tem de
+// fechar na saida.
+static function envLinhaAte(cDir, cProcurado)
+  local nOnde := 0
+
+  for cLinha, nNum in lines(cDir + "ZXTPL.TXT")
+    return nNum if alltrim(cLinha) == cProcurado
+  next
+
+return nOnde
+
+// Um return antecipado de dentro de um using: a area tem de voltar.
+static function envUsingSai()
+  local cAntes := alias()
+
+  using alias ZXTPL do
+    ZXTPL->(DbGoTop())
+    return alias()
+  end using
+
+return cAntes
+
+// A nota que o comando raw escreve, guardada numa PRIVATE para o comando
+// poder alcanca-la de onde for.
+// A PRIVATE e de envtest(); aqui so se limpa o que ela guarda.
+static function envZeraNota()
+  cEnvNota := ""
+return nil
+
+// Um 'private' e conhecido no arquivo inteiro, entao nada aqui precisa de
+// 'external' -- e 'external' recusaria a atribuicao de qualquer jeito.
+static function envNota(cTexto)
+  cEnvNota := cTexto
+return nil
+
+static function envNotaFoi()
+return cEnvNota
+
+// Fecha, apaga e desconecta, mesmo se algo falhou no meio.
+static function envLimpa(cDir)
+  if select("ZXTPL") > 0
+    ZXTPL->(DbCloseArea())
+  endif
+  TCDelFile("ZXTPL")
+  FErase(cDir + "ZXTPL.TXT")
+  TCUnlink()
+return nil
+
+// --------------------------------------------------------------------------------
+// the end

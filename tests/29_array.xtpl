@@ -1,0 +1,52 @@
+// 29_array.xtpl -- the runtime's array functions, as ordinary calls
+//
+// Collection first, matching aEval and aScan. A lambda is '[name] body',
+// with up to six names. Every function returns a new array and leaves its
+// input alone. Chaining them is a separate feature; see test_feed.xtpl.
+// --------------------------------------------------------------------------------
+
+user function testArray(aOrders, aNums, aCodes, aDesc)
+  local aVals := {}
+  local aBig := {}
+  local aLive := {}
+  local aPairs := {}
+  local nTotal := 0
+
+  // transform, keep, discard
+  aVals := map(aOrders, [o] o:nValue)
+  aBig  := filter(aOrders, [o] o:nValue > 1000)
+  aLive := reject(aOrders, [o] o:lCancelled)
+
+  // fold with an explicit seed; fold() starts from the first element instead
+  nTotal := reduce(aNums, [acc, x] acc + x, 0)
+  nTotal := fold(aNums, [acc, x] Max(acc, x))
+
+  // slicing and reshaping
+  aVals := take(aNums, 5)
+  aVals := drop(aNums, 2)
+  aVals := chunks(aNums, 3)
+  aVals := reverse(aNums)
+  aVals := flatten(aVals)
+  aVals := enumerate(aNums)
+
+  // distinct keeps the first occurrence and the original order
+  aVals := distinct(aNums)
+
+  // sorting copies first, so aOrders keeps its own order
+  aVals := sort(aNums)
+  aVals := sort(aOrders, [a, b] a:nValue < b:nValue)
+  aVals := sortBy(aOrders, [o] o:nValue)
+  aVals := sortBy(aOrders, [o] o:nValue, .T.)
+
+  // zip takes two to six arrays; a block in any position is the combiner
+  aPairs := zip(aCodes, aDesc)
+  aPairs := zip(aCodes, aDesc, aNums)
+  aPairs := zip(aCodes, aDesc, [c, d] c + " " + d)
+  aPairs := zip(aCodes, aDesc, aNums, [c, d, n] c + d + cValToChar(n))
+
+  conout(cValToChar(len(aBig)) + cValToChar(len(aLive)) + cValToChar(len(aPairs)))
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

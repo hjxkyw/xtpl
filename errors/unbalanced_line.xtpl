@@ -1,0 +1,22 @@
+// unbalanced_line.xtpl -- uma linha continuada sem o ';'.
+//
+// O AdvPL precisa do ';' no fim de uma linha que continua na seguinte. Sem
+// ele, os parenteses nao fecham e o pre-processador reclama muito depois e
+// muito menos claramente:
+//
+//   appre0(440) Error C2002 Statement unterminated at end of line
+//
+// Uma linha cujos parenteses nao fecham nunca pode ser um comando, entao o
+// xtpl recusa na hora e diz o que falta.
+// --------------------------------------------------------------------------------
+
+user function unbalancedLine(nX)
+  local nTotal := 0
+
+  nTotal := minhaFuncao(nX,
+                        nX + 1)
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

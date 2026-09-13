@@ -1,0 +1,1 @@
+warning: line 22: 'fallback' turns off fusion for this chain -- a guard needs an expression and a fused loop is not one, so each stage builds an array again. Guard the part that can fail instead, and leave the chain outside it.

@@ -1,0 +1,73 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 26_raw.tlpp -- handing lines to the AdvPL preprocessor untouched
+//
+// A #command or #xtranslate rewrites syntax, not identifiers, so a line like
+// '@ 10, 5 SAY ... GET ...' is not AdvPL yet -- it becomes AdvPL only after
+// the preprocessor runs, which is after xtpl. 'raw' says: do not try to
+// understand this line.
+//
+// Declared variables are still renamed inside raw, so block locals work.
+// Every other word is left alone instead of being reported as undeclared.
+// --------------------------------------------------------------------------------
+
+#xtranslate MOSTRE <x> QUANDO <c> => If <c> ; conout(<x>) ; EndIf
+#xtranslate ANOTE <x> => conout("nota: " + <x>)
+
+user function testRaw(oDlg)
+
+  Local cNome := ""
+  Local nTotal := 0
+  Local cSql := ""
+
+  Local __blk_1_cAux
+
+
+  // one line
+  MOSTRE cValToChar(nTotal) QUANDO nTotal > 0
+
+  // a block, for a screen or a dialog
+    ANOTE "primeira"
+    ANOTE "segunda"
+
+  // a block local used inside raw: renamed like anywhere else, and pinned,
+  // because GET passes it by reference and the dialog outlives the block
+  if nTotal > 0
+    let cAux as __blk_1_cAux
+    %cAux^1% := ""
+    ANOTE %cAux^1%
+  endif
+
+  // normal xtpl carries on around it
+  nTotal := nTotal + 1
+  cSql := "SELECT * FROM SA1"
+
+  conout(cSql)
+
+  return cNome
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,3 @@
+warning: line 24: 'SA1->A1_NMOE' is not a field of SA1. Did you mean A1_NOME?
+warning: line 25: alias 'SAX' is not in the dictionary. A table that is missing usually means the export is out of date.
+warning: line 28: 'SA1->A1_NMOE' is not a field of SA1. Did you mean A1_NOME?

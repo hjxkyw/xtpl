@@ -1,0 +1,39 @@
+// 20_object.xtpl -- 'with object', for code that repeats the same subject
+//
+// The subject is evaluated once and bound to a hidden block local. Inside the
+// block, a ':' in a position where AdvPL could not have put one means "the
+// subject". Member access on anything else, '::' for self and ':=' for
+// assignment are all left alone.
+// --------------------------------------------------------------------------------
+
+user function testObject(oModel, oOutro, aRows)
+  local cNome := ""
+  local nTam := 0
+
+  with object oModel:GetModel("SA1DETAIL")
+    :SetValue("A1_COD", "000001")
+    :SetValue("A1_NOME", "ACME")
+    cNome := :GetValue("A1_NOME")
+    nTam := len(:GetValue("A1_COD"))
+
+    // untouched: another object, an index, an assignment, self
+    cNome := oOutro:cRazao
+    nTam := aRows[1]
+    nTam := 5
+    cNome := ::cUltimo
+
+    // nesting: the innermost subject wins, then the outer resumes
+    with object oOutro
+      :Ativa()
+      cNome := :cRazao
+    end with
+
+    :Grava()
+  end with
+
+  conout(cValToChar(nTam))
+
+  return cNome
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,4 @@
+user function v()
+  local nL <const> := 1
+  calc(@nL)
+  return nL

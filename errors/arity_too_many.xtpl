@@ -1,0 +1,15 @@
+// arity_too_many.xtpl -- more arguments than the function takes.
+// --------------------------------------------------------------------------------
+
+static function calcTotal(nBase, nRate)
+  return nBase * nRate
+
+user function arityTooMany(nX)
+  local nT := 0
+
+  nT := calcTotal(nX, 2, 3)
+
+  return nT
+
+// --------------------------------------------------------------------------------
+// the end

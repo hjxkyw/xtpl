@@ -1,0 +1,15 @@
+// uniq_no_key.xtpl -- distinctAdjacent over a work area with nothing to compare.
+//
+// Without a key it compares the element against the previous one, and a
+// work-area record is not a value.
+// --------------------------------------------------------------------------------
+
+user function uniqNoKey()
+  local aNumeros := {}
+
+  aNumeros := rows("SC6") |> distinctAdjacent |> map([r] r:C6_NUM)
+
+  return aNumeros
+
+// --------------------------------------------------------------------------------
+// the end

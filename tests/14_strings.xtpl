@@ -1,0 +1,34 @@
+// 14_strings.xtpl -- string verbs and interpolation.
+//
+// The runtime only carries what AdvPL lacks. Upper, AllTrim, PadL and the
+// rest already take their subject first, so they compose with '|>' as they
+// stand -- wrapping them would shadow the originals on every existing call.
+// --------------------------------------------------------------------------------
+
+user function testStrings(cNome, nTotal, hCfg, aLinhas)
+  local aPartes := {}
+  local cOut := ""
+  local lHit := .F.
+
+  aPartes := split(cNome, ",")
+  cOut := aPartes |> map([p] alltrim(p)) |> join("; ")
+
+  // AdvPL's own functions need nothing from the runtime
+  cOut := cNome |> alltrim |> upper
+
+  lHit := starts(cNome, "SA") .or. ends(cNome, "01") .or. contains(cNome, "X")
+
+  // interpolation: the literal becomes a concatenation before anything else
+  // sees it, so a hash read inside one is an ordinary subscript
+  cOut := "total = ${nTotal} itens"
+  cOut := "ola ${cNome}"
+  cOut := "${cNome}"
+  cOut := "taxa ${hCfg{'t'}} fim"
+  cOut := "nada para trocar"
+
+  conout("a ${nTotal} b")
+
+  return cOut + cValToChar(lHit) + cValToChar(len(aLinhas))
+
+// --------------------------------------------------------------------------------
+// the end

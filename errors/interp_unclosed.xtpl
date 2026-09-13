@@ -1,0 +1,14 @@
+// interp_unclosed.xtpl -- an interpolation using the string's own quote.
+//
+// The literal ends at the inner quote, so the '${' is left open.
+// --------------------------------------------------------------------------------
+
+user function interpUnclosed(hCfg)
+  local cMsg := ""
+
+  cMsg := "taxa ${hCfg{"t"}} fim"
+
+  return cMsg
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,37 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 06_private.tlpp -- PRIVATE, o escopo dinamico do AdvPL.
+//
+// Um PRIVATE e visivel para tudo que a funcao chama. E assim que um dialogo
+// Protheus deixa o code block de um botao alcancar um controle construido por
+// quem o criou -- e o xtpl nao tinha como dizer isso, entao a unica conversao
+// honesta de um arquivo desses era --legacy.
+//
+// Declarado em um lugar, conhecido no arquivo inteiro: e o que escopo
+// dinamico significa. Diferente de 'external', que so promete que o nome
+// existe, um PRIVATE tambem pode ser atribuido.
+// --------------------------------------------------------------------------------
+
+user function testPrivate()
+
+  Local oDlg
+
+  Private oControle
+  Private nContador := 0
+
+
+  oControle := "campo"
+  oDlg := abreDialogo({|| chamadaDeVolta()})
+
+  return oDlg
+
+static function chamadaDeVolta()
+
+  // oControle vem de quem chamou, sem 'external'
+  conout(oControle)
+  nContador := nContador + 1
+  return nContador
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,30 @@
+// 22_loop_comment.xtpl -- a comment on a loop header.
+//
+// Masking turns a comment into one token, so a construct anchored to the end
+// of its line stops seeing the end as soon as one is written. 'for N times'
+// failed outright before this, reporting 'times' as an undeclared variable.
+// --------------------------------------------------------------------------------
+
+user function testLoopComment(aItems, oDoc)
+  local nTotal := 0
+
+  for 3 times                        // a literal count
+    nTotal := nTotal + 1
+  next
+
+  for contaLinhas(oDoc) times        // a bound count
+    nTotal := nTotal + 1
+  next
+
+  for oItem in aItems           // the element alone
+    nTotal := nTotal + oItem:nValor
+  next
+
+  for oItem, nIdx in aItems     // element and index
+    nTotal := nTotal + nIdx
+  next
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

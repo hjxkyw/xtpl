@@ -1,0 +1,1 @@
+SyntaxError: Line 10: 'fallback' cannot guard a walk over rows(). The guard needs an expression and a walk is a loop. Assign the chain first, then guard what uses it.

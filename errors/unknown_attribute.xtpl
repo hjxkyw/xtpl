@@ -1,0 +1,3 @@
+user function v()
+  local a <bogus> := 1
+  return a

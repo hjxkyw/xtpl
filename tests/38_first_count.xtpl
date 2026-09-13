@@ -1,0 +1,38 @@
+// 38_first_count.xtpl -- the first match, and how many match.
+//
+// Both replace 'filter(...) then look at the result', which builds an array
+// to answer a question that does not need one -- and in first's case keeps
+// searching after the answer is known.
+//
+// count reads the element, so a chain over rows() needs no map before it.
+// first does not: it hands the element back, and a work-area record is not a
+// value, so it needs something a map has made.
+// --------------------------------------------------------------------------------
+
+user function testFirstCount(aRows, cNum)
+  local oAtrasado := Nil
+  local nGrandes := 0
+  local nItens := 0
+  local nComSaldo := 0
+
+  // stops at the first match instead of collecting every one
+  oAtrasado := aRows |> map([r] r:oPed) |> first([p] p:lAtraso)
+
+  nGrandes := aRows |> map([r] r:nValor) |> count([v] v > 100)
+
+  using alias SC6 order 1 do
+    // how many items in this order, without building the array of them
+    nItens := rows("SC6", xFilial("SC6") + cNum) ;
+              |> takewhile([r] r:C6_NUM == cNum) ;
+              |> count
+
+    // a predicate reads the record directly
+    nComSaldo := rows("SC6") |> count([r] r:C6_QUANT > 0)
+  end using
+
+  conout(cValToChar(oAtrasado != Nil))
+
+  return nGrandes + nItens + nComSaldo
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,219 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 52_torture.tlpp -- constructs that meet each other in unusual ways.
+//
+// Written adversarially rather than to demonstrate anything: nested walks,
+// chains inside arguments and conditions, comments and continuations cutting
+// constructs in half, and a source inside a defer. Six bugs came out of
+// writing it, and each line below is one of the shapes that found one.
+// --------------------------------------------------------------------------------
+
+user function testTorture(hCfg, cNum, aRows, cPath, nX)
+
+  Local nT := 0
+  Local aOut := {}
+  Local cMsg := ""
+  Local aQ := {}
+  Local aX := {}
+
+  Local __blk_0_g
+  Local __blk_0_i
+  Local __blk_0_r
+  Local __blk_1_r
+  Local __fuse_area_1_0
+  Local __fuse_bag_0_0
+  Local __fuse_chunk_0_0
+  Local __fuse_i_0_0
+  Local __fuse_j_0_0
+  Local __fuse_key_0_0
+  Local __fuse_last_1_0
+  Local __fuse_lim_0_0
+  Local __fuse_n_0_0
+  Local __fuse_open_0_0
+  Local __fuse_open_1_0
+  Local __fuse_out_0_0
+  Local __fuse_out_1_0
+  Local __fuse_probe_1_0
+  Local __fuse_rec_1_0
+  Local __fuse_seen_0_0
+  Local __fuse_src_0_0
+  Local __fuse_v_0_0
+  Local __fuse_v_1_0
+  Local __hash_tmp_0_0
+  Local __hash_tmp_1_0
+  Local __pipe_tmp_0_0
+  Local __stk_1_usearea
+  Local __stk_1_useord
+  Local __stk_1_userec
+  Local __stk_2_usearea
+  Local __stk_2_useord
+  Local __stk_2_userec
+
+
+
+  // a string literal inside an interpolated expression
+  __hash_tmp_0_0 := Nil
+  hCfg:Get('moeda', @__hash_tmp_0_0)
+  cMsg := ("moeda " + cValToChar(__hash_tmp_0_0) + " fim")
+
+  // nested using, both restored at an early return, with a hash in the key
+  let usearea as __stk_1_usearea
+  let userec as __stk_1_userec
+  !usearea^1! := Alias()
+  DbSelectArea("SA1")
+  !userec^1! := SA1->(RecNo())
+  let useord as __stk_1_useord
+  !useord^1! := SA1->(IndexOrd())
+  SA1->(DbSetOrder(1))
+    let usearea as __stk_2_usearea
+    let userec as __stk_2_userec
+    !usearea^2! := Alias()
+    DbSelectArea("SC6")
+    !userec^2! := SC6->(RecNo())
+    let useord as __stk_2_useord
+    !useord^2! := SC6->(IndexOrd())
+    SC6->(DbSetOrder(2))
+      __hash_tmp_1_0 := Nil
+      hCfg:Get("chave", @__hash_tmp_1_0)
+      __fuse_area_1_0 := Alias()
+      DbSelectArea("SC6")
+      __fuse_rec_1_0 := SC6->(RecNo())
+      SC6->(DbSeek(__hash_tmp_1_0))
+      __fuse_open_1_0 := .F.
+      __fuse_last_1_0 := Nil
+      __fuse_probe_1_0 := Nil
+      __fuse_out_1_0 := {}
+      While !SC6->(Eof())
+        If !(SC6->C6_NUM == cNum)
+          Exit
+        EndIf
+        __fuse_v_1_0 := SC6->C6_PRODUTO
+        __fuse_probe_1_0 := __fuse_v_1_0
+        If !(__fuse_open_1_0 .And. (__fuse_probe_1_0 == __fuse_last_1_0))
+          __fuse_open_1_0 := .T.
+          __fuse_last_1_0 := __fuse_probe_1_0
+          AAdd(__fuse_out_1_0, __fuse_v_1_0)
+        EndIf
+        SC6->(DbSkip())
+      EndDo
+      SC6->(DbGoto(__fuse_rec_1_0))
+      If !Empty(__fuse_area_1_0)
+        DbSelectArea(__fuse_area_1_0)
+      EndIf
+      aOut := __fuse_out_1_0  // split mid-chain // and a block comment
+
+
+
+      __hash_tmp_1_0 := Nil
+      hCfg:Get("parar", @__hash_tmp_1_0)
+      If __hash_tmp_1_0
+        conout("saindo")
+        SC6->(DbSetOrder(!useord^2!))
+        SC6->(DbGoto(!userec^2!))
+        If !Empty(!usearea^2!)
+          DbSelectArea(!usearea^2!)
+        EndIf
+        SA1->(DbSetOrder(!useord^1!))
+        SA1->(DbGoto(!userec^1!))
+        If !Empty(!usearea^1!)
+          DbSelectArea(!usearea^1!)
+        EndIf
+        Return len(aOut)
+      EndIf
+      nT := SA1->A1_SALDO + SC6->C6_QUANT
+    SC6->(DbSetOrder(!useord^2!))
+    SC6->(DbGoto(!userec^2!))
+    If !Empty(!usearea^2!)
+      DbSelectArea(!usearea^2!)
+    EndIf
+  SA1->(DbSetOrder(!useord^1!))
+  SA1->(DbGoto(!userec^1!))
+  If !Empty(!usearea^1!)
+    DbSelectArea(!usearea^1!)
+  EndIf
+
+  // a chain inside a stage's own argument
+  __fuse_src_0_0 := aRows
+  __fuse_lim_0_0 := len(u_xtpl_distinct(aRows))
+  __fuse_n_0_0 := 0
+  __fuse_out_0_0 := {}
+  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
+    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
+    If __fuse_n_0_0 >= __fuse_lim_0_0
+      Exit
+    EndIf
+    __fuse_n_0_0 := __fuse_n_0_0 + 1
+    %r^0% := __fuse_v_0_0
+    __fuse_v_0_0 := %r^0%:cCod
+    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+  Next
+  aX := __fuse_out_0_0
+
+  // a terminal that is not the last stage
+  __fuse_src_0_0 := aRows
+  __fuse_chunk_0_0 := {}
+  __fuse_key_0_0 := Nil
+  __fuse_open_0_0 := .F.
+  __fuse_seen_0_0 := Nil
+  __fuse_out_0_0 := {}
+  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
+    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
+    %r^0% := __fuse_v_0_0
+    __fuse_bag_0_0 := %r^0%:aItens
+    For __fuse_j_0_0 := 1 To Len(__fuse_bag_0_0)
+      __fuse_v_0_0 := __fuse_bag_0_0[__fuse_j_0_0]
+      %i^0% := __fuse_v_0_0
+      __fuse_seen_0_0 := %i^0%:cGrupo
+      If !__fuse_open_0_0
+        __fuse_open_0_0 := .T.
+        __fuse_key_0_0 := __fuse_seen_0_0
+      ElseIf !(__fuse_seen_0_0 == __fuse_key_0_0)
+        AAdd(__fuse_out_0_0, __fuse_chunk_0_0)
+        __fuse_chunk_0_0 := {}
+        __fuse_key_0_0 := __fuse_seen_0_0
+      EndIf
+      AAdd(__fuse_chunk_0_0, __fuse_v_0_0)
+    Next
+  Next
+  If __fuse_open_0_0
+    AAdd(__fuse_out_0_0, __fuse_chunk_0_0)
+  EndIf
+  __pipe_tmp_0_0 := u_xtpl_map(__fuse_out_0_0, {|%g^0%| len(%g^0%)})
+  aQ := __pipe_tmp_0_0
+
+  // two chains on one line, and one in a postfix condition
+  nT := nT + len(u_xtpl_distinct(aRows)) + len(u_xtpl_reverse(aRows))
+  If len(u_xtpl_distinct(aRows)) > 3
+    nT := 99
+  EndIf
+
+  conout(cMsg + cValToChar(len(aX)) + cValToChar(len(aQ)))
+
+  conout("saindo")
+  return nT
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,1 @@
+SyntaxError: Line 3: 'nOutro' is not declared. Everything used in xtpl must be declared.

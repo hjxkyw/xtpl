@@ -1,0 +1,84 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 28_hash_iter.tlpp -- keys, values and pairs.
+//
+// 'for' walks arrays, so a hash could not be iterated at all -- it was
+// invisible to the whole pipeline. These return arrays, so nothing else
+// needed changing: 'for', the chain, the verbs and interpolation all compose
+// with them as they stand.
+//
+// They go through THashMap:List(), which fills an array with one row per
+// entry, key in column 1 and value in column 2.
+// --------------------------------------------------------------------------------
+
+user function testHashIter(hCfg, hSaldos)
+
+  Local aMv := {}
+  Local nTotal := 0
+  Local cLista := ""
+  Local lVazio := .F.
+  Local aPares := {}
+
+  Local __blk_0_k
+  Local __blk_0_p
+  Local __hash_tmp_1_0
+  Local __pipe_tmp_0_0
+  Local __pipe_tmp_0_1
+  Local __stk_1_cChave
+  Local __stk_1_each
+  Local __stk_1_eachi
+
+
+  // a hash can be walked now
+  let each as __stk_1_each
+  let cChave as __stk_1_cChave
+  let eachi as __stk_1_eachi
+  !each^1! := u_xtpl_keys(hCfg)
+  For !eachi^1! := 1 To Len(!each^1!)
+    !cChave^1! := !each^1![!eachi^1!]
+    __hash_tmp_1_0 := Nil
+    hCfg:Get(!cChave^1!, @__hash_tmp_1_0)
+    conout((cValToChar(!cChave^1!) + " = " + cValToChar(__hash_tmp_1_0)))
+  next
+
+  __pipe_tmp_0_0 := u_xtpl_asum(u_xtpl_values(hSaldos))
+  nTotal := __pipe_tmp_0_0
+  __pipe_tmp_0_0 := u_xtpl_filter(u_xtpl_keys(hCfg), {|%k^0%| u_xtpl_starts(%k^0%, "MV_")})
+  aMv := __pipe_tmp_0_0
+  __pipe_tmp_0_0 := u_xtpl_sort(u_xtpl_keys(hCfg))
+  __pipe_tmp_0_1 := u_xtpl_join(__pipe_tmp_0_0, ", ")
+  cLista := __pipe_tmp_0_1
+  __pipe_tmp_0_0 := u_xtpl_noneof(u_xtpl_keys(hCfg), {|%k^0%| .T.})
+  lVazio := __pipe_tmp_0_0
+
+  // pairs keeps them together: {chave, valor} per row
+  __pipe_tmp_0_0 := u_xtpl_reject(u_xtpl_pairs(hCfg), {|%p^0%| %p^0%[2] == Nil})
+  aPares := __pipe_tmp_0_0
+
+  return nTotal + len(aMv) + len(cLista) + len(aPares) + iif(lVazio, 1, 0)
+
+// --------------------------------------------------------------------------------
+// the end

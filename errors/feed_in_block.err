@@ -1,0 +1,1 @@
+SyntaxError: Line 10: '|>' cannot chain inside a code block -- lifting its stages out would run them before the block does.

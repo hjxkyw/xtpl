@@ -1,0 +1,1 @@
+warning: line 23: nothing in this function opened SA1. Wrap the use in 'using alias SA1 do', or declare 'external alias SA1' if the caller opens it.

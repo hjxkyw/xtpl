@@ -1,0 +1,56 @@
+// 31_feed.xtpl -- '=>' chaining, the fold operators, and 'fallback'
+//
+// '=>' has exactly one rule: the value on the left becomes the first
+// argument of the stage on the right. It knows nothing about the runtime,
+// so it composes runtime functions and your own helpers identically.
+// --------------------------------------------------------------------------------
+
+user function testFeed(aOrders, aNums)
+  local aCodes := {}
+  local aTop := {}
+  local nTotal := 0
+  local nMax := 0
+  local nSafe := 0
+
+  // chaining runtime functions
+  aCodes := aOrders |> filter([o] o:nValue > 1000) |> map([o] o:cCode)
+  aTop := aOrders |> sortBy([o] o:nValue, .T.) |> take(10)
+
+  // a stage with no arguments needs no parentheses
+  aCodes := aNums |> distinct |> reverse
+
+  // the same rule covers a function of your own
+  aCodes := aOrders |> myOwnHelper(3) |> sortRows
+
+  // folding: named functions, not operators. The 'a' prefix keeps amax and
+  // amin clear of AdvPL's own two-argument Max and Min.
+  nTotal := asum(aNums)
+  nMax := amax(aNums)
+  nTotal := asum(map(aOrders, [o] o:nValue))
+
+  // and as a chain stage, since they are ordinary calls
+  nTotal := aOrders |> filter([o] o:lPaid) |> map([o] o:nValue) |> asum
+
+  // a chain inside an expression is lifted into its own statement first
+  nTotal := len(aNums |> distinct)
+  nTotal := len(aNums |> filter([x] x > 100)) + len(aOrders)
+
+  // reduce chains like any other call, so no parentheses are needed
+  nTotal := aOrders |> map([o] o:nValue) |> reduce([acc, x] acc + x, 0)
+
+  // the lifted result can be indexed like any other expression
+  nTotal := len(aNums) + (aNums |> distinct)[1]
+
+  // run for its effects: no assignment, so no result is kept
+  aOrders |> myOwnHelper(3) |> sortRows
+
+  // fallback guards a bare call, a chain, or a return
+  nSafe := riskyCall(1) fallback 0
+  nSafe := aNums |> filter([x] x > 100) |> asum fallback 0
+
+  conout(cValToChar(nMax) + cValToChar(nSafe))
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

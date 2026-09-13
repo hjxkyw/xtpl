@@ -1,0 +1,5 @@
+user function v(n)
+  local c := 0
+  given n do
+  end given
+  return c

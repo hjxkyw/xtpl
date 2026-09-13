@@ -1,0 +1,24 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 47_main_form.tlpp -- 'main function', com o nome do arquivo.
+//
+// O xtpl reconhece 'user function', 'static function' e 'main function' como
+// cabeçalhos -- para ele são todas apenas uma função.
+//
+// 'main function' é especial no Protheus e não é exercitado aqui: uma fixture
+// não deveria reivindicar o ponto de entrada.
+// --------------------------------------------------------------------------------
+
+user function test_main_form(nX)
+
+  Local nTotal := 0
+
+
+
+  nTotal := nX + 1
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,78 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 50_dictionary.tlpp -- field references checked against an exported SX3.
+//
+// SA1->A1_NMOE when the field is A1_NOME is a runtime error today, found in
+// production. It is invisible to AdvPL and to the preprocessor, and it is
+// exactly the shape a transpiler can catch.
+//
+// Checked on the emitted line rather than the source, so a field named
+// through a rows() chain is checked too: by then it has become an ordinary
+// SA1->A1_VALOR, and that is the one place the alias and the field are known
+// together beyond doubt.
+//
+// Warnings, not errors: a field being added may not be in an export yet, and
+// a stale dictionary should not stop a build. --dict-strict for CI.
+// --------------------------------------------------------------------------------
+
+
+user function testDictionary(cAlias)
+
+  Local nT := 0
+  Local aC := {}
+  Local aV := {}
+
+  Local __blk_0_r
+  Local __fuse_alias_0_0
+  Local __fuse_area_0_0
+  Local __fuse_out_0_0
+  Local __fuse_rec_0_0
+  Local __fuse_v_0_0
+
+
+  nT := SA1->A1_SALDO  // known
+  nT := nT + SA1->A1_NMOE  // a typo for A1_NOME
+  nT := nT + SAX->X_QUALQUER  // no such table
+
+  // caught through the chain: r:A1_NMOE becomes SA1->A1_NMOE
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("SA1")
+  __fuse_rec_0_0 := SA1->(RecNo())
+  SA1->(DbGoTop())
+  __fuse_out_0_0 := {}
+  While !SA1->(Eof())
+    If SA1->A1_SALDO > 0
+      __fuse_v_0_0 := SA1->A1_NMOE
+      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    EndIf
+    SA1->(DbSkip())
+  EndDo
+  SA1->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  aC := __fuse_out_0_0
+
+  // the alias is a variable, so there is nothing to check it against
+  __fuse_alias_0_0 := cAlias
+  __fuse_area_0_0 := Alias()
+  DbSelectArea(__fuse_alias_0_0)
+  __fuse_rec_0_0 := (__fuse_alias_0_0)->(RecNo())
+  (__fuse_alias_0_0)->(DbGoTop())
+  __fuse_out_0_0 := {}
+  While !(__fuse_alias_0_0)->(Eof())
+    __fuse_v_0_0 := (__fuse_alias_0_0)->B1_DESC
+    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    (__fuse_alias_0_0)->(DbSkip())
+  EndDo
+  (__fuse_alias_0_0)->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  aV := __fuse_out_0_0
+
+  return nT + len(aC) + len(aV)
+
+// --------------------------------------------------------------------------------
+// the end

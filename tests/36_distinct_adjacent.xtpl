@@ -1,0 +1,35 @@
+// 36_distinct_adjacent.xtpl -- adjacent dedup, and the largest element.
+//
+// distinctAdjacent drops ADJACENT duplicates -- 'distinctAdjacent' in the Unix sense, not 'distinct'
+// in the SQL one. It compares each element against the previous, so it is one
+// pass holding one value, where distinct compares against everything kept so
+// far and blocks fusion. Over unsorted input they give different answers.
+//
+// maxby gives the largest ELEMENT by a key, where amax gives the largest key
+// and loses the row it came from. Otherwise you sort everything to look at
+// one of them.
+// --------------------------------------------------------------------------------
+
+user function testUniqMaxby(aRows)
+  local aPedidos := {}
+  local oMaior := Nil
+  local oMenor := Nil
+  local aNumeros := {}
+
+  // no key: compares the element itself
+  aPedidos := aRows |> map([r] r:cPedido) |> distinctAdjacent
+
+  oMaior := aRows |> map([r] r:oPed) |> maxby([p] p:nValor)
+  oMenor := aRows |> map([r] r:oPed) |> minby([p] p:nValor)
+
+  // over an ordered table: the distinct order numbers, in one pass
+  using alias SC6 order 1 do
+    aNumeros := rows("SC6") |> distinctAdjacent([r] r:C6_NUM) |> map([r] r:C6_NUM)
+  end using
+
+  conout(cValToChar(oMaior != Nil) + cValToChar(oMenor != Nil))
+
+  return len(aPedidos) + len(aNumeros)
+
+// --------------------------------------------------------------------------------
+// the end

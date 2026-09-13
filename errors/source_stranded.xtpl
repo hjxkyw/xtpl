@@ -1,0 +1,16 @@
+// source_stranded.xtpl -- a source used as if it were a function.
+//
+// 'lines' and 'rows' name something to walk. There is no function of that
+// name to call, so anywhere but the head of a chain is refused rather than
+// emitted as a call that cannot link.
+// --------------------------------------------------------------------------------
+
+user function sourceStranded(cPath)
+  local nCount := 0
+
+  nCount := len(lines(cPath))
+
+  return nCount
+
+// --------------------------------------------------------------------------------
+// the end

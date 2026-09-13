@@ -1,0 +1,1 @@
+SyntaxError: Line 3: the fold operators were replaced by functions: asum(), aprod(), amax(), amin(), or fold() for anything else.

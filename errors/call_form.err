@@ -1,0 +1,1 @@
+SyntaxError: Line 15: 'u_ajuda' -- ajuda is a static function in this file, so it is called by its plain name, without the 'u_'.

@@ -1,0 +1,222 @@
+// 54_selftest.xtpl -- roda o que as outras fixtures apenas compilam.
+//
+// Cinquenta e tres fixtures passam pelo compilador. Nenhuma linha gerada foi
+// executada, e compilar nao e funcionar: se um laco fundido calcula o que a
+// cadeia disse, ninguem sabe.
+//
+// Esta e um programa so, sem tabelas e sem arquivos, que exercita o runtime e
+// as construcoes geradas e confere cada resposta. Compile e chame u_selftest():
+// ele imprime uma linha por falha e um total no fim.
+//
+//   u_selftest()
+//   selftest: 47 ok, 0 falhas
+//
+// Tudo aqui e computacao pura de proposito. Nada que dependa de area de
+// trabalho, arquivo ou tela entra, porque o objetivo e uma resposta certa ou
+// errada, nao um ambiente.
+// --------------------------------------------------------------------------------
+
+user function selftest()
+  local nOk := 0
+  local nBad := 0
+  local aNums := {3, 1, 4, 1, 5, 9, 2, 6}
+  local aRep := {1, 1, 2, 2, 2, 3, 1}
+  local aPal := {"beta", "alfa", "gama"}
+  local hCfg := {"taxa" => 5, "limite" => 10}
+  local oFila
+  local aTmp := {}
+  local nTmp := 0
+  local cTmp := ""
+  local lTmp := .F.
+
+  // ---- runtime: folds ----------------------------------------------------
+  nTmp := asum(aNums)
+  check("asum", nTmp == 31, nTmp, @nOk, @nBad)
+  nTmp := amax(aNums)
+  check("amax", nTmp == 9, nTmp, @nOk, @nBad)
+  nTmp := amin(aNums)
+  check("amin", nTmp == 1, nTmp, @nOk, @nBad)
+  nTmp := aprod({2, 3, 4})
+  check("aprod", nTmp == 24, nTmp, @nOk, @nBad)
+  nTmp := asum({})
+  check("asum vazio", nTmp == 0, nTmp, @nOk, @nBad)
+  check("amax vazio", amax({}) == Nil, 0, @nOk, @nBad)
+
+  // ---- runtime: transformacoes -------------------------------------------
+  aTmp := map(aNums, [x] x * 2)
+  check("map", len(aTmp) == 8 .and. aTmp[1] == 6, len(aTmp), @nOk, @nBad)
+  aTmp := filter(aNums, [x] x > 3)
+  check("filter", len(aTmp) == 4, len(aTmp), @nOk, @nBad)
+  aTmp := reject(aNums, [x] x > 3)
+  check("reject", len(aTmp) == 4, len(aTmp), @nOk, @nBad)
+  aTmp := take(aNums, 3)
+  check("take", len(aTmp) == 3 .and. aTmp[3] == 4, len(aTmp), @nOk, @nBad)
+  aTmp := drop(aNums, 6)
+  check("drop", len(aTmp) == 2 .and. aTmp[1] == 2, len(aTmp), @nOk, @nBad)
+  aTmp := take(aNums, 99)
+  check("take demais", len(aTmp) == 8, len(aTmp), @nOk, @nBad)
+  aTmp := reverse({1, 2, 3})
+  check("reverse", aTmp[1] == 3 .and. aTmp[3] == 1, aTmp[1], @nOk, @nBad)
+  aTmp := distinct(aRep)
+  check("distinct", len(aTmp) == 3, len(aTmp), @nOk, @nBad)
+  aTmp := distinctAdjacent(aRep)
+  check("distinctAdjacent", len(aTmp) == 4, len(aTmp), @nOk, @nBad)
+  aTmp := flatten({1, {2, {3, 4}}, 5})
+  check("flatten", len(aTmp) == 5 .and. aTmp[4] == 4, len(aTmp), @nOk, @nBad)
+  aTmp := enumerate({"a", "b"})
+  check("enumerate", aTmp[2][1] == 2 .and. aTmp[2][2] == "b", 0, @nOk, @nBad)
+  aTmp := chunks({1, 2, 3, 4, 5}, 2)
+  check("chunks", len(aTmp) == 3 .and. len(aTmp[3]) == 1, len(aTmp), @nOk, @nBad)
+
+  // ---- sort copia antes de ordenar ---------------------------------------
+  aTmp := sort(aPal)
+  check("sort", aTmp[1] == "alfa", 0, @nOk, @nBad)
+  check("sort nao mexe na entrada", aPal[1] == "beta", 0, @nOk, @nBad)
+  aTmp := sortBy(aPal, [c] len(c))
+  check("sortBy", len(aTmp) == 3, len(aTmp), @nOk, @nBad)
+
+  // ---- dobras com bloco --------------------------------------------------
+  nTmp := reduce(aNums, [acc, x] acc + x, 100)
+  check("reduce com semente", nTmp == 131, nTmp, @nOk, @nBad)
+  nTmp := fold({4, 9, 2}, [acc, x] Iif(x > acc, x, acc))
+  check("fold", nTmp == 9, nTmp, @nOk, @nBad)
+  check("fold vazio", fold({}, [acc, x] acc) == Nil, 0, @nOk, @nBad)
+
+  // ---- zip ---------------------------------------------------------------
+  aTmp := zip({1, 2, 3}, {"a", "b"})
+  check("zip corta no menor", len(aTmp) == 2, len(aTmp), @nOk, @nBad)
+  aTmp := zip({1, 2}, {10, 20}, [a, b] a + b)
+  check("zip com bloco", aTmp[2] == 22, aTmp[2], @nOk, @nBad)
+
+  // ---- pertinencia e divisibilidade --------------------------------------
+  check("in array", 5 in aNums, 0, @nOk, @nBad)
+  check("in array ausente", !(7 in aNums), 0, @nOk, @nBad)
+  check("in faixa", 5 in 1..10, 0, @nOk, @nBad)
+  check("divisivel", 9 %% 3, 0, @nOk, @nBad)
+  check("nao divisivel", !(10 %% 3), 0, @nOk, @nBad)
+
+  // ---- cadeia fundida: o resultado tem de bater com as etapas -------------
+  nTmp := aNums |> filter([x] x > 2) |> map([x] x * 10) |> asum
+  check("cadeia fundida", nTmp == 270, nTmp, @nOk, @nBad)
+  aTmp := aNums |> filter([x] x > 2) |> take(2)
+  check("take para o laco", len(aTmp) == 2 .and. aTmp[2] == 4, len(aTmp), @nOk, @nBad)
+  nTmp := aNums |> count([x] x > 3)
+  check("count", nTmp == 4, nTmp, @nOk, @nBad)
+  nTmp := aNums |> first([x] x > 4)
+  check("first", nTmp == 5, nTmp, @nOk, @nBad)
+  check("first sem acerto", (aNums |> first([x] x > 99)) == Nil, 0, @nOk, @nBad)
+  lTmp := aNums |> anyof([x] x == 9)
+  check("anyof", lTmp, 0, @nOk, @nBad)
+  lTmp := aNums |> allof([x] x > 0)
+  check("allof", lTmp, 0, @nOk, @nBad)
+  lTmp := aNums |> noneof([x] x > 99)
+  check("noneof", lTmp, 0, @nOk, @nBad)
+  nTmp := aNums |> maxby([x] -x)
+  check("maxby", nTmp == 1, nTmp, @nOk, @nBad)
+
+  // ---- etapas de fluxo ---------------------------------------------------
+  aTmp := {10, -3, 5} |> scan([acc, x] acc + x, 0)
+  check("scan", len(aTmp) == 3 .and. aTmp[3] == 12, aTmp[3], @nOk, @nBad)
+  aTmp := {1, 4, 9} |> pairwise |> map([p] p[2] - p[1])
+  check("pairwise", len(aTmp) == 2 .and. aTmp[2] == 5, aTmp[2], @nOk, @nBad)
+  aTmp := {1, 2, 3} |> expand([x] {x, x})
+  check("expand", len(aTmp) == 6, len(aTmp), @nOk, @nBad)
+  aTmp := aRep |> chunkby([x] x)
+  check("chunkby", len(aTmp) == 4 .and. len(aTmp[3]) == 1, len(aTmp), @nOk, @nBad)
+  aTmp := aNums |> takewhile([x] x < 5)
+  check("takewhile", len(aTmp) == 4, len(aTmp), @nOk, @nBad)
+  aTmp := aNums |> dropwhile([x] x < 5)
+  check("dropwhile", len(aTmp) == 4 .and. aTmp[1] == 5, len(aTmp), @nOk, @nBad)
+
+  // ---- strings -----------------------------------------------------------
+  aTmp := split("a,b,c", ",")
+  check("split", len(aTmp) == 3 .and. aTmp[2] == "b", len(aTmp), @nOk, @nBad)
+  cTmp := join({"a", "b", "c"}, "-")
+  check("join", cTmp == "a-b-c", 0, @nOk, @nBad)
+  check("starts", starts("abcdef", "abc"), 0, @nOk, @nBad)
+  check("ends", ends("abcdef", "def"), 0, @nOk, @nBad)
+  check("contains", contains("abcdef", "cde"), 0, @nOk, @nBad)
+  cTmp := "soma ${1 + 2} fim"
+  check("interpolacao", cTmp == "soma 3 fim", 0, @nOk, @nBad)
+
+  // ---- hash --------------------------------------------------------------
+  check("hash leitura", hCfg{"taxa"} == 5, 0, @nOk, @nBad)
+  check("hash ausente", hCfg{"nada"} == Nil, 0, @nOk, @nBad)
+  check("hash has", hCfg has "limite", 0, @nOk, @nBad)
+  hCfg{"taxa"} := 7
+  check("hash escrita", hCfg{"taxa"} == 7, 0, @nOk, @nBad)
+  aTmp := keys(hCfg)
+  check("keys", len(aTmp) == 2, len(aTmp), @nOk, @nBad)
+  nTmp := values(hCfg) |> asum
+  check("values", nTmp == 17, nTmp, @nOk, @nBad)
+
+  // ---- operadores --------------------------------------------------------
+  cTmp := Nil
+  cTmp ?= "padrao"
+  check("?= atribui quando Nil", cTmp == "padrao", 0, @nOk, @nBad)
+  cTmp ?= "outro"
+  check("?= nao atribui depois", cTmp == "padrao", 0, @nOk, @nBad)
+  nTmp := Nil ?: 42
+  check("?: pega a alternativa", nTmp == 42, nTmp, @nOk, @nBad)
+  nTmp := 7 ?: 42
+  check("?: pega o valor", nTmp == 7, nTmp, @nOk, @nBad)
+
+  // ---- fallback ----------------------------------------------------------
+  nTmp := aNums[99] fallback -1
+  check("fallback pega o erro", nTmp == -1, nTmp, @nOk, @nBad)
+  nTmp := len({1, 2}) fallback -1
+  check("fallback nao atrapalha", nTmp == 2, nTmp, @nOk, @nBad)
+
+  // ---- fila --------------------------------------------------------------
+  // Construida aqui, e nao no prologo: se a classe falhar, so os testes da
+  // fila falham, e nao todos os que vem antes.
+  oFila := queue()
+  oFila:Push("a")
+  oFila:Push("b")
+  check("fila conta", oFila:Count() == 2, oFila:Count(), @nOk, @nBad)
+  check("fila e FIFO", oFila:Pop() == "a", 0, @nOk, @nBad)
+  check("fila sobra", oFila:Peek() == "b", 0, @nOk, @nBad)
+  oFila:Pop()
+  check("fila vazia", oFila:IsEmpty(), 0, @nOk, @nBad)
+  check("pop vazio da Nil", oFila:Pop() == Nil, 0, @nOk, @nBad)
+
+  // ---- escopo de bloco e reciclagem de slot ------------------------------
+  nTmp := 0
+  for nCada in {1, 2, 3}
+    local nDobro := nCada * 2
+    nTmp := nTmp + nDobro
+  next
+  check("local de bloco em laco", nTmp == 12, nTmp, @nOk, @nBad)
+
+  // os defers rodam antes da linha do Return, em ordem inversa: 10 +2 +1
+  nTmp := defers()
+  check("defer roda na saida", nTmp == 13, nTmp, @nOk, @nBad)
+
+  conout("selftest: " + cValToChar(nOk) + " ok, " + cValToChar(nBad) + " falhas")
+
+return nBad
+
+// --------------------------------------------------------------------------------
+
+static function check(cNome, lOk, xVisto, nOk, nBad)
+  if lOk
+    nOk := nOk + 1
+  else
+    nBad := nBad + 1
+    conout("FALHA  " + cNome + "  (visto: " + cValToChar(xVisto) + ")")
+  endif
+return nil
+
+// Dois defers, ordem inversa, mais um return antecipado que nao e tomado.
+static function defers()
+  local nTotal := 0
+
+  defer nTotal := nTotal + 1
+  defer nTotal := nTotal + 2
+
+  nTotal := 10
+
+return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

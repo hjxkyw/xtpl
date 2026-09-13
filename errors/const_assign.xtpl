@@ -1,0 +1,4 @@
+user function v()
+  local nL <const> := 1000
+  nL := 2000
+  return nL

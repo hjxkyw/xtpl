@@ -1,0 +1,42 @@
+// 51_legacy.xtpl -- --legacy: reading code xtpl would otherwise refuse.
+//
+// One thing stops xtpl accepting an existing .prw: a write to an undeclared
+// name. AdvPL allows it and creates a PRIVATE -- an anti-pattern, but legal --
+// while xtpl refuses it. --legacy makes it a warning.
+//
+// Reading an undeclared name is an error in AdvPL too, so that check is not an
+// xtpl restriction. Nor is the prologue: AdvPL rejects a Local after the first
+// statement and a Local inside a block, so no file that compiles today has
+// either. Relaxing the prologue is a convenience.
+//
+// A name a write brought into being is reported once, where it happens -- the
+// reads after it are of a variable that by then exists.
+//
+// --legacy does not touch scoping. Block-scoped local is something xtpl adds
+// where AdvPL has nothing, so there is no existing meaning to preserve.
+// --------------------------------------------------------------------------------
+
+#xtranslate MOSTRE <x> => conout(<x>)
+
+User Function Legado(cCodigo)
+   Local nTotal := 0
+
+   nTotal := 10
+   Local cNome := "x"           // fora do prólogo: aviso, e o valor fica aqui
+
+   If nTotal > 5
+      Local nExtra := 1         // bloco: xtpl acrescenta isto, o AdvPL recusa
+      nTotal := nTotal + nExtra
+   Endif
+
+   cNaoDeclarado := nTotal      // cria uma PRIVATE: avisado uma vez, aqui
+   nTotal := nTotal + len(cNaoDeclarado)   // leitura: existe agora, sem aviso
+
+   MOSTRE cValToChar(nTotal)
+
+   conout(cNome + cNaoDeclarado)
+
+Return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

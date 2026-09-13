@@ -1,0 +1,35 @@
+// 08_returns.xtpl -- a value on one path, nothing on another.
+//
+// The caller gets Nil and finds out somewhere else and later. AdvPL says
+// nothing about it.
+// --------------------------------------------------------------------------------
+
+user function comValor(nX)
+  local nT := 0
+
+  if nX > 5
+    return nT
+  endif
+
+  return                        // returns nothing on this path
+
+user function caiNoFim(nX)
+  local nT := 0
+
+  if nX > 5
+    return nT
+  endif
+
+  nT := 1                       // and reaches the end without returning
+
+user function consistente(nX)
+  local nT := 0
+
+  if nX > 5
+    return nT
+  endif
+
+  return 0
+
+// --------------------------------------------------------------------------------
+// the end

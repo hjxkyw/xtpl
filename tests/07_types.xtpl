@@ -1,0 +1,38 @@
+// 07_types.xtpl -- field types and sizes, from the same SX3 export.
+//
+// Only literals are typed. Inferring types across an untyped language is how
+// a checker turns into a false-positive machine, so a field used with a
+// variable is left alone -- there is nothing to compare it against.
+// --------------------------------------------------------------------------------
+
+external alias SA1
+
+user function testTypes(cQualquer, nX)
+  local nT := 0
+
+  // wrong type, assigned
+  SA1->A1_NOME := 5
+  SA1->A1_SALDO := "texto"
+  SA1->A1_DTCAD := 0
+
+  // wrong type, compared -- either way round
+  nT := 1 if SA1->A1_SALDO == "abc"
+  nT := 2 if "abc" == SA1->A1_SALDO
+
+  // right type: silent
+  SA1->A1_COD := "123456"
+  nT := 3 if SA1->A1_BLOQ == .T.
+  nT := 4 if SA1->A1_NOME == "ok"
+  nT := 5 if SA1->A1_SALDO > 0
+
+  // a variable says nothing about its type, so nothing is claimed
+  SA1->A1_COD := cQualquer
+  SA1->A1_SALDO := nX
+
+  // silent truncation: AdvPL writes what fits and drops the rest
+  SA1->A1_COD := "1234567"
+
+  return nT
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,41 @@
+// 11_defined_or.xtpl -- the '?=' operator
+//
+// '?=' assigns only when the target is still Nil. It is an operator on a
+// variable that already exists, never a declaration form: a freshly declared
+// local is always Nil, so the test could not fail there.
+// --------------------------------------------------------------------------------
+
+user function testDefinedOr(lUseDisk, lUseNet)
+  local cCache
+  local nRetries
+  local aRows
+  local cLabel := "preset"
+
+  // Nothing has been assigned yet, so the fallback lands.
+  nRetries ?= 3
+  conout("retries: " + cValToChar(nRetries))
+
+  // Already holds a value, so '?=' leaves it alone.
+  cLabel ?= "ignored"
+  conout("label: " + cLabel)
+
+  // The real use: branches that may or may not have filled the variable.
+  if lUseDisk
+    cCache := loadFromDisk()
+  endif
+
+  if lUseNet
+    cCache := loadFromNet()
+  endif
+
+  cCache ?= "empty"
+  conout("cache: " + cCache)
+
+  // Works for any type, and the fallback may be an expression.
+  aRows ?= buildRows(nRetries * 2)
+  conout("rows: " + cValToChar(len(aRows)))
+
+  return cCache
+
+// --------------------------------------------------------------------------------
+// the end

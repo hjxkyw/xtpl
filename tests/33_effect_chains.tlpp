@@ -1,0 +1,79 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 33_effect_chains.tlpp -- uma cadeia executada só pelos efeitos.
+//
+// Sem atribuição, uma cadeia não tem resultado a construir -- e por isso se
+// funde SEM acumulador. Antes ela não se fundia de forma alguma, e uma
+// cadeia com 'tap' virava dois laços e um array intermediário, pior do que o
+// 'for' que ela substituía.
+//
+// Uma cadeia de funções comuns continua sem se fundir: nunca foi candidata.
+// --------------------------------------------------------------------------------
+
+user function testEffectChains(aCobertura, cAlvo, aPedidos)
+
+  // exatamente o laço que alguém escreveria à mão
+  Local __blk_0_r
+  Local __fuse_area_0_0
+  Local __fuse_i_0_0
+  Local __fuse_out_0_0
+  Local __fuse_rec_0_0
+  Local __fuse_src_0_0
+  Local __fuse_v_0_0
+  Local __pipe_tmp_0_0
+
+  __fuse_src_0_0 := aCobertura
+  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
+    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
+    %r^0% := __fuse_v_0_0
+    If upper(%r^0%[1]) == cAlvo
+      %r^0% := __fuse_v_0_0
+      VarInfo("COBERTURA", %r^0%)
+    EndIf
+  Next
+
+  // sobre uma área de trabalho, também sem acumulador
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("SA1")
+  __fuse_rec_0_0 := SA1->(RecNo())
+  SA1->(DbGoTop())
+  While !SA1->(Eof())
+    conout(SA1->A1_COD)
+    SA1->(DbSkip())
+  EndDo
+  SA1->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+
+  // funções comuns: continua uma chamada por etapa
+  __pipe_tmp_0_0 := valida(aPedidos)
+  grava(__pipe_tmp_0_0)
+
+  return
+
+// --------------------------------------------------------------------------------
+// the end

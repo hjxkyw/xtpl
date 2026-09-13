@@ -1,0 +1,15 @@
+// feed_in_block.xtpl -- a chain inside a code block is refused.
+//
+// The block's body runs later. Lifting a stage into a statement ahead of the
+// line would run it now, so there is no correct place to put it.
+// --------------------------------------------------------------------------------
+
+user function feedInBlock(aNums)
+  local aOut := {}
+
+  aOut := map(aNums, [x] x |> triple)
+
+  return aOut
+
+// --------------------------------------------------------------------------------
+// the end

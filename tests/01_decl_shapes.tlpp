@@ -1,0 +1,36 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// 01_decl_shapes.tlpp -- declarator lists that told the two paths apart.
+//
+// Both found by fuzz_paths.py, which generates programs and diffs the grammar
+// path against the regex one.
+//
+// An attribute list holds commas of its own, and '<' and '>' are not
+// delimiters to the top-level splitter -- so '<const, contained>' was cut in
+// half on the regex path and 'contained' became a declarator of its own.
+//
+// And a list ending on a bare name has nowhere to absorb a trailing comment.
+// The regex swallowed it into the value while the grammar, anchored to the
+// end of the line, refused the whole list. Both peel it first now, and it
+// goes back on the declarator it was written against.
+// --------------------------------------------------------------------------------
+
+user function testDeclShapes(nX)
+
+  Local v1 := 0
+  Local v2 := 1
+  Local v3 := 2
+  Local v4
+  Local v5 := 3  // no spaces anywhere
+  Local v6 := {}  // spaces everywhere
+
+
+
+  aadd(v6, v1 + v2 + v3 + v5)
+  v4 := len(v6)
+
+  return nX + v4
+
+// --------------------------------------------------------------------------------
+// the end

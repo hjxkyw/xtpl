@@ -1,0 +1,31 @@
+// 25_continuation.xtpl -- ';' continuations meeting the other passes.
+//
+// The lines are folded into one before any pass runs, so a construct may be
+// split across them. A comment on a continued line has nowhere to sit once
+// they are joined, so it moves to the end of the statement.
+// --------------------------------------------------------------------------------
+
+user function testContinuation(cUrl, cBody, aNums, hCfg)
+  local nTimeout := 30
+  local cReply := ""
+  local aBig := {}
+  local nT := 0
+  local nA := 1, ;
+        nB := 2
+
+  cReply := HttpPost(cUrl, "", cBody, nTimeout, ;
+                     {"Content-Type: application/json"}) fallback ""
+
+  aBig := aNums ;                     // a comment on a continued line
+          |> filter([x] x > 10) ;
+          |> distinct
+
+  nT := hCfg{"a"} + ;
+        hCfg{"b"}
+
+  conout(cReply + cValToChar(len(aBig)))
+
+  return nT + nA + nB
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,77 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 45_foreach_lines.tlpp -- 'for' over the lines of a file.
+//
+// This works where 'for' over rows() would not: the element here IS a
+// value -- the line -- so it binds to a name in the ordinary way and the body
+// needs no rewriting. A work-area record is not a value, which is why the
+// same shape was refused there.
+//
+// FT_FSkip() sits straight after the read rather than at the foot of the
+// loop. The body is the programmer's, so it may contain a 'Loop', and a Loop
+// over a skip at the foot would never advance the file.
+//
+// Closing the file is an exit-path job, like restoring a work area: an early
+// return has to close it too.
+// --------------------------------------------------------------------------------
+
+user function testForeachLines(cPath)
+
+  Local nTotal := 0
+
+  Local __stk_1_cLinha
+  Local __stk_1_each
+  Local __stk_1_nNumero
+
+
+  let each as __stk_1_each
+  let cLinha as __stk_1_cLinha
+  let nNumero as __stk_1_nNumero
+  !each^1! := cPath
+  FT_FUse(!each^1!)
+  FT_FGoTop()
+  !nNumero^1! := 0
+  While File(!each^1!) .And. !FT_FEof()
+    !nNumero^1! := !nNumero^1! + 1
+    !cLinha^1! := FT_FReadLn()
+    FT_FSkip()
+    if empty(!cLinha^1!)
+      loop  // safe: the file has already advanced
+    endif
+
+    nTotal := nTotal + len(!cLinha^1!)
+
+    If nTotal > 1000  // closes the file on the way out
+      FT_FUse()
+      Return !nNumero^1!
+    EndIf
+  EndDo
+  FT_FUse()
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

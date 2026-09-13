@@ -1,0 +1,16 @@
+// feed_no_head.xtpl -- a chain with nothing on its left.
+//
+// Reached in practice by a continuation that failed to join, which left the
+// second line standing alone. The stage used to be composed with an empty
+// first argument.
+// --------------------------------------------------------------------------------
+
+user function feedNoHead(aNums)
+  local aOut := {}
+
+  aOut := |> distinct
+
+  return aOut
+
+// --------------------------------------------------------------------------------
+// the end

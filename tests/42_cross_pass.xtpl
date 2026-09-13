@@ -1,0 +1,30 @@
+// 42_cross_pass.xtpl -- constructs that meet each other on one line.
+//
+// Each pass was right on its own. These are the cases where an earlier pass
+// changed the line out from under a later one.
+// --------------------------------------------------------------------------------
+
+user function testCrossPass(hCfg, aNums, lFlag, nX)
+  local nA := 0
+  local nB := 0
+  local nC := 0
+
+  // The hash read turns one line into three. 'fallback' has to be peeled
+  // before that happens, or the assignment ends up inside the guard and a
+  // failure leaves nA untouched.
+  nA := hCfg{"k"} fallback 0
+
+  // The modifier has to come off before the chain pass, which would take
+  // 'asum if lFlag' as a stage name and keep only the name. Every line the
+  // statement becomes belongs inside the If, not just the last.
+  nB := aNums |> asum if lFlag
+
+  // A condition can lift statements of its own; they go above the block.
+  nC := 1 if hCfg{"n"} > 0
+
+  return nA + nB + nC if lFlag
+  return 0
+
+
+// --------------------------------------------------------------------------------
+// the end

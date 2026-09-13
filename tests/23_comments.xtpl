@@ -1,0 +1,34 @@
+// 23_comments.xtpl -- a trailing comment on a transformed line.
+//
+// Masking turns a comment into one token that travels with the tail of the
+// line. Every pass here wraps that tail in generated syntax, so a comment
+// left in place lands inside it and comments out the closing bracket:
+// '... fallback 0  // note' produced '{|| 0  // note})'. The comment is
+// peeled once before the rewrites and put back once after.
+// --------------------------------------------------------------------------------
+
+user function testComments(aNums, nX, hCfg, oUser)
+  local nSafe := 0
+  local cOut := ""
+  local nT := 0
+
+  nSafe := riskyCall(1) fallback 0        // fallback wraps the tail in a block
+  cOut := lookupName(1) ?: "anonymous"    // elvis wraps it in an If()
+  nT := aNums |> distinct |> asum         // a chain lands in a temp
+  nT := hCfg{"taxa"}                      // a hash read lifts to a Get
+  nT := nX %% 3                           // divisible-by
+  cOut := oUser?.oAddr?.cCity             // optional chaining
+  xconout("total=", nT)                   // xconout
+
+  for 3 times                             // a loop header
+    nT := nT + 1
+  next
+
+  conout(cOut + cValToChar(nSafe))
+
+  return nT if nT > 5                     // a postfix modifier
+  return 0
+
+
+// --------------------------------------------------------------------------------
+// the end

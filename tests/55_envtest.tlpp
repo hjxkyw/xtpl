@@ -1,0 +1,626 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// 55_envtest.tlpp -- rows(), lines(), using alias e raw, contra dados proprios.
+//
+// 54_selftest cobre o que e computacao pura. Estas quatro precisam de
+// ambiente: uma area de trabalho, um arquivo, o pre-processador. Em vez de
+// depender de uma tabela do dicionario, este arquivo CRIA o que precisa, usa,
+// e apaga no fim.
+//
+// Rode com:  appserver.exe -env=SeuAmbiente -run=u_envtest
+//
+//    envtest: 23 ok, 0 falhas
+//
+// Cada bloco e guardado por si, entao uma parte que falhe nao impede as
+// outras de rodar -- a fila no 54_selftest ensinou isso.
+//
+// A tabela se chama ZXTPL e o texto ZXTPL.TXT, nomes que nao devem colidir
+// com nada. Os dois sao apagados no fim, inclusive se algo falhar no meio.
+// --------------------------------------------------------------------------------
+
+#xtranslate ANOTE <x> => envNota(<x>)
+
+
+// A tabela e aberta por envTabela() e usada pelas outras: e exatamente para
+// isto que 'external alias' existe.
+
+user function envtest()
+
+  Local nOk := 0
+  Local nBad := 0
+  Local aEstr := {}
+  Local cDir := ""
+  Local nTmp := 0
+  Local cTmp := ""
+  Local aTmp := {}
+  Local lTmp := .F.
+
+  Local __blk_0_r
+  Local __blk_1_l
+  Local __blk_2_cDentro
+  Local __fuse_area_0_0
+  Local __fuse_n_0_0
+  Local __fuse_n_1_0
+  Local __fuse_out_0_0
+  Local __fuse_out_1_0
+  Local __fuse_rec_0_0
+  Local __fuse_src_1_0
+  Local __fuse_v_0_0
+  Local __fuse_v_1_0
+  Local __stk_1_usearea
+  Local __stk_1_userec
+  Local __stk_2_cLinha
+  Local __stk_2_each
+  Local __stk_2_eachi
+  Private cEnvNota := ""
+
+
+  // O comando raw escreve aqui. Uma PRIVATE vive enquanto a funcao que a
+  // declarou estiver na pilha -- declarada num auxiliar que retorna na hora,
+  // ela some antes de alguem ler. Entao e declarada AQUI.
+
+  cDir := ""
+
+  if !envConecta()
+    return 1
+  endif
+
+
+  // ---- monta a tabela ----------------------------------------------------
+  aadd(aEstr, {"ZX_COD", "C", 3, 0})
+  aadd(aEstr, {"ZX_NOME", "C", 20, 0})
+  aadd(aEstr, {"ZX_VALOR", "N", 10, 2})
+
+  if !envTabela(aEstr)
+    conout("envtest: nao consegui criar a tabela, nada mais pode rodar")
+    envLimpa(cDir)
+    return 1
+  endif
+
+  // ---- rows(): percorrer, filtrar, somar ---------------------------------
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("ZXTPL")
+  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  ZXTPL->(DbGoTop())
+  __fuse_out_0_0 := 0
+  While !ZXTPL->(Eof())
+    __fuse_v_0_0 := ZXTPL->ZX_VALOR
+    __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+    ZXTPL->(DbSkip())
+  EndDo
+  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  nTmp := __fuse_out_0_0
+  check("rows soma tudo", nTmp == 60, nTmp, @nOk, @nBad)
+
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("ZXTPL")
+  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  ZXTPL->(DbGoTop())
+  __fuse_out_0_0 := 0
+  While !ZXTPL->(Eof())
+    If ZXTPL->ZX_VALOR > 15
+      __fuse_v_0_0 := ZXTPL->ZX_VALOR
+      __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+    EndIf
+    ZXTPL->(DbSkip())
+  EndDo
+  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  nTmp := __fuse_out_0_0
+  check("rows filtra", nTmp == 45, nTmp, @nOk, @nBad)  // 20 + 25
+
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("ZXTPL")
+  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  ZXTPL->(DbGoTop())
+  __fuse_out_0_0 := 0
+  While !ZXTPL->(Eof())
+    __fuse_out_0_0 := __fuse_out_0_0 + 1
+    ZXTPL->(DbSkip())
+  EndDo
+  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  nTmp := __fuse_out_0_0
+  check("rows conta", nTmp == 4, nTmp, @nOk, @nBad)
+
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("ZXTPL")
+  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  ZXTPL->(DbGoTop())
+  __fuse_out_0_0 := 0
+  While !ZXTPL->(Eof())
+    If ZXTPL->ZX_COD == "002"
+      __fuse_out_0_0 := __fuse_out_0_0 + 1
+    EndIf
+    ZXTPL->(DbSkip())
+  EndDo
+  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  nTmp := __fuse_out_0_0
+  check("rows conta com teste", nTmp == 1, nTmp, @nOk, @nBad)
+
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("ZXTPL")
+  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  ZXTPL->(DbGoTop())
+  __fuse_out_0_0 := {}
+  While !ZXTPL->(Eof())
+    __fuse_v_0_0 := alltrim(ZXTPL->ZX_COD)
+    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    ZXTPL->(DbSkip())
+  EndDo
+  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  aTmp := __fuse_out_0_0
+  check("rows na ordem", len(aTmp) == 4 .and. aTmp[1] == "001", len(aTmp), @nOk, @nBad)
+
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("ZXTPL")
+  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  ZXTPL->(DbGoTop())
+  __fuse_out_0_0 := .F.
+  While !ZXTPL->(Eof())
+    If ZXTPL->ZX_VALOR > 20
+      __fuse_out_0_0 := .T.
+      Exit
+    EndIf
+    ZXTPL->(DbSkip())
+  EndDo
+  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  lTmp := __fuse_out_0_0  // o maior e 25
+  check("rows anyof acha", lTmp, 0, @nOk, @nBad)
+
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("ZXTPL")
+  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  ZXTPL->(DbGoTop())
+  __fuse_out_0_0 := .F.
+  While !ZXTPL->(Eof())
+    If ZXTPL->ZX_VALOR > 999
+      __fuse_out_0_0 := .T.
+      Exit
+    EndIf
+    ZXTPL->(DbSkip())
+  EndDo
+  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  lTmp := __fuse_out_0_0
+  check("rows anyof nao acha", !lTmp, 0, @nOk, @nBad)
+
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("ZXTPL")
+  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  ZXTPL->(DbGoTop())
+  __fuse_n_0_0 := 0
+  __fuse_out_0_0 := 0
+  While !ZXTPL->(Eof())
+    __fuse_v_0_0 := ZXTPL->ZX_VALOR
+    If __fuse_n_0_0 >= 2
+      Exit
+    EndIf
+    __fuse_n_0_0 := __fuse_n_0_0 + 1
+    __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+    ZXTPL->(DbSkip())
+  EndDo
+  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  nTmp := __fuse_out_0_0
+  check("rows para cedo", nTmp == 15, nTmp, @nOk, @nBad)
+
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("ZXTPL")
+  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  ZXTPL->(DbGoTop())
+  __fuse_out_0_0 := 0
+  While !ZXTPL->(Eof())
+    If !(ZXTPL->ZX_VALOR < 20)
+      Exit
+    EndIf
+    __fuse_out_0_0 := __fuse_out_0_0 + 1
+    ZXTPL->(DbSkip())
+  EndDo
+  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  nTmp := __fuse_out_0_0
+  check("rows takewhile", nTmp == 2, nTmp, @nOk, @nBad)
+
+  // ---- rows() deixa a area como achou ------------------------------------
+  DbSelectArea("ZXTPL")
+  ZXTPL->(DbGoTop())
+  ZXTPL->(DbSkip())
+  nTmp := ZXTPL->(RecNo())
+  __fuse_area_0_0 := Alias()
+  DbSelectArea("ZXTPL")
+  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  ZXTPL->(DbGoTop())
+  __fuse_out_0_0 := {}
+  While !ZXTPL->(Eof())
+    __fuse_v_0_0 := ZXTPL->ZX_COD
+    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    ZXTPL->(DbSkip())
+  EndDo
+  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  If !Empty(__fuse_area_0_0)
+    DbSelectArea(__fuse_area_0_0)
+  EndIf
+  aTmp := __fuse_out_0_0
+  check("rows devolve o registro", ZXTPL->(RecNo()) == nTmp, ZXTPL->(RecNo()), @nOk, @nBad)
+
+  // ---- using alias -------------------------------------------------------
+  ZXTPL->(DbGoTop())
+  nTmp := ZXTPL->(RecNo())
+  let usearea as __stk_1_usearea
+  let userec as __stk_1_userec
+  !usearea^1! := Alias()
+  DbSelectArea("ZXTPL")
+  !userec^1! := ZXTPL->(RecNo())
+    ZXTPL->(DbSkip())
+    ZXTPL->(DbSkip())
+  ZXTPL->(DbGoto(!userec^1!))
+  If !Empty(!usearea^1!)
+    DbSelectArea(!usearea^1!)
+  EndIf
+  check("using devolve o registro", ZXTPL->(RecNo()) == nTmp, ZXTPL->(RecNo()), @nOk, @nBad)
+
+  cTmp := envUsingSai()
+  check("using devolve no return", cTmp == "ZXTPL", cTmp, @nOk, @nBad)
+
+  // ---- lines(): o arquivo texto ------------------------------------------
+  if !envTexto(cDir)
+    let each as __stk_2_each
+    let cLinha as __stk_2_cLinha
+    let eachi as __stk_2_eachi
+    conout("envtest: nao consegui escrever o texto")
+  else
+    __fuse_src_1_0 := cDir + "ZXTPL.TXT"
+    FT_FUse(__fuse_src_1_0)
+    FT_FGoTop()
+    __fuse_out_1_0 := {}
+    While File(__fuse_src_1_0) .And. !FT_FEof()
+      __fuse_v_1_0 := FT_FReadLn()
+      AAdd(__fuse_out_1_0, __fuse_v_1_0)
+      FT_FSkip()
+    EndDo
+    FT_FUse()
+    aTmp := __fuse_out_1_0
+    check("lines le tudo", len(aTmp) == 5, len(aTmp), @nOk, @nBad)
+
+    __fuse_src_1_0 := cDir + "ZXTPL.TXT"
+    FT_FUse(__fuse_src_1_0)
+    FT_FGoTop()
+    __fuse_out_1_0 := 0
+    While File(__fuse_src_1_0) .And. !FT_FEof()
+      __fuse_v_1_0 := FT_FReadLn()
+      __fuse_out_1_0 := __fuse_out_1_0 + 1
+      FT_FSkip()
+    EndDo
+    FT_FUse()
+    nTmp := __fuse_out_1_0
+    check("lines conta", nTmp == 5, nTmp, @nOk, @nBad)
+
+    __fuse_src_1_0 := cDir + "ZXTPL.TXT"
+    FT_FUse(__fuse_src_1_0)
+    FT_FGoTop()
+    __fuse_out_1_0 := {}
+    While File(__fuse_src_1_0) .And. !FT_FEof()
+      __fuse_v_1_0 := FT_FReadLn()
+      %l^1% := __fuse_v_1_0
+      If !empty(%l^1%)
+        %l^1% := __fuse_v_1_0
+        __fuse_v_1_0 := alltrim(%l^1%)
+        AAdd(__fuse_out_1_0, __fuse_v_1_0)
+      EndIf
+      FT_FSkip()
+    EndDo
+    FT_FUse()
+    aTmp := __fuse_out_1_0
+    check("lines filtra vazias", len(aTmp) == 4, len(aTmp), @nOk, @nBad)
+
+    __fuse_src_1_0 := cDir + "ZXTPL.TXT"
+    FT_FUse(__fuse_src_1_0)
+    FT_FGoTop()
+    __fuse_n_1_0 := 0
+    __fuse_out_1_0 := {}
+    While File(__fuse_src_1_0) .And. !FT_FEof()
+      __fuse_v_1_0 := FT_FReadLn()
+      If __fuse_n_1_0 >= 2
+        Exit
+      EndIf
+      __fuse_n_1_0 := __fuse_n_1_0 + 1
+      AAdd(__fuse_out_1_0, __fuse_v_1_0)
+      FT_FSkip()
+    EndDo
+    FT_FUse()
+    aTmp := __fuse_out_1_0
+    check("lines para cedo", len(aTmp) == 2 .and. alltrim(aTmp[1]) == "um", len(aTmp), @nOk, @nBad)
+
+    __fuse_src_1_0 := cDir + "ZXTPL.TXT"
+    FT_FUse(__fuse_src_1_0)
+    FT_FGoTop()
+    __fuse_out_1_0 := Nil
+    While File(__fuse_src_1_0) .And. !FT_FEof()
+      __fuse_v_1_0 := FT_FReadLn()
+      %l^1% := __fuse_v_1_0
+      __fuse_v_1_0 := alltrim(%l^1%)
+      %l^1% := __fuse_v_1_0
+      If %l^1% == "tres"
+        __fuse_out_1_0 := __fuse_v_1_0
+        Exit
+      EndIf
+      FT_FSkip()
+    EndDo
+    FT_FUse()
+    cTmp := __fuse_out_1_0
+    check("lines first", cTmp == "tres", cTmp, @nOk, @nBad)
+
+    // for sobre lines, com loop e return antecipado
+    nTmp := 0
+    !each^2! := cDir + "ZXTPL.TXT"
+    FT_FUse(!each^2!)
+    FT_FGoTop()
+    !eachi^2! := 0
+    While File(!each^2!) .And. !FT_FEof()
+      !eachi^2! := !eachi^2! + 1
+      !cLinha^2! := FT_FReadLn()
+      FT_FSkip()
+      if empty(!cLinha^2!)
+        loop
+      endif
+      nTmp := nTmp + 1
+    EndDo
+    FT_FUse()
+    check("for sobre lines, com loop", nTmp == 4, nTmp, @nOk, @nBad)
+
+    nTmp := envLinhaAte(cDir, "tres")
+    check("for sobre lines, return", nTmp == 4, nTmp, @nOk, @nBad)  // a vazia conta
+
+    __fuse_src_1_0 := cDir + "NAOEXISTE.TXT"
+    FT_FUse(__fuse_src_1_0)
+    FT_FGoTop()
+    __fuse_out_1_0 := {}
+    While File(__fuse_src_1_0) .And. !FT_FEof()
+      __fuse_v_1_0 := FT_FReadLn()
+      AAdd(__fuse_out_1_0, __fuse_v_1_0)
+      FT_FSkip()
+    EndDo
+    FT_FUse()
+    aTmp := __fuse_out_1_0
+    check("lines de arquivo ausente", len(aTmp) == 0, len(aTmp), @nOk, @nBad)
+  endif
+
+  // ---- raw ---------------------------------------------------------------
+  envZeraNota()
+  ANOTE "de uma linha raw"
+  check("raw de uma linha", envNotaFoi() == "de uma linha raw", envNotaFoi(), @nOk, @nBad)
+
+  envZeraNota()
+    ANOTE "de um bloco raw"
+  check("raw em bloco", envNotaFoi() == "de um bloco raw", envNotaFoi(), @nOk, @nBad)
+
+  // uma variavel declarada continua renomeada dentro do raw
+  if .T.
+    let cDentro as __blk_2_cDentro
+    %cDentro^2% := "vem do bloco"
+    envZeraNota()
+    ANOTE %cDentro^2%
+    check("raw renomeia o que e declarado", envNotaFoi() == "vem do bloco", envNotaFoi(), @nOk, @nBad)
+
+  endif
+
+  conout("envtest: " + cValToChar(nOk) + " ok, " + cValToChar(nBad) + " falhas")
+
+envLimpa(cDir)
+return nBad
+
+// --------------------------------------------------------------------------------
+
+static function check(cNome, lOk, xVisto, nOk, nBad)
+
+  if lOk
+    nOk := nOk + 1
+  else
+    nBad := nBad + 1
+    conout("FALHA  " + cNome + "  (visto: " + cValToChar(xVisto) + ")")
+  endif
+return nil
+
+// A conexao com o banco. Um job iniciado por '-run=' comeca sem nenhuma, e
+// tudo que toca uma tabela falha ate isto rodar.
+static function envConecta()
+
+  Local nErro
+
+
+  nErro := TCLink()
+
+  if nErro < 0
+    conout("envtest: TCLink falhou com " + cValToChar(nErro))
+    return .F.
+  endif
+
+return .T.
+
+// Cria a tabela se nao existir, esvazia, e poe quatro linhas em ordem
+// crescente de valor. 'TOPCONN' e obrigatorio no DbCreate; sem ele erra.
+static function envTabela(aEstr)
+
+  if !TCCanOpen("ZXTPL")
+    DbCreate("ZXTPL", aEstr, "TOPCONN")
+  endif
+
+  if !TCCanOpen("ZXTPL")
+    conout("envtest: nao consegui criar ZXTPL")
+    return .F.
+  endif
+
+  DbUseArea(.T., "TOPCONN", "ZXTPL", "ZXTPL", .F., .F.)
+
+  if select("ZXTPL") == 0
+    conout("envtest: ZXTPL nao abriu")
+    return .F.
+  endif
+
+  __DbZap()
+
+  envPoe("001", "primeiro", 5)
+  envPoe("002", "segundo", 10)
+  envPoe("003", "terceiro", 20)
+  envPoe("004", "quarto", 25)
+
+  ZXTPL->(DbGoTop())
+
+return .T.
+
+// DbAppend(.F.) e a forma que funciona aqui; RecLock e do ERP.
+static function envPoe(cCod, cNome, nValor)
+
+  ZXTPL->(DbAppend(.F.))
+  ZXTPL->ZX_COD := cCod
+  ZXTPL->ZX_NOME := cNome
+  ZXTPL->ZX_VALOR := nValor
+  ZXTPL->(DbCommit())
+return nil
+
+// Cinco linhas, uma delas vazia.
+static function envTexto(cDir)
+
+  Local cTexto
+
+
+  cTexto := "um" + CRLF + "dois" + CRLF + "" + CRLF + "tres" + CRLF + "quatro"
+return MemoWrite(cDir + "ZXTPL.TXT", cTexto)
+
+// Um return antecipado de dentro de um for sobre lines: o arquivo tem de
+// fechar na saida.
+static function envLinhaAte(cDir, cProcurado)
+
+  Local nOnde := 0
+
+  Local __stk_1_cLinha
+  Local __stk_1_each
+  Local __stk_1_nNum
+
+
+  let each as __stk_1_each
+  let cLinha as __stk_1_cLinha
+  let nNum as __stk_1_nNum
+  !each^1! := cDir + "ZXTPL.TXT"
+  FT_FUse(!each^1!)
+  FT_FGoTop()
+  !nNum^1! := 0
+  While File(!each^1!) .And. !FT_FEof()
+    !nNum^1! := !nNum^1! + 1
+    !cLinha^1! := FT_FReadLn()
+    FT_FSkip()
+    If alltrim(!cLinha^1!) == cProcurado
+      FT_FUse()
+      Return !nNum^1!
+    EndIf
+  EndDo
+  FT_FUse()
+
+return nOnde
+
+// Um return antecipado de dentro de um using: a area tem de voltar.
+static function envUsingSai()
+
+  Local cAntes
+
+  Local __stk_1_usearea
+  Local __stk_1_userec
+
+  cAntes := alias()
+
+  let usearea as __stk_1_usearea
+  let userec as __stk_1_userec
+  !usearea^1! := Alias()
+  DbSelectArea("ZXTPL")
+  !userec^1! := ZXTPL->(RecNo())
+    ZXTPL->(DbGoTop())
+    ZXTPL->(DbGoto(!userec^1!))
+    If !Empty(!usearea^1!)
+      DbSelectArea(!usearea^1!)
+    EndIf
+    return alias()
+  ZXTPL->(DbGoto(!userec^1!))
+  If !Empty(!usearea^1!)
+    DbSelectArea(!usearea^1!)
+  EndIf
+
+return cAntes
+
+// A nota que o comando raw escreve, guardada numa PRIVATE para o comando
+// poder alcanca-la de onde for.
+// A PRIVATE e de envtest(); aqui so se limpa o que ela guarda.
+static function envZeraNota()
+
+  cEnvNota := ""
+return nil
+
+// Um 'private' e conhecido no arquivo inteiro, entao nada aqui precisa de
+// 'external' -- e 'external' recusaria a atribuicao de qualquer jeito.
+static function envNota(cTexto)
+
+  cEnvNota := cTexto
+return nil
+
+static function envNotaFoi()
+
+return cEnvNota
+
+// Fecha, apaga e desconecta, mesmo se algo falhou no meio.
+static function envLimpa(cDir)
+
+  if select("ZXTPL") > 0
+    ZXTPL->(DbCloseArea())
+  endif
+  TCDelFile("ZXTPL")
+  FErase(cDir + "ZXTPL.TXT")
+  TCUnlink()
+return nil
+
+// --------------------------------------------------------------------------------
+// the end

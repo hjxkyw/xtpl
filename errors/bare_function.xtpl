@@ -1,0 +1,14 @@
+// bare_function.xtpl -- 'function' sem qualificador.
+//
+// O Protheus recusa:
+//   Regular functions are not allowed in code.
+//   Use USER FUNCTION or STATIC FUNCTION.
+//
+// Nunca pode dar certo, entao e recusado aqui e nao na compilacao.
+// --------------------------------------------------------------------------------
+
+function semQualificador(nX)
+  return nX
+
+// --------------------------------------------------------------------------------
+// the end

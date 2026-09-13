@@ -1,0 +1,15 @@
+// fallback_over_source.xtpl -- a guard around a walk.
+//
+// A source has no unfused form, so there is no way to express the walk as an
+// expression for the guard to hold.
+// --------------------------------------------------------------------------------
+
+user function fallbackOverSource()
+  local nTotal := 0
+
+  nTotal := rows("SA1") |> map([r] r:A1_SALDO) |> asum fallback 0
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

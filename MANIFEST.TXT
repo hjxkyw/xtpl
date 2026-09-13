@@ -1,4 +1,4 @@
-# xtpl 102 -- the fixtures this release contains.
+# xtpl 103 -- the fixtures this release contains.
 # A file in tests/ or errors/ that is not listed here is a leftover
 # from an earlier release, and will fail for reasons of its own.
 errors/arity_too_many.xtpl

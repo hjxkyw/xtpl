@@ -19,10 +19,10 @@ method process(jPayLoad as json) as json class MinhaTool
   Local cAlias as character
 
 
-
   jResp := JsonObject():New()
 
   DbSelectArea("SC9")
+
   if SC9->(MsSeek(xFilial("SC9") + jPayLoad["numero"]))
     // dentro de ALIAS->( ... ) um nome solto é campo daquele alias
     if SA1->(MsSeek(xFilial("SA1") + SC9->(C9_CLIENTE + C9_LOJA)))

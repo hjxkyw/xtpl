@@ -41,7 +41,6 @@ user function testOperators(nValor, cCodigo, aCodigos, aNums)
   Local __fuse_src_0_0
   Local __fuse_v_0_0
 
-
   // folds: named functions, not operators, so they chain too
   nTotal := u_xtpl_asum(aNums)
   nTotal := u_xtpl_aprod(aNums)
@@ -49,13 +48,14 @@ user function testOperators(nValor, cCodigo, aCodigos, aNums)
   nTotal := u_xtpl_amin(aNums)
   __fuse_src_0_0 := aNums
   __fuse_out_0_0 := 0
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %n^0% := __fuse_v_0_0
-    If %n^0% > 10
+    If __fuse_v_0_0 > 10
       __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
     EndIf
   Next
+
   nTotal := __fuse_out_0_0
 
   // fold() for anything the four do not cover

@@ -41,10 +41,7 @@ user function testChunkby(aRows, cNum)
   Local aGrupos := {}
   Local aTamanhos := {}
 
-  Local __blk_0_c
   Local __blk_0_r
-  Local __blk_1_r
-  Local __blk_1_x
   Local __fuse_area_1_0
   Local __fuse_chunk_0_0
   Local __fuse_chunk_1_0
@@ -65,7 +62,6 @@ user function testChunkby(aRows, cNum)
   Local __stk_1_usearea
   Local __stk_1_useord
   Local __stk_1_userec
-
 
   // one stage on its own stays a call
   __pipe_tmp_0_0 := u_xtpl_chunkby(aRows, {|%r^0%| %r^0%:cPedido})
@@ -91,8 +87,7 @@ user function testChunkby(aRows, cNum)
     __fuse_out_1_0 := {}
     While !SC6->(Eof())
       __fuse_v_1_0 := {SC6->C6_NUM, SC6->C6_PRODUTO}
-      %x^1% := __fuse_v_1_0
-      __fuse_seen_1_0 := %x^1%[1]
+      __fuse_seen_1_0 := __fuse_v_1_0[1]
       If !__fuse_open_1_0
         __fuse_open_1_0 := .T.
         __fuse_key_1_0 := __fuse_seen_1_0
@@ -113,9 +108,9 @@ user function testChunkby(aRows, cNum)
     EndIf
     aGrupos := __fuse_out_1_0
 
-
   SC6->(DbSetOrder(!useord^1!))
   SC6->(DbGoto(!userec^1!))
+
   If !Empty(!usearea^1!)
     DbSelectArea(!usearea^1!)
   EndIf
@@ -128,12 +123,11 @@ user function testChunkby(aRows, cNum)
   __fuse_open_0_0 := .F.
   __fuse_seen_0_0 := Nil
   __fuse_out_0_0 := {}
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %r^0% := __fuse_v_0_0
-    __fuse_v_0_0 := %r^0%:cPedido
-    %c^0% := __fuse_v_0_0
-    __fuse_seen_0_0 := %c^0%
+    __fuse_v_0_0 := __fuse_v_0_0:cPedido
+    __fuse_seen_0_0 := __fuse_v_0_0
     If !__fuse_open_0_0
       __fuse_open_0_0 := .T.
       __fuse_key_0_0 := __fuse_seen_0_0
@@ -144,9 +138,11 @@ user function testChunkby(aRows, cNum)
     EndIf
     AAdd(__fuse_chunk_0_0, __fuse_v_0_0)
   Next
+
   If __fuse_open_0_0
     AAdd(__fuse_out_0_0, __fuse_chunk_0_0)
   EndIf
+
   aTamanhos := __fuse_out_0_0
 
   return len(aPedidos) + len(aGrupos) + len(aTamanhos)

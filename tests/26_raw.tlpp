@@ -45,7 +45,6 @@ user function testRaw(oDlg)
 
   Local __blk_1_cAux
 
-
   // one line
   MOSTRE cValToChar(nTotal) QUANDO nTotal > 0
 

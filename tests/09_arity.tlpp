@@ -21,7 +21,6 @@ user function testArity(nX)
   Local nT := 0
 
 
-
   nT := calcTotal(nX, 2)  // exactly right
   nT := nT + calcTotal(nX)  // fewer: ordinary, the second is Nil
   nT := nT + semArgs()

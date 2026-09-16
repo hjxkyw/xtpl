@@ -42,7 +42,6 @@ user function testAliasOpen(nX)
   Local __stk_1_usearea
   Local __stk_1_userec
 
-
   // opened here, so both uses are fine
   let usearea as __stk_1_usearea
   let userec as __stk_1_userec
@@ -51,6 +50,7 @@ user function testAliasOpen(nX)
   !userec^1! := SA1->(RecNo())
     nT := SA1->A1_SALDO + SA1->A1_VALOR
   SA1->(DbGoto(!userec^1!))
+
   If !Empty(!usearea^1!)
     DbSelectArea(!usearea^1!)
   EndIf

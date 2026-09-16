@@ -1,28 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
-
 // 40_map.tlpp -- --map: every emitted line says where it came from.
 //
 // One source line often becomes a dozen, so the marker goes on all of them.
@@ -34,23 +12,22 @@ user function testMap(aNums, hCfg)
   Local nT := 0
   Local cOut := ""
 
-  Local __blk_0_x
   Local __fuse_i_0_0
   Local __fuse_out_0_0
   Local __fuse_src_0_0
   Local __fuse_v_0_0
   Local __hash_tmp_0_0
 
-
   __fuse_src_0_0 := aNums  // xtpl:11
   __fuse_out_0_0 := 0  // xtpl:11
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)  // xtpl:11
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]  // xtpl:11
-    %x^0% := __fuse_v_0_0  // xtpl:11
-    If %x^0% > 1  // xtpl:11
+    If __fuse_v_0_0 > 1  // xtpl:11
       __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0  // xtpl:11
     EndIf  // xtpl:11
   Next  // xtpl:11
+
   nT := __fuse_out_0_0  // xtpl:11
   cOut := ("total " + cValToChar(nT))  // xtpl:12
   __hash_tmp_0_0 := Nil  // xtpl:13

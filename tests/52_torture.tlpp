@@ -40,9 +40,6 @@ user function testTorture(hCfg, cNum, aRows, cPath, nX)
   Local aX := {}
 
   Local __blk_0_g
-  Local __blk_0_i
-  Local __blk_0_r
-  Local __blk_1_r
   Local __fuse_area_1_0
   Local __fuse_bag_0_0
   Local __fuse_chunk_0_0
@@ -71,8 +68,6 @@ user function testTorture(hCfg, cNum, aRows, cPath, nX)
   Local __stk_2_usearea
   Local __stk_2_useord
   Local __stk_2_userec
-
-
 
   // a string literal inside an interpolated expression
   __hash_tmp_0_0 := Nil
@@ -125,8 +120,6 @@ user function testTorture(hCfg, cNum, aRows, cPath, nX)
       EndIf
       aOut := __fuse_out_1_0  // split mid-chain // and a block comment
 
-
-
       __hash_tmp_1_0 := Nil
       hCfg:Get("parar", @__hash_tmp_1_0)
       If __hash_tmp_1_0
@@ -151,6 +144,7 @@ user function testTorture(hCfg, cNum, aRows, cPath, nX)
     EndIf
   SA1->(DbSetOrder(!useord^1!))
   SA1->(DbGoto(!userec^1!))
+
   If !Empty(!usearea^1!)
     DbSelectArea(!usearea^1!)
   EndIf
@@ -160,16 +154,17 @@ user function testTorture(hCfg, cNum, aRows, cPath, nX)
   __fuse_lim_0_0 := len(u_xtpl_distinct(aRows))
   __fuse_n_0_0 := 0
   __fuse_out_0_0 := {}
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
     If __fuse_n_0_0 >= __fuse_lim_0_0
       Exit
     EndIf
     __fuse_n_0_0 := __fuse_n_0_0 + 1
-    %r^0% := __fuse_v_0_0
-    __fuse_v_0_0 := %r^0%:cCod
+    __fuse_v_0_0 := __fuse_v_0_0:cCod
     AAdd(__fuse_out_0_0, __fuse_v_0_0)
   Next
+
   aX := __fuse_out_0_0
 
   // a terminal that is not the last stage
@@ -179,14 +174,13 @@ user function testTorture(hCfg, cNum, aRows, cPath, nX)
   __fuse_open_0_0 := .F.
   __fuse_seen_0_0 := Nil
   __fuse_out_0_0 := {}
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %r^0% := __fuse_v_0_0
-    __fuse_bag_0_0 := %r^0%:aItens
+    __fuse_bag_0_0 := __fuse_v_0_0:aItens
     For __fuse_j_0_0 := 1 To Len(__fuse_bag_0_0)
       __fuse_v_0_0 := __fuse_bag_0_0[__fuse_j_0_0]
-      %i^0% := __fuse_v_0_0
-      __fuse_seen_0_0 := %i^0%:cGrupo
+      __fuse_seen_0_0 := __fuse_v_0_0:cGrupo
       If !__fuse_open_0_0
         __fuse_open_0_0 := .T.
         __fuse_key_0_0 := __fuse_seen_0_0
@@ -198,14 +192,17 @@ user function testTorture(hCfg, cNum, aRows, cPath, nX)
       AAdd(__fuse_chunk_0_0, __fuse_v_0_0)
     Next
   Next
+
   If __fuse_open_0_0
     AAdd(__fuse_out_0_0, __fuse_chunk_0_0)
   EndIf
+
   __pipe_tmp_0_0 := u_xtpl_map(__fuse_out_0_0, {|%g^0%| len(%g^0%)})
   aQ := __pipe_tmp_0_0
 
   // two chains on one line, and one in a postfix condition
   nT := nT + len(u_xtpl_distinct(aRows)) + len(u_xtpl_reverse(aRows))
+
   If len(u_xtpl_distinct(aRows)) > 3
     nT := 99
   EndIf

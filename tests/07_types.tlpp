@@ -14,7 +14,6 @@ user function testTypes(cQualquer, nX)
   Local nT := 0
 
 
-
   // wrong type, assigned
   SA1->A1_NOME := 5
   SA1->A1_SALDO := "texto"
@@ -24,18 +23,22 @@ user function testTypes(cQualquer, nX)
   If SA1->A1_SALDO == "abc"
     nT := 1
   EndIf
+
   If "abc" == SA1->A1_SALDO
     nT := 2
   EndIf
 
   // right type: silent
   SA1->A1_COD := "123456"
+
   If SA1->A1_BLOQ == .T.
     nT := 3
   EndIf
+
   If SA1->A1_NOME == "ok"
     nT := 4
   EndIf
+
   If SA1->A1_SALDO > 0
     nT := 5
   EndIf

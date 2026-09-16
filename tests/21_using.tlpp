@@ -38,7 +38,6 @@ user function testUsing(cAlias, nX)
   Local nT := 0
   Local aC := {}
 
-  Local __blk_0_r
   Local __fuse_area_0_0
   Local __fuse_out_0_0
   Local __fuse_rec_0_0
@@ -49,7 +48,6 @@ user function testUsing(cAlias, nX)
   Local __stk_2_usealias
   Local __stk_2_usearea
   Local __stk_2_userec
-
 
   let usearea as __stk_1_usearea
   let userec as __stk_1_userec
@@ -84,6 +82,7 @@ user function testUsing(cAlias, nX)
     EndIf
   SA1->(DbSetOrder(!useord^1!))
   SA1->(DbGoto(!userec^1!))
+
   If !Empty(!usearea^1!)
     DbSelectArea(!usearea^1!)
   EndIf
@@ -94,6 +93,7 @@ user function testUsing(cAlias, nX)
   __fuse_rec_0_0 := SA1->(RecNo())
   SA1->(DbGoTop())
   __fuse_out_0_0 := {}
+
   While !SA1->(Eof())
     If SA1->A1_SALDO > 0
       __fuse_v_0_0 := SA1->A1_COD
@@ -101,10 +101,13 @@ user function testUsing(cAlias, nX)
     EndIf
     SA1->(DbSkip())
   EndDo
+
   SA1->(DbGoto(__fuse_rec_0_0))
+
   If !Empty(__fuse_area_0_0)
     DbSelectArea(__fuse_area_0_0)
   EndIf
+
   aC := __fuse_out_0_0
 
   return nT + len(aC)

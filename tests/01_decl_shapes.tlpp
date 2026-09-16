@@ -26,7 +26,6 @@ user function testDeclShapes(nX)
   Local v6 := {}  // spaces everywhere
 
 
-
   aadd(v6, v1 + v2 + v3 + v5)
   v4 := len(v6)
 

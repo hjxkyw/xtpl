@@ -855,6 +855,21 @@ If ((nValor + 1) % 3) == 0
 
 O `%` sozinho é o módulo do próprio AdvPL e passa intocado.
 
+### Uma cadeia não aninha, mas os verbos são funções comuns
+
+Uma cadeia `|>` não pode ficar dentro de um lambda — içar as etapas para fora
+do bloco as faria rodar antes dele, e não há lugar certo para pô-las. Mas todo
+verbo de cadeia também é uma função comum, e chamá-la direto dentro do lambda
+funciona:
+
+```xtpl
+|> filter([a] len(a) == 3 .and. allof(a, ehNumero))
+|> map([a] asum(map(a, val)) / 3)
+```
+
+Na prática isso quase sempre dispensa a função auxiliar que a restrição
+parece exigir.
+
 ### `|>` — alimentação
 
 Açúcar para encadeamento: o valor da esquerda vira o **primeiro argumento** da

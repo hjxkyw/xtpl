@@ -47,7 +47,6 @@ user function testArray(aOrders, aNums, aCodes, aDesc)
   Local __blk_0_o
   Local __blk_0_x
 
-
   // transform, keep, discard
   aVals := u_xtpl_map(aOrders, {|%o^0%| %o^0%:nValue})
   aBig  := u_xtpl_filter(aOrders, {|%o^0%| %o^0%:nValue > 1000})

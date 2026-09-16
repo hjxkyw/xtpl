@@ -45,16 +45,19 @@ user function testForeachLines(cPath)
   Local __stk_1_cLinha
   Local __stk_1_each
   Local __stk_1_nNumero
-
+  Local __stk_1_opened
 
   let each as __stk_1_each
   let cLinha as __stk_1_cLinha
   let nNumero as __stk_1_nNumero
   !each^1! := cPath
+  let opened as __stk_1_opened
+  !opened^1! := File(!each^1!)
   FT_FUse(!each^1!)
   FT_FGoTop()
   !nNumero^1! := 0
-  While File(!each^1!) .And. !FT_FEof()
+
+  While !opened^1! .And. !FT_FEof()
     !nNumero^1! := !nNumero^1! + 1
     !cLinha^1! := FT_FReadLn()
     FT_FSkip()
@@ -69,6 +72,7 @@ user function testForeachLines(cPath)
       Return !nNumero^1!
     EndIf
   EndDo
+
   FT_FUse()
 
   return nTotal

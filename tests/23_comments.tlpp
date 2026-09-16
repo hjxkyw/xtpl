@@ -44,7 +44,6 @@ user function testComments(aNums, nX, hCfg, oUser)
   Local __pipe_tmp_0_1
   Local __stk_1_times
 
-
   nSafe := u_xtpl_safe_pipe({|| riskyCall(1)}, {|| 0})  // fallback wraps the tail in a block
   __elvis_tmp_0_0 := lookupName(1)
   cOut := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, "anonymous")  // elvis wraps it in an If()
@@ -59,6 +58,7 @@ user function testComments(aNums, nX, hCfg, oUser)
   conout("total=" + cValToChar(nT))  // xconout
 
   let times as __stk_1_times
+
   For !times^1! := 1 To 3  // a loop header
     nT := nT + 1
   next
@@ -68,8 +68,8 @@ user function testComments(aNums, nX, hCfg, oUser)
   If nT > 5  // a postfix modifier
     Return nT
   EndIf
-  return 0
 
+  return 0
 
 // --------------------------------------------------------------------------------
 // the end

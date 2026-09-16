@@ -1521,6 +1521,78 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     # and expands to nothing.
 
 
+  def drop_unused_generated():
+    """Forget generated storage that nothing in the body refers to.
+
+    Substituting a block's parameter for the value the loop already holds
+    leaves its slot declared and never mentioned. The name was the
+    transpiler's, so there is nothing to warn about -- it just goes, along
+    with the 'let' that marked it.
+    """
+    body = "\n".join(function_buffer[1:])
+    alive = []
+    for name in generated_hoisted:
+      spelled = re.match(r'^__(stk|blk)_(\d+)_(.+)$', name)
+      forms = [rf'\b{re.escape(name)}\b']
+      if spelled:
+        kind, depth, tail = spelled.groups()
+        if kind == "blk":
+          forms.append(rf'%{re.escape(tail)}\^{depth}%')
+        elif tail.isdigit():
+          forms.append(rf'![A-Za-z_]\w*\^{depth}\^{tail}!')
+        else:
+          forms.append(rf'!{re.escape(tail)}\^{depth}!')
+      if any(re.search(f, body) for f in forms):
+        alive.append(name)
+    if len(alive) == len(generated_hoisted):
+      return
+    gone = [n for n in generated_hoisted if n not in alive]
+    generated_hoisted[:] = alive
+    function_buffer[1:] = [
+      l for l in function_buffer[1:]
+      if not any(re.match(rf'\s*let \w+ as {re.escape(n)}\s*$', l)
+                 for n in gone)]
+
+  def space_out_blocks():
+    """A blank line either side of a control structure at the outer level.
+
+    A fused chain emits a dozen lines with a loop in the middle, and without
+    this the whole function reads as one block of text. Only the outermost
+    level: spacing a nested 'If' as well would pull the loop apart.
+    """
+    opens = re.compile(
+      r'^  (?:If|For|While|Do\s+Case|Begin\s+Sequence|Try)\b', re.IGNORECASE)
+    closes = re.compile(
+      r'^  (?:EndIf|Next|EndDo|EndCase|End\s+Sequence|EndTry)\b',
+      re.IGNORECASE)
+    spaced = []
+    for index, line in enumerate(function_buffer):
+      if opens.match(line) and spaced:
+        # A comment run directly above belongs to the block it documents, so
+        # the blank goes above the comment, not between them.
+        at = len(spaced)
+        while at > 0 and spaced[at - 1].strip().startswith("//"):
+          at -= 1
+        # Only when there is real body above it. Position 1 is straight after
+        # the signature, where the declarations already separate.
+        if at > 1 and spaced[at - 1].strip():
+          spaced.insert(at, "")
+      spaced.append(line)
+      if closes.match(line):
+        following = function_buffer[index + 1] if index + 1 < len(
+          function_buffer) else ""
+        if following.strip():
+          spaced.append("")
+    # A ';' continuation leaves its lines blank so the numbering still points
+    # at the source, which can put five blanks in a row where one statement
+    # was spread over five lines. One is enough anywhere.
+    collapsed = []
+    for line in spaced:
+      if not line.strip() and collapsed and not collapsed[-1].strip():
+        continue
+      collapsed.append(line)
+    function_buffer[:] = collapsed
+
   def mark_block_declarations():
     """'let <name> as <storage>' in front of every block-local declaration.
 
@@ -1697,6 +1769,8 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     spell_named_slots()
     spell_private_storage()
     mark_block_declarations()
+    space_out_blocks()
+    drop_unused_generated()
     if using_stack:
       # Without this the block silently swallows the rest of the function and
       # the area is never put back.
@@ -1788,6 +1862,10 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       out_lines.append("")
 
     for line in remaining_body:
+      # The declaration block already ends with a blank; the body often
+      # begins with one too, and two in a row reads as a gap.
+      if not line.strip() and out_lines and not out_lines[-1].strip():
+        continue
       out_lines.append(line)
 
     # A function that returns a value on one path and nothing on another
@@ -2624,6 +2702,30 @@ def transpile(source_code, dictionary=None, dict_strict=False,
 
     parts = feed_segments(expr_nodes(expr))
 
+    # The whole left side becomes the first argument, which is the rule and is
+    # exactly what someone writing 'a == 3 .and. aList |> allof(...)' did not
+    # mean. It compiles and quietly passes the comparison as the collection.
+    if len(parts) > 1 and not for_value:
+      head_text = parts[0]
+      # At depth zero only. A complete call whose arguments contain a
+      # comparison -- 'zip(a, b, [x, y] len(x) == len(y))' -- is not a loose
+      # left side, and warning about it taught people to ignore the warning.
+      bare, depth = [], 0
+      for char in head_text:
+        if char in "([{":
+          depth += 1
+        elif char in ")]}":
+          depth -= 1
+        elif depth == 0:
+          bare.append(char)
+      loose = re.search(r'\.(?:and|or)\.|[<>]=?|==|!=|<>', "".join(bare),
+                        re.IGNORECASE)
+      if loose:
+        print(f"warning: line {line_idx + 1}: the whole left side of '|>' is "
+              f"the first argument, so '{head_text.strip()[:40]}' is what "
+              f"gets fed in. Put brackets around the part you meant to chain.",
+              file=sys.stderr)
+
     head_expr = parts[0].strip()
     if not head_expr:
       # Nothing to feed. Reached by a continuation that failed to join, which
@@ -2731,6 +2833,59 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     if inner is None or segment[end_idx:].strip():
       return None
     return head.group(1).lower(), inner.strip()
+
+  def expand_bare_blocks(line, curr_scope):
+    """Rewrite 'verb(name)' into 'verb([x] name(x))' before anything else."""
+    for found in list(re_verb_call.finditer(line)):
+      verb = found.group(1).lower()
+      if verb not in _TAKES_A_BLOCK:
+        continue
+      args, end_idx = extract_parens(line, found.end() - 1)
+      if args is None:
+        continue
+      pieces = split_top_level(args)
+      changed = False
+      # The LAST argument only. For every one of these verbs the block comes
+      # last, and converting any bare name turned the collection into a block
+      # too -- 'allof(b, ehOk)' inside a lambda, where 'b' is the lambda's own
+      # parameter and is not in scope yet when this runs.
+      if pieces:
+        index = len(pieces) - 1
+        widened = name_as_block(verb, pieces[index].strip(), curr_scope)
+        if widened != pieces[index].strip():
+          pieces[index] = widened
+          changed = True
+      if changed:
+        return expand_bare_blocks(
+          line[:found.end()] + ", ".join(pieces) + line[end_idx - 1:],
+          curr_scope)
+    return line
+
+  # Verbs whose argument is a block, and which therefore accept a bare
+  # function name standing for one.
+  _TAKES_A_BLOCK = {
+    "map", "filter", "reject", "tap", "takewhile", "dropwhile", "expand",
+    "maxby", "minby", "sortby", "chunkby", "distinctadjacent", "first",
+    "count", "anyof", "allof", "noneof",
+  }
+  re_bare_name = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+
+  def name_as_block(verb, args, curr_scope):
+    """'map(alltrim)' means 'map([x] alltrim(x))'.
+
+    Writing the lambda out is three tokens of ceremony for something the
+    reader already understands, and 'alltrim' on its own read as an
+    undeclared name -- a poor error for a reasonable thing to write.
+
+    A name that IS a variable in scope is left alone: a block held in a
+    variable is a perfectly good argument, and that is what it means.
+    """
+    if verb not in _TAKES_A_BLOCK or not re_bare_name.match(args):
+      return args
+    lower = args.lower()
+    if any(lower in scope_vars[s_id] for s_id in scope_stack):
+      return args
+    return f"[__um] {args}(__um)"
 
   re_rows_head = re.compile(r'^rows\s*\(', re.IGNORECASE)
   re_lines_head = re.compile(r'^lines\s*\(', re.IGNORECASE)
@@ -2963,6 +3118,8 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     if fold is not None:
       blocked_by = None
 
+    walk_indent = ""                  # a file source nests the walk one deeper
+
     if alias_arg is not None and taken < 1:
       raise SyntaxError(
         f"Line {line_idx + 1}: rows() is a source to walk, not a value. It has "
@@ -2986,17 +3143,21 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       # line at a time -- so a 'take' really does stop the read rather than
       # trimming something already loaded.
       source = next_temp("fuse_src", curr_scope)
+      walk_indent = "  "              # everything sits inside the If File()
+      # The file is tested ONCE, not in the loop condition. On a file that
+      # never opened FT_FEof() stays .F. and the walk never ends -- a hang
+      # rather than an error -- but asking File() per line is a filesystem
+      # call per line, which on a large file costs more than the read.
       before.extend([f"{indent}{source} := {path_arg}",
-                     f"{indent}FT_FUse({source})",
-                     f"{indent}FT_FGoTop()"])
-      # 'File()' as well as '!FT_FEof()'. On a file that never opened,
-      # FT_FEof() stays .F. and the walk never ends -- a hang rather than an
-      # error, which is the worst way for this to fail.
-      opener = f"{indent}While File({source}) .And. !FT_FEof()"
-      closer = f"{indent}EndDo"
-      first = [f"{indent}  {value} := FT_FReadLn()"]
-      step = [f"{indent}  FT_FSkip()"]
-      after.append(f"{indent}FT_FUse()")
+                     f"{indent}If File({source})",
+                     f"{indent}  FT_FUse({source})",
+                     f"{indent}  FT_FGoTop()"])
+      opener = f"{indent}  While !FT_FEof()"
+      closer = f"{indent}  EndDo"
+      first = [f"{indent}    {value} := FT_FReadLn()"]
+      step = [f"{indent}    FT_FSkip()"]
+      after.append(f"{indent}  FT_FUse()")
+      after.append(f"{indent}EndIf")
       has_value = True
     elif alias_arg is None:
       source = next_temp("fuse_src", curr_scope)
@@ -3043,7 +3204,13 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       # 'closers' is what each open block ends with, innermost last -- not a
       # count. A stage that opens a For rather than an If closes differently,
       # and the depth alone could not say which.
-      body.append(f"{indent}  {'  ' * len(closers)}{text}")
+      body.append(f"{indent}{walk_indent}  {'  ' * len(closers)}{text}")
+
+    def writes_to(name, text):
+      """Does this block body assign to its own parameter?"""
+      return bool(
+        re.search(rf'\b{re.escape(name)}\s*(?::=|\+=|-=|\*=|/=)', text)
+        or re.search(rf'@\s*{re.escape(name)}\b', text))
 
     def read_body(args):
       """The block's parameter and body, with field access resolved.
@@ -3059,6 +3226,17 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       # name in the ordinary way -- so the field rewrite must not apply to
       # stages after it.
       if field is None or has_value:
+        # The parameter is a name for the value the loop is already holding,
+        # so put the value in directly and skip the binding. That removes a
+        # copy per stage per element -- and where the body never mentions the
+        # name at all, as in 'tap([l] nConta += 1)', it removed a binding that
+        # was assigned and never read.
+        #
+        # Not when the body WRITES to the parameter: the value temp carries
+        # the element between stages, and a stage that rebinds its own
+        # parameter must not disturb it.
+        if not writes_to(param, expr):
+          return None, re.sub(rf'\b{re.escape(param)}\b', value, expr)
         return param, expr
       expr = re.sub(rf'\b{re.escape(param)}\s*:\s*([A-Za-z_][A-Za-z0-9_]*)',
                     rf'{field}->\1', expr)
@@ -3116,8 +3294,14 @@ def transpile(source_code, dictionary=None, dict_strict=False,
         step_expr = block.group(2).strip()
         running = next_temp("fuse_acc", curr_scope)
         before.append(f"{indent}{running} := {given[1].strip()}")
-        push(f"{carried} := {running}")
-        push(f"{element} := {value}")
+        if writes_to(carried, step_expr):
+          push(f"{carried} := {running}")
+        else:
+          step_expr = re.sub(rf'\b{re.escape(carried)}\b', running, step_expr)
+        if writes_to(element, step_expr):
+          push(f"{element} := {value}")
+        else:
+          step_expr = re.sub(rf'\b{re.escape(element)}\b', value, step_expr)
         push(f"{running} := {step_expr}")
         # The running value is what continues down the chain.
         push(f"{value} := {running}")
@@ -3297,19 +3481,32 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     elif fold in ("reduce", "fold"):
       carried, element = [p.strip() for p in fold_block.group(1).split(",")]
       step_expr = fold_block.group(2).strip()
+      # Same as the single-parameter stages: both names stand for something
+      # the loop already holds, so they go in directly unless the body
+      # writes to one of them.
+      keeps_carried = writes_to(carried, step_expr)
+      keeps_element = writes_to(element, step_expr)
+      if not keeps_carried:
+        step_expr = re.sub(rf'\b{re.escape(carried)}\b', result, step_expr)
+      if not keeps_element:
+        step_expr = re.sub(rf'\b{re.escape(element)}\b', value, step_expr)
       if fold == "fold":
         # Seedless: the first element IS the starting value, so there is
         # nothing to combine it with. Nil until one arrives, as amax does.
         push(f"If {result} == Nil")
         push(f"  {result} := {value}")
         push(f"Else")
-        push(f"  {carried} := {result}")
-        push(f"  {element} := {value}")
+        if keeps_carried:
+          push(f"  {carried} := {result}")
+        if keeps_element:
+          push(f"  {element} := {value}")
         push(f"  {result} := {step_expr}")
         push(f"EndIf")
       else:
-        push(f"{carried} := {result}")
-        push(f"{element} := {value}")
+        if keeps_carried:
+          push(f"{carried} := {result}")
+        if keeps_element:
+          push(f"{element} := {value}")
         push(f"{result} := {step_expr}")
     elif fold == "join":
       # A flag, not a test on the accumulator: an empty first element would
@@ -3354,7 +3551,12 @@ def transpile(source_code, dictionary=None, dict_strict=False,
         seed = _FUSE_FOLDS[fold]
       else:
         seed = "{}"
-      before.append(f"{indent}{result} := {seed}")
+      # Ahead of the 'If File()' when the source is a file: the result has to
+      # exist even when the file does not, or the caller reads a Nil.
+      if walk_indent:
+        before.insert(0, f"{indent}{result} := {seed}")
+      else:
+        before.append(f"{indent}{result} := {seed}")
     # 'finish' runs after the loop but before a work area is put back.
     lines = before + [opener] + body + step + [closer] + finish + after
     return lines, (None if for_effect else result), parts[1:][taken:], blocked_by
@@ -3569,7 +3771,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     result.append(text[last:])
     return "".join(result)
 
-  def rewrite_statement(line, curr_scope, line_idx):
+  def rewrite_statement(line, curr_scope, line_idx, for_value=False):
     """Every expression-level rewrite, in order, for one statement.
 
     Returns what the statement becomes, which may be several physical lines:
@@ -3629,6 +3831,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
         break
       before, dividend, divisor, after = hit
       line = f"{before}({dividend} % {divisor}) == 0{after}"
+    line = expand_bare_blocks(line, curr_scope)
     line = transpile_lambdas(line, curr_scope)
     line = transpile_hash(line, curr_scope)
 
@@ -3636,7 +3839,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     # statement, where the feed pass can then see it at statement level.
     line = "\n".join(
       transpile_feed_chains(sub_line, curr_scope, line_idx,
-                            fallback_val is not None)
+                            fallback_val is not None, for_value)
       for sub_line in line.split("\n"))
     # The four array functions live in the runtime under prefixed names.
     line = re_verb_call.sub(lambda m: f"u_xtpl_{m.group(1).lower()}(", line)
@@ -3715,7 +3918,12 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     those first and then uses final_expr wherever it was going to put the
     value.
     """
-    produced = rewrite_statement(f"{indent}{value}", curr_scope, line_idx).split("\n")
+    # for_value: an initialiser has no assignment in front of it, and without
+    # this the chain reads that as being run for its effects -- it drops the
+    # accumulator and the caller takes the walk's closing line as the value.
+    # 'local a := lines(f) |> map(g)' produced 'a := FT_FUse()'.
+    produced = rewrite_statement(f"{indent}{value}", curr_scope, line_idx,
+                                 for_value=True).split("\n")
     resolve = lambda text: re.sub(
       r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', resolve_identifier, text)
     return [resolve(part) for part in produced[:-1]], resolve(produced[-1].strip())
@@ -4138,10 +4346,17 @@ def transpile(source_code, dictionary=None, dict_strict=False,
         for part in lead:
           emit(part)
         emit(f"{indent}{holder} := {resolved}")
+        # Asked once, into a flag. On a file that never opened FT_FEof()
+        # stays .F. and the walk would never end, but File() in the condition
+        # is a filesystem call per line. The body here is the programmer's,
+        # so an 'If' around it would mean tracking a closer their 'next' does
+        # not know about -- a flag does the same work.
+        opened = register_block_local("__opened", curr_scope, idx + 1)
+        emit(f"{indent}{opened} := File({holder})")
         emit(f"{indent}FT_FUse({holder})")
         emit(f"{indent}FT_FGoTop()")
         emit(f"{indent}{counter} := 0")
-        emit(f"{indent}While File({holder}) .And. !FT_FEof(){loop_note}")
+        emit(f"{indent}While {opened} .And. !FT_FEof(){loop_note}")
         emit(f"{indent}  {counter} := {counter} + 1")
         emit(f"{indent}  {mangled_elem} := FT_FReadLn()")
         # Advanced straight after reading, not at the foot of the loop. The

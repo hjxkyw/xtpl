@@ -15,7 +15,6 @@ user function test_main_form(nX)
   Local nTotal := 0
 
 
-
   nTotal := nX + 1
 
   return nTotal

@@ -41,10 +41,6 @@ user function testFirstCount(aRows, cNum)
   Local nItens := 0
   Local nComSaldo := 0
 
-  Local __blk_0_p
-  Local __blk_0_r
-  Local __blk_0_v
-  Local __blk_1_r
   Local __fuse_area_1_0
   Local __fuse_i_0_0
   Local __fuse_out_0_0
@@ -52,38 +48,36 @@ user function testFirstCount(aRows, cNum)
   Local __fuse_rec_1_0
   Local __fuse_src_0_0
   Local __fuse_v_0_0
-  Local __fuse_v_1_0
   Local __stk_1_usearea
   Local __stk_1_useord
   Local __stk_1_userec
 
-
   // stops at the first match instead of collecting every one
   __fuse_src_0_0 := aRows
   __fuse_out_0_0 := Nil
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %r^0% := __fuse_v_0_0
-    __fuse_v_0_0 := %r^0%:oPed
-    %p^0% := __fuse_v_0_0
-    If %p^0%:lAtraso
+    __fuse_v_0_0 := __fuse_v_0_0:oPed
+    If __fuse_v_0_0:lAtraso
       __fuse_out_0_0 := __fuse_v_0_0
       Exit
     EndIf
   Next
+
   oAtrasado := __fuse_out_0_0
 
   __fuse_src_0_0 := aRows
   __fuse_out_0_0 := 0
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %r^0% := __fuse_v_0_0
-    __fuse_v_0_0 := %r^0%:nValor
-    %v^0% := __fuse_v_0_0
-    If %v^0% > 100
+    __fuse_v_0_0 := __fuse_v_0_0:nValor
+    If __fuse_v_0_0 > 100
       __fuse_out_0_0 := __fuse_out_0_0 + 1
     EndIf
   Next
+
   nGrandes := __fuse_out_0_0
 
   let usearea as __stk_1_usearea
@@ -113,8 +107,6 @@ user function testFirstCount(aRows, cNum)
     EndIf
     nItens := __fuse_out_1_0
 
-
-
     // a predicate reads the record directly
     __fuse_area_1_0 := Alias()
     DbSelectArea("SC6")
@@ -134,6 +126,7 @@ user function testFirstCount(aRows, cNum)
     nComSaldo := __fuse_out_1_0
   SC6->(DbSetOrder(!useord^1!))
   SC6->(DbGoto(!userec^1!))
+
   If !Empty(!usearea^1!)
     DbSelectArea(!usearea^1!)
   EndIf

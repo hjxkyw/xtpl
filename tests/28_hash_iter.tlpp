@@ -51,12 +51,12 @@ user function testHashIter(hCfg, hSaldos)
   Local __stk_1_each
   Local __stk_1_eachi
 
-
   // a hash can be walked now
   let each as __stk_1_each
   let cChave as __stk_1_cChave
   let eachi as __stk_1_eachi
   !each^1! := u_xtpl_keys(hCfg)
+
   For !eachi^1! := 1 To Len(!each^1!)
     !cChave^1! := !each^1![!eachi^1!]
     __hash_tmp_1_0 := Nil

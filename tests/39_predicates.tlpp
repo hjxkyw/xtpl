@@ -41,10 +41,8 @@ user function testPredicates(aRows, aNums)
   Local lNegativo := .F.
   Local lOrdenado := .F.
 
-  Local __blk_0_c
   Local __blk_0_n
   Local __blk_0_r
-  Local __blk_0_v
   Local __fuse_area_0_0
   Local __fuse_i_0_0
   Local __fuse_out_0_0
@@ -54,7 +52,6 @@ user function testPredicates(aRows, aNums)
   Local __pipe_tmp_0_0
   Local __pipe_tmp_0_1
 
-
   // one stage on its own stays a call -- the runtime version stops early too
   __pipe_tmp_0_0 := u_xtpl_anyof(aRows, {|%r^0%| !%r^0%:lPago})
   lAlguem := __pipe_tmp_0_0
@@ -62,29 +59,29 @@ user function testPredicates(aRows, aNums)
   // fused: map then the predicate, leaving at the first answer
   __fuse_src_0_0 := aRows
   __fuse_out_0_0 := .T.
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %r^0% := __fuse_v_0_0
-    __fuse_v_0_0 := %r^0%:nValor
-    %v^0% := __fuse_v_0_0
-    If !(%v^0% > 0)
+    __fuse_v_0_0 := __fuse_v_0_0:nValor
+    If !(__fuse_v_0_0 > 0)
       __fuse_out_0_0 := .F.
       Exit
     EndIf
   Next
+
   lTodos := __fuse_out_0_0
   __fuse_src_0_0 := aRows
   __fuse_out_0_0 := .T.
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %r^0% := __fuse_v_0_0
-    __fuse_v_0_0 := %r^0%:cCod
-    %c^0% := __fuse_v_0_0
-    If empty(%c^0%)
+    __fuse_v_0_0 := __fuse_v_0_0:cCod
+    If empty(__fuse_v_0_0)
       __fuse_out_0_0 := .F.
       Exit
     EndIf
   Next
+
   lNenhum := __fuse_out_0_0
 
   // over a work area, and no map is needed: a predicate reads the record
@@ -93,6 +90,7 @@ user function testPredicates(aRows, aNums)
   __fuse_rec_0_0 := SA1->(RecNo())
   SA1->(DbGoTop())
   __fuse_out_0_0 := .F.
+
   While !SA1->(Eof())
     If SA1->A1_SALDO < 0
       __fuse_out_0_0 := .T.
@@ -100,10 +98,13 @@ user function testPredicates(aRows, aNums)
     EndIf
     SA1->(DbSkip())
   EndDo
+
   SA1->(DbGoto(__fuse_rec_0_0))
+
   If !Empty(__fuse_area_0_0)
     DbSelectArea(__fuse_area_0_0)
   EndIf
+
   lNegativo := __fuse_out_0_0
 
   // sort cannot be fused, so the predicate runs as an ordinary call

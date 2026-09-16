@@ -24,7 +24,6 @@ user function testBlockComments(nX)
   Local cS := ""
 
 
-
   /* a block comment spanning lines,
      with local nGhost := 1 inside it, which is
      text and not a declaration */

@@ -830,6 +830,21 @@ If ((nValor + 1) % 3) == 0
 
 `%` itself is AdvPL's own modulo and passes through untouched.
 
+### A chain does not nest, but the verbs are ordinary functions
+
+A `|>` chain cannot sit inside a lambda -- lifting its stages out of the block
+would run them before the block does, and there is no correct place to put
+them. But every chain verb is also a plain function, and calling one directly
+inside the lambda works:
+
+```xtpl
+|> filter([a] len(a) == 3 .and. allof(a, ehNumero))
+|> map([a] asum(map(a, val)) / 3)
+```
+
+In practice that removes almost every helper function the restriction appears
+to demand.
+
 ### `|>` — feed
 
 Sugar for chaining: the value on the left becomes the **first argument** of the

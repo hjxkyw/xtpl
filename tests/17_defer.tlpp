@@ -19,8 +19,6 @@ user function testDefer(aRows, nX, hCfg)
   Local __hash_tmp_0_0
   Local __pipe_tmp_0_0
 
-
-
   nCount := 99
 
   If nX > 100
@@ -33,6 +31,7 @@ user function testDefer(aRows, nX, hCfg)
     reportTotal(nCount)  // read only here: not 'never read'
     Return nCount
   EndIf
+
   __pipe_tmp_0_0 := validate(aRows)
   flush(__pipe_tmp_0_0)  // a chain becomes one line per stage
   __hash_tmp_0_0 := Nil
@@ -41,7 +40,6 @@ user function testDefer(aRows, nX, hCfg)
   conout("rows=" + cValToChar(nX))  // translated, not spliced as written
   reportTotal(nCount)  // read only here: not 'never read'
   return 0
-
 
 // --------------------------------------------------------------------------------
 // the end

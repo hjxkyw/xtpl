@@ -46,7 +46,6 @@ user function testKitchenSink()
   Local __elvis_tmp_0_0
   Local __stk_2_nInner
 
-
   // 2. Traditional for loop (Passes safety check because 'i' is declared above)
   for i := 1 to 3
     nCount := nCount + i
@@ -54,6 +53,7 @@ user function testKitchenSink()
 
   // 3. Block-scoped for loop (loop counter takes a depth-1 stack slot)
   let idx as __stk_1_0
+
   for !idx^1^0! := 1 to 5
     conout("Index: " + cValToChar(!idx^1^0!))
   next
@@ -77,12 +77,14 @@ user function testKitchenSink()
   // 6. 'if local' conditional binding with explicit condition after comma
   let lSuccess as __stk_1_0
   !lSuccess^1^0! := myAction("param1, with comma")
+
   If !lSuccess^1^0! == .T.
     conout("Action succeeded!")
   endif
 
   // 7. 'while local' loop binding with explicit condition after comma
   let cNode as __stk_1_0
+
   While .T.
     !cNode^1^0! := getNextNode()
     If !(!cNode^1^0! != Nil)
@@ -103,6 +105,7 @@ user function testKitchenSink()
   aList := {}
   aadd(aList, "A")
   aadd(aList, "B")
+
   if nTotal > 80
     aadd(aList, "C")
   endif
@@ -120,6 +123,7 @@ user function testKitchenSink()
   // 11. Appends from inside a 'for' loop, some behind an inner 'if'
   aLoopList := {}
   let k as __stk_1_0
+
   for !k^1^0! := 1 to 4
     aadd(aLoopList, "Item_" + cValToChar(!k^1^0!))
     if !k^1^0! % 2 == 0
@@ -146,6 +150,7 @@ user function testKitchenSink()
     !nCount^1^0! := 999
     conout("Shadowed: " + cValToChar(!nCount^1^0!))
   endif
+
   conout("Restored: " + cValToChar(nCount))
 
   // 14. Nesting: the inner block sits one level deeper, so it gets its own slot
@@ -161,6 +166,7 @@ user function testKitchenSink()
 
   // 15. 'for local' counter, plus a body slot recycled on every iteration
   let j as __stk_1_0
+
   for !j^1^0! := 1 to 3
     let nSquare as __stk_1_1
     !nSquare^1^1! := !j^1^0! * !j^1^0!
@@ -170,6 +176,7 @@ user function testKitchenSink()
   // 16. 'if local' binding, with an array built inside the block
   let lReady as __stk_1_0
   !lReady^1^0! := checkReady()
+
   If !lReady^1^0!
     let aBatch as __stk_1_1
     !aBatch^1^1! := {}
@@ -249,9 +256,11 @@ user function testKitchenSink()
   if nTotal > 90
     cCache := loadFromCache()
   endif
+
   If cCache == Nil
     cCache := "empty"
   EndIf
+
   conout("Cache: " + cCache)
 
   // 26. Elvis: same idea inline, with the left side evaluated exactly once
@@ -260,12 +269,14 @@ user function testKitchenSink()
 
   // 27. Chained elvis: each fallback runs only if the one before came back Nil
   __elvis_tmp_0_0 := firstChoice()
+
   If __elvis_tmp_0_0 == Nil
     __elvis_tmp_0_0 := secondChoice()
     If __elvis_tmp_0_0 == Nil
       __elvis_tmp_0_0 := "last resort"
     EndIf
   EndIf
+
   cPick := __elvis_tmp_0_0
 
   return nTotal

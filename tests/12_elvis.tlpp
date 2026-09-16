@@ -18,7 +18,6 @@ user function testElvis(oUser)
 
   Local __elvis_tmp_0_0
 
-
   // Two operands: compact form.
   __elvis_tmp_0_0 := lookupName(1)
   cName := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, "anonymous")
@@ -26,6 +25,7 @@ user function testElvis(oUser)
 
   // Chained: each fallback runs only if the one before came back Nil.
   __elvis_tmp_0_0 := firstChoice()
+
   If __elvis_tmp_0_0 == Nil
     __elvis_tmp_0_0 := secondChoice()
     If __elvis_tmp_0_0 == Nil
@@ -35,6 +35,7 @@ user function testElvis(oUser)
       EndIf
     EndIf
   EndIf
+
   cPick := __elvis_tmp_0_0
   conout("pick: " + cPick)
 
@@ -51,9 +52,11 @@ user function testElvis(oUser)
   // Works as a plain expression too, not only on the right of ':='.
   aItems := {}
   __elvis_tmp_0_0 := loadItem(1)
+
   If __elvis_tmp_0_0 == Nil
     __elvis_tmp_0_0 := "placeholder"
   EndIf
+
   aadd(aItems,__elvis_tmp_0_0)
   conout("items: " + cValToChar(len(aItems)))
 

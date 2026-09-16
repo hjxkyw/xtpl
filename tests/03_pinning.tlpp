@@ -39,7 +39,6 @@ user function testPinning(lFlag)
   Local __stk_1_0     // aTmp, aOther, i, cTmp
   Local __stk_1_aTmp
 
-
   // ESCAPES -- keepIt receives this aTmp and may hold it past the block,
   // so this declaration gets private storage.
   if nTotal > 0
@@ -68,6 +67,7 @@ user function testPinning(lFlag)
 
   // The name is reused a third time inside a loop, still contained.
   let i as __stk_1_0
+
   for !i^1^0! := 1 to 3
     let aTmp as __stk_1_aTmp
     !aTmp^1! := {}

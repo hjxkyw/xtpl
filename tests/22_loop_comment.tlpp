@@ -38,8 +38,8 @@ user function testLoopComment(aItems, oDoc)
   Local __stk_1_1  // __ntimes, oItem
   Local __stk_1_2  // __eachi, nIdx
 
-
   let times as __stk_1_0
+
   For !times^1^0! := 1 To 3  // a literal count
     nTotal := nTotal + 1
   next
@@ -47,6 +47,7 @@ user function testLoopComment(aItems, oDoc)
   let times as __stk_1_0
   let ntimes as __stk_1_1
   !ntimes^1^1! := contaLinhas(oDoc)
+
   For !times^1^0! := 1 To !ntimes^1^1!  // a bound count
     nTotal := nTotal + 1
   next
@@ -55,6 +56,7 @@ user function testLoopComment(aItems, oDoc)
   let oItem as __stk_1_1
   let eachi as __stk_1_2
   !each^1^0! := aItems
+
   For !eachi^1^2! := 1 To Len(!each^1^0!)  // the element alone
     !oItem^1^1! := !each^1^0![!eachi^1^2!]
     nTotal := nTotal + !oItem^1^1!:nValor
@@ -64,6 +66,7 @@ user function testLoopComment(aItems, oDoc)
   let oItem as __stk_1_1
   let nIdx as __stk_1_2
   !each^1^0! := aItems
+
   For !nIdx^1^2! := 1 To Len(!each^1^0!)  // element and index
     !oItem^1^1! := !each^1^0![!nIdx^1^2!]
     nTotal := nTotal + !nIdx^1^2!

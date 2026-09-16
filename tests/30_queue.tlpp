@@ -54,6 +54,7 @@ user function testQueue(aPedidos, oModelo)
   let oPedido as __stk_1_oPedido
   let eachi as __stk_1_eachi
   !each^1! := aPedidos
+
   For !eachi^1! := 1 To Len(!each^1!)
     !oPedido^1! := !each^1![!eachi^1!]
     oFila:Push(!oPedido^1!)

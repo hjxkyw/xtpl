@@ -16,17 +16,18 @@ user function testDefinedOr(lUseDisk, lUseNet)
   Local cLabel := "preset"
 
 
-
   // Nothing has been assigned yet, so the fallback lands.
   If nRetries == Nil
     nRetries := 3
   EndIf
+
   conout("retries: " + cValToChar(nRetries))
 
   // Already holds a value, so '?=' leaves it alone.
   If cLabel == Nil
     cLabel := "ignored"
   EndIf
+
   conout("label: " + cLabel)
 
   // The real use: branches that may or may not have filled the variable.
@@ -41,12 +42,14 @@ user function testDefinedOr(lUseDisk, lUseNet)
   If cCache == Nil
     cCache := "empty"
   EndIf
+
   conout("cache: " + cCache)
 
   // Works for any type, and the fallback may be an expression.
   If aRows == Nil
     aRows := buildRows(nRetries * 2)
   EndIf
+
   conout("rows: " + cValToChar(len(aRows)))
 
   return cCache

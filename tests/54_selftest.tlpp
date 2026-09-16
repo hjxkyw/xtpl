@@ -59,7 +59,6 @@ user function selftest()
   Local __blk_0_acc
   Local __blk_0_b
   Local __blk_0_c
-  Local __blk_0_p
   Local __blk_0_x
   Local __elvis_tmp_0_0
   Local __fuse_had_0_0
@@ -151,24 +150,24 @@ user function selftest()
   // ---- cadeia fundida: o resultado tem de bater com as etapas -------------
   __fuse_src_0_0 := aNums
   __fuse_out_0_0 := 0
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %x^0% := __fuse_v_0_0
-    If %x^0% > 2
-      %x^0% := __fuse_v_0_0
-      __fuse_v_0_0 := %x^0% * 10
+    If __fuse_v_0_0 > 2
+      __fuse_v_0_0 := __fuse_v_0_0 * 10
       __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
     EndIf
   Next
+
   nTmp := __fuse_out_0_0
   check("cadeia fundida", nTmp == 270, nTmp, @nOk, @nBad)
   __fuse_src_0_0 := aNums
   __fuse_n_0_0 := 0
   __fuse_out_0_0 := {}
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %x^0% := __fuse_v_0_0
-    If %x^0% > 2
+    If __fuse_v_0_0 > 2
       If __fuse_n_0_0 >= 2
         Exit
       EndIf
@@ -176,6 +175,7 @@ user function selftest()
       AAdd(__fuse_out_0_0, __fuse_v_0_0)
     EndIf
   Next
+
   aTmp := __fuse_out_0_0
   check("take para o laco", len(aTmp) == 2 .and. aTmp[2] == 4, len(aTmp), @nOk, @nBad)
   __pipe_tmp_0_0 := u_xtpl_count(aNums, {|%x^0%| %x^0% > 3})
@@ -206,6 +206,7 @@ user function selftest()
   __fuse_prev_0_0 := Nil
   __fuse_had_0_0 := .F.
   __fuse_out_0_0 := {}
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
     __fuse_older_0_0 := __fuse_prev_0_0
@@ -214,11 +215,11 @@ user function selftest()
     __fuse_had_0_0 := .T.
     If __fuse_ready_0_0
       __fuse_v_0_0 := {__fuse_older_0_0, __fuse_v_0_0}
-      %p^0% := __fuse_v_0_0
-      __fuse_v_0_0 := %p^0%[2] - %p^0%[1]
+      __fuse_v_0_0 := __fuse_v_0_0[2] - __fuse_v_0_0[1]
       AAdd(__fuse_out_0_0, __fuse_v_0_0)
     EndIf
   Next
+
   aTmp := __fuse_out_0_0
   check("pairwise", len(aTmp) == 2 .and. aTmp[2] == 5, aTmp[2], @nOk, @nBad)
   __pipe_tmp_0_0 := u_xtpl_expand({1, 2, 3}, {|%x^0%| {%x^0%, %x^0%}})
@@ -266,13 +267,17 @@ user function selftest()
 
   // ---- operadores --------------------------------------------------------
   cTmp := Nil
+
   If cTmp == Nil
     cTmp := "padrao"
   EndIf
+
   check("?= atribui quando Nil", cTmp == "padrao", 0, @nOk, @nBad)
+
   If cTmp == Nil
     cTmp := "outro"
   EndIf
+
   check("?= nao atribui depois", cTmp == "padrao", 0, @nOk, @nBad)
   __elvis_tmp_0_0 := Nil
   nTmp := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, 42)
@@ -306,12 +311,14 @@ user function selftest()
   let nCada as __stk_1_nCada
   let eachi as __stk_1_eachi
   !each^1! := {1, 2, 3}
+
   For !eachi^1! := 1 To Len(!each^1!)
     let nDobro as __stk_1_nDobro
     !nCada^1! := !each^1![!eachi^1!]
     !nDobro^1! := !nCada^1! * 2
     nTmp := nTmp + !nDobro^1!
   next
+
   check("local de bloco em laco", nTmp == 12, nTmp, @nOk, @nBad)
 
   // os defers rodam antes da linha do Return, em ordem inversa: 10 +2 +1
@@ -332,14 +339,13 @@ static function check(cNome, lOk, xVisto, nOk, nBad)
     nBad := nBad + 1
     conout("FALHA  " + cNome + "  (visto: " + cValToChar(xVisto) + ")")
   endif
+
 return nil
 
 // Dois defers, ordem inversa, mais um return antecipado que nao e tomado.
 static function defers()
 
   Local nTotal := 0
-
-
 
 
   nTotal := 10

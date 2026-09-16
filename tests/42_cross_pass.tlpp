@@ -16,7 +16,6 @@ user function testCrossPass(hCfg, aNums, lFlag, nX)
   Local __hash_tmp_0_0
   Local __pipe_tmp_0_0
 
-
   // The hash read turns one line into three. 'fallback' has to be peeled
   // before that happens, or the assignment ends up inside the guard and a
   // failure leaves nA untouched.
@@ -33,6 +32,7 @@ user function testCrossPass(hCfg, aNums, lFlag, nX)
   // A condition can lift statements of its own; they go above the block.
   __hash_tmp_0_0 := Nil
   hCfg:Get("n", @__hash_tmp_0_0)
+
   If __hash_tmp_0_0 > 0
     nC := 1
   EndIf
@@ -40,8 +40,8 @@ user function testCrossPass(hCfg, aNums, lFlag, nX)
   If lFlag
     Return nA + nB + nC
   EndIf
-  return 0
 
+  return 0
 
 // --------------------------------------------------------------------------------
 // the end

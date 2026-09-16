@@ -12,7 +12,6 @@ user function comValor(nX)
   Local nT := 0
 
 
-
   if nX > 5
     return nT
   endif
@@ -24,7 +23,6 @@ user function caiNoFim(nX)
   Local nT := 0
 
 
-
   if nX > 5
     return nT
   endif
@@ -34,7 +32,6 @@ user function caiNoFim(nX)
 user function consistente(nX)
 
   Local nT := 0
-
 
 
   if nX > 5

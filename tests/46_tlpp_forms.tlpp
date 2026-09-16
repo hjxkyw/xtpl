@@ -23,7 +23,6 @@ user function tlppForms(nX)
   Local oOutro as object
 
 
-
   oTool := totvs.tools.Alguma.Coisa():New()
   oOutro := outro.pacote.Classe():New()
 

@@ -1,0 +1,1 @@
+warning: line 13: this chain does not fuse -- 'distinct' stops it, because it needs the whole collection, so it and every stage after it builds an array

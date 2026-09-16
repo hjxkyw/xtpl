@@ -1,0 +1,41 @@
+// 56_initialiser_chain.xtpl -- uma cadeia no inicializador de uma declaracao.
+//
+// Um inicializador nao tem atribuicao na frente, e sem dizer que o valor e
+// desejado a cadeia lia isso como "executada pelos efeitos": largava o
+// acumulador, e quem chamava pegava a linha de fechamento do percurso como se
+// fosse o valor --
+//
+//    local aTudo := lines(cArq) |> map(...)   ->   aTudo := FT_FUse()
+//
+// Silencioso: compila, e devolve o que FT_FUse() devolver.
+//
+// O arquivo tambem fixa 'map(alltrim)': um nome solto onde se espera um bloco
+// vira '[x] alltrim(x)'. Um nome que E uma variavel em escopo passa intacto,
+// porque um bloco guardado numa variavel e argumento legitimo.
+// --------------------------------------------------------------------------------
+
+user function testInitialiserChain(cArquivo, aNums, bMeu)
+  local aTudo := lines(cArquivo) |> map(alltrim)
+  local nSoma := aNums |> map(dobro) |> asum
+  local aBloco := aNums |> map(bMeu)
+  local nQuantas := 0
+  local aFiltrado := {}
+
+  // Uma CADEIA nao pode ficar dentro de um lambda, mas todo verbo de cadeia
+  // tambem e uma funcao comum -- e ai o nome solto vale para o ULTIMO
+  // argumento, que e onde o bloco fica. 'a' e o parametro do proprio lambda
+  // e tem de passar intacto.
+  aFiltrado := aNums |> filter([a] allof({a}, dobroEhPar))
+
+  nQuantas := len(aTudo) + nSoma + len(aBloco) + len(aFiltrado)
+
+  return nQuantas
+
+static function dobro(nX)
+  return nX * 2
+
+static function dobroEhPar(nX)
+  return (nX * 2) %% 2
+
+// --------------------------------------------------------------------------------
+// the end

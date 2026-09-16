@@ -20,7 +20,6 @@ user function testPrivate()
   Private oControle
   Private nContador := 0
 
-
   oControle := "campo"
   oDlg := abreDialogo({|| chamadaDeVolta()})
 

@@ -42,9 +42,6 @@ user function testUniqMaxby(aRows)
   Local oMenor := Nil
   Local aNumeros := {}
 
-  Local __blk_0_p
-  Local __blk_0_r
-  Local __blk_1_r
   Local __fuse_area_1_0
   Local __fuse_best_0_0
   Local __fuse_i_0_0
@@ -64,17 +61,16 @@ user function testUniqMaxby(aRows)
   Local __stk_1_useord
   Local __stk_1_userec
 
-
   // no key: compares the element itself
   __fuse_src_0_0 := aRows
   __fuse_open_0_0 := .F.
   __fuse_last_0_0 := Nil
   __fuse_probe_0_0 := Nil
   __fuse_out_0_0 := {}
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %r^0% := __fuse_v_0_0
-    __fuse_v_0_0 := %r^0%:cPedido
+    __fuse_v_0_0 := __fuse_v_0_0:cPedido
     __fuse_probe_0_0 := __fuse_v_0_0
     If !(__fuse_open_0_0 .And. (__fuse_probe_0_0 == __fuse_last_0_0))
       __fuse_open_0_0 := .T.
@@ -82,6 +78,7 @@ user function testUniqMaxby(aRows)
       AAdd(__fuse_out_0_0, __fuse_v_0_0)
     EndIf
   Next
+
   aPedidos := __fuse_out_0_0
 
   __fuse_src_0_0 := aRows
@@ -89,36 +86,36 @@ user function testUniqMaxby(aRows)
   __fuse_open_0_0 := .F.
   __fuse_probe_0_0 := Nil
   __fuse_out_0_0 := Nil
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %r^0% := __fuse_v_0_0
-    __fuse_v_0_0 := %r^0%:oPed
-    %p^0% := __fuse_v_0_0
-    __fuse_probe_0_0 := %p^0%:nValor
+    __fuse_v_0_0 := __fuse_v_0_0:oPed
+    __fuse_probe_0_0 := __fuse_v_0_0:nValor
     If !__fuse_open_0_0 .Or. __fuse_probe_0_0 > __fuse_best_0_0
       __fuse_open_0_0 := .T.
       __fuse_best_0_0 := __fuse_probe_0_0
       __fuse_out_0_0 := __fuse_v_0_0
     EndIf
   Next
+
   oMaior := __fuse_out_0_0
   __fuse_src_0_0 := aRows
   __fuse_best_0_0 := Nil
   __fuse_open_0_0 := .F.
   __fuse_probe_0_0 := Nil
   __fuse_out_0_0 := Nil
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %r^0% := __fuse_v_0_0
-    __fuse_v_0_0 := %r^0%:oPed
-    %p^0% := __fuse_v_0_0
-    __fuse_probe_0_0 := %p^0%:nValor
+    __fuse_v_0_0 := __fuse_v_0_0:oPed
+    __fuse_probe_0_0 := __fuse_v_0_0:nValor
     If !__fuse_open_0_0 .Or. __fuse_probe_0_0 < __fuse_best_0_0
       __fuse_open_0_0 := .T.
       __fuse_best_0_0 := __fuse_probe_0_0
       __fuse_out_0_0 := __fuse_v_0_0
     EndIf
   Next
+
   oMenor := __fuse_out_0_0
 
   // over an ordered table: the distinct order numbers, in one pass
@@ -155,6 +152,7 @@ user function testUniqMaxby(aRows)
     aNumeros := __fuse_out_1_0
   SC6->(DbSetOrder(!useord^1!))
   SC6->(DbGoto(!userec^1!))
+
   If !Empty(!usearea^1!)
     DbSelectArea(!usearea^1!)
   EndIf

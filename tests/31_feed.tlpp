@@ -38,7 +38,6 @@ user function testFeed(aOrders, aNums)
   Local nMax := 0
   Local nSafe := 0
 
-  Local __blk_0_acc
   Local __blk_0_o
   Local __blk_0_x
   Local __fuse_i_0_0
@@ -48,19 +47,18 @@ user function testFeed(aOrders, aNums)
   Local __pipe_tmp_0_0
   Local __pipe_tmp_0_1
 
-
   // chaining runtime functions
   __fuse_src_0_0 := aOrders
   __fuse_out_0_0 := {}
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %o^0% := __fuse_v_0_0
-    If %o^0%:nValue > 1000
-      %o^0% := __fuse_v_0_0
-      __fuse_v_0_0 := %o^0%:cCode
+    If __fuse_v_0_0:nValue > 1000
+      __fuse_v_0_0 := __fuse_v_0_0:cCode
       AAdd(__fuse_out_0_0, __fuse_v_0_0)
     EndIf
   Next
+
   aCodes := __fuse_out_0_0
   __pipe_tmp_0_0 := u_xtpl_sortby(aOrders, {|%o^0%| %o^0%:nValue}, .T.)
   __pipe_tmp_0_1 := u_xtpl_take(__pipe_tmp_0_0, 10)
@@ -85,15 +83,15 @@ user function testFeed(aOrders, aNums)
   // and as a chain stage, since they are ordinary calls
   __fuse_src_0_0 := aOrders
   __fuse_out_0_0 := 0
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %o^0% := __fuse_v_0_0
-    If %o^0%:lPaid
-      %o^0% := __fuse_v_0_0
-      __fuse_v_0_0 := %o^0%:nValue
+    If __fuse_v_0_0:lPaid
+      __fuse_v_0_0 := __fuse_v_0_0:nValue
       __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
     EndIf
   Next
+
   nTotal := __fuse_out_0_0
 
   // a chain inside an expression is lifted into its own statement first
@@ -103,14 +101,13 @@ user function testFeed(aOrders, aNums)
   // reduce chains like any other call, so no parentheses are needed
   __fuse_src_0_0 := aOrders
   __fuse_out_0_0 := 0
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %o^0% := __fuse_v_0_0
-    __fuse_v_0_0 := %o^0%:nValue
-    %acc^0% := __fuse_out_0_0
-    %x^0% := __fuse_v_0_0
-    __fuse_out_0_0 := %acc^0% + %x^0%
+    __fuse_v_0_0 := __fuse_v_0_0:nValue
+    __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
   Next
+
   nTotal := __fuse_out_0_0
 
   // the lifted result can be indexed like any other expression

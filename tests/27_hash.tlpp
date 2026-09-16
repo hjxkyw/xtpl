@@ -52,12 +52,14 @@ user function testHash(nBase, cChave)
 
   // 'has' rides on Get's logical return
   __hash_tmp_1_0 := Nil
+
   if hCfg:Get("taxa", @__hash_tmp_1_0)
     conout("tem taxa")
   endif
 
   __hash_tmp_2_0 := Nil
   __hash_tmp_2_1 := Nil
+
   if hCfg:Get("a", @__hash_tmp_2_0) .and. hCfg:Get("b", @__hash_tmp_2_1)
     conout("tem as duas")
   endif

@@ -45,23 +45,17 @@ user function testContinuation(cUrl, cBody, aNums, hCfg)
   Local __pipe_tmp_0_0
   Local __pipe_tmp_0_1
 
-
-
   cReply := u_xtpl_safe_pipe({|| HttpPost(cUrl, "", cBody, nTimeout, {"Content-Type: application/json"})}, {|| ""})
-
 
   __pipe_tmp_0_0 := u_xtpl_filter(aNums, {|%x^0%| %x^0% > 10})
   __pipe_tmp_0_1 := u_xtpl_distinct(__pipe_tmp_0_0)
   aBig := __pipe_tmp_0_1  // a comment on a continued line
-
-
 
   __hash_tmp_0_0 := Nil
   hCfg:Get("a", @__hash_tmp_0_0)
   __hash_tmp_0_1 := Nil
   hCfg:Get("b", @__hash_tmp_0_1)
   nT := __hash_tmp_0_0 + __hash_tmp_0_1
-
 
   conout(cReply + cValToChar(len(aBig)))
 

@@ -47,7 +47,6 @@ user function testWhileStages(aRows, cNum)
   Local aSeek := {}
 
   Local __blk_0_r
-  Local __blk_1_r
   Local __fuse_area_0_0
   Local __fuse_area_1_0
   Local __fuse_drop_0_0
@@ -64,13 +63,13 @@ user function testWhileStages(aRows, cNum)
   Local __stk_1_useord
   Local __stk_1_userec
 
-
   // over an ordered work area: stops when the key changes
   __fuse_area_0_0 := Alias()
   DbSelectArea("SC6")
   __fuse_rec_0_0 := SC6->(RecNo())
   SC6->(DbGoTop())
   __fuse_out_0_0 := {}
+
   While !SC6->(Eof())
     If !(SC6->C6_NUM == cNum)
       Exit
@@ -79,26 +78,29 @@ user function testWhileStages(aRows, cNum)
     AAdd(__fuse_out_0_0, __fuse_v_0_0)
     SC6->(DbSkip())
   EndDo
+
   SC6->(DbGoto(__fuse_rec_0_0))
+
   If !Empty(__fuse_area_0_0)
     DbSelectArea(__fuse_area_0_0)
   EndIf
+
   aItens := __fuse_out_0_0
 
   // skip the leading zeros, keep everything after -- zeros included
   __fuse_src_0_0 := aRows
   __fuse_drop_0_0 := .T.
   __fuse_out_0_0 := {}
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %r^0% := __fuse_v_0_0
-    If !(__fuse_drop_0_0 .And. (%r^0%:nSaldo == 0))
+    If !(__fuse_drop_0_0 .And. (__fuse_v_0_0:nSaldo == 0))
       __fuse_drop_0_0 := .F.
-      %r^0% := __fuse_v_0_0
-      __fuse_v_0_0 := %r^0%:cCod
+      __fuse_v_0_0 := __fuse_v_0_0:cCod
       AAdd(__fuse_out_0_0, __fuse_v_0_0)
     EndIf
   Next
+
   aDepois := __fuse_out_0_0
 
   // one stage stays a call; the runtime version stops early too
@@ -114,6 +116,7 @@ user function testWhileStages(aRows, cNum)
   SC6->(DbGoTop())
   __fuse_drop_0_0 := .T.
   __fuse_out_0_0 := {}
+
   While !SC6->(Eof())
     If !(__fuse_drop_0_0 .And. (SC6->C6_NUM != cNum))
       __fuse_drop_0_0 := .F.
@@ -125,14 +128,14 @@ user function testWhileStages(aRows, cNum)
     EndIf
     SC6->(DbSkip())
   EndDo
+
   SC6->(DbGoto(__fuse_rec_0_0))
+
   If !Empty(__fuse_area_0_0)
     DbSelectArea(__fuse_area_0_0)
   EndIf
+
   aGrupo := __fuse_out_0_0
-
-
-
 
   // the way to actually do it: 'using alias' fixes the order, rows() seeks
   // by the index rather than reading up to the group, and takewhile ends it
@@ -163,9 +166,9 @@ user function testWhileStages(aRows, cNum)
     EndIf
     aSeek := __fuse_out_1_0
 
-
   SC6->(DbSetOrder(!useord^1!))
   SC6->(DbGoto(!userec^1!))
+
   If !Empty(!usearea^1!)
     DbSelectArea(!usearea^1!)
   EndIf

@@ -42,7 +42,6 @@ user function testConst(aH)
   Local __stk_1_nBase
   Local __stk_1_nContador
 
-
   // reading is what a const is for
   nTotal := nLimite * 2
   conout(cAlias + ": " + cValToChar(aTaxas[1]))

@@ -38,7 +38,6 @@ user function testDeferPinning(nX)
   Local __blk_1_nA
   Local __stk_1_cB
 
-
   if nX > 0
     let nA as __blk_1_nA
     %nA^1% := 5

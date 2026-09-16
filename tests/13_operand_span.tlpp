@@ -16,7 +16,6 @@ user function testOperandSpan(aCodes, cCod, nValor, oUser, aOut)
   Local nR := 0
 
 
-
   // a comma at this level ends the collection
   lHit := checkBoth(u_xtpl_in(cCod, aCodes), nValor)
   lHit := outer(inner(u_xtpl_in(cCod, aCodes)), nValor)

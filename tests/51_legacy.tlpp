@@ -50,7 +50,6 @@ User Function Legado(cCodigo)
 
   Local __stk_1_nExtra
 
-
    nTotal := 10
    cNome := "x"  // fora do prólogo: aviso, e o valor fica aqui
 

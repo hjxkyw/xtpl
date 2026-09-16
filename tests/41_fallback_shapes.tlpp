@@ -51,7 +51,6 @@ user function testFallbackShapes(aNums, hCfg)
   Local __pipe_tmp_0_1
   Local __pipe_tmp_0_2
 
-
   // a bare call
   nSafe := u_xtpl_safe_pipe({|| riskyCall(1)}, {|| 0})
 
@@ -63,20 +62,19 @@ user function testFallbackShapes(aNums, hCfg)
   __guard_tmp_0_0 := u_xtpl_safe_pipe({|| riskyCall(2)}, {|| {}})
   __fuse_src_0_0 := __guard_tmp_0_0
   __fuse_out_0_0 := {}
+
   For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
     __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    %x^0% := __fuse_v_0_0
-    If %x^0% > 1
-      %x^0% := __fuse_v_0_0
-      __fuse_v_0_0 := %x^0% * 2
+    If __fuse_v_0_0 > 1
+      __fuse_v_0_0 := __fuse_v_0_0 * 2
       AAdd(__fuse_out_0_0, __fuse_v_0_0)
     EndIf
   Next
+
   aList := __fuse_out_0_0
 
   // a hash read lifts statements, and they are expressions too
   nHash := u_xtpl_safe_pipe({|| __hash_tmp_0_0 := Nil, hCfg:Get("taxa", @__hash_tmp_0_0), __hash_tmp_0_0}, {|| 0})
-
 
   return nSafe + nHash + len(aList)
 

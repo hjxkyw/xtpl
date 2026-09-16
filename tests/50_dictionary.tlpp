@@ -23,13 +23,11 @@ user function testDictionary(cAlias)
   Local aC := {}
   Local aV := {}
 
-  Local __blk_0_r
   Local __fuse_alias_0_0
   Local __fuse_area_0_0
   Local __fuse_out_0_0
   Local __fuse_rec_0_0
   Local __fuse_v_0_0
-
 
   nT := SA1->A1_SALDO  // known
   nT := nT + SA1->A1_NMOE  // a typo for A1_NOME
@@ -41,6 +39,7 @@ user function testDictionary(cAlias)
   __fuse_rec_0_0 := SA1->(RecNo())
   SA1->(DbGoTop())
   __fuse_out_0_0 := {}
+
   While !SA1->(Eof())
     If SA1->A1_SALDO > 0
       __fuse_v_0_0 := SA1->A1_NMOE
@@ -48,10 +47,13 @@ user function testDictionary(cAlias)
     EndIf
     SA1->(DbSkip())
   EndDo
+
   SA1->(DbGoto(__fuse_rec_0_0))
+
   If !Empty(__fuse_area_0_0)
     DbSelectArea(__fuse_area_0_0)
   EndIf
+
   aC := __fuse_out_0_0
 
   // the alias is a variable, so there is nothing to check it against
@@ -61,15 +63,19 @@ user function testDictionary(cAlias)
   __fuse_rec_0_0 := (__fuse_alias_0_0)->(RecNo())
   (__fuse_alias_0_0)->(DbGoTop())
   __fuse_out_0_0 := {}
+
   While !(__fuse_alias_0_0)->(Eof())
     __fuse_v_0_0 := (__fuse_alias_0_0)->B1_DESC
     AAdd(__fuse_out_0_0, __fuse_v_0_0)
     (__fuse_alias_0_0)->(DbSkip())
   EndDo
+
   (__fuse_alias_0_0)->(DbGoto(__fuse_rec_0_0))
+
   If !Empty(__fuse_area_0_0)
     DbSelectArea(__fuse_area_0_0)
   EndIf
+
   aV := __fuse_out_0_0
 
   return nT + len(aC) + len(aV)

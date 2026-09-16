@@ -39,7 +39,6 @@ user function testObject(oModel, oOutro, aRows)
   Local __stk_1_obj
   Local __stk_2_obj
 
-
   let obj as __stk_1_obj
   !obj^1! := oModel:GetModel("SA1DETAIL")
     !obj^1!:SetValue("A1_COD", "000001")

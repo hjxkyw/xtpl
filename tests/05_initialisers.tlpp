@@ -72,6 +72,7 @@ user function testInitialisers(aNums, hCfg, cC, aC, oUser, nX, aRows, oModel)
   let oIt as __stk_1_1
   let eachi as __stk_1_eachi
   !each^1^0! := u_xtpl_distinct(aRows)
+
   For !eachi^1! := 1 To Len(!each^1^0!)  // a chain in the source
     !oIt^1^1! := !each^1^0![!eachi^1!]
     nT := nT + !oIt^1^1!:nValue
@@ -82,18 +83,21 @@ user function testInitialisers(aNums, hCfg, cC, aC, oUser, nX, aRows, oModel)
   hCfg:Get("n", @__hash_tmp_1_0)
   let ntimes as __stk_1_1
   !ntimes^1^1! := __hash_tmp_1_0
+
   For !times^1^0! := 1 To !ntimes^1^1!  // a hash read in the count
     nT := nT + 1
   next
 
   let nS as __stk_1_0
   !nS^1^0! := u_xtpl_asum(aNums)
+
   If !nS^1^0! > 0  // a chain in a conditional binding
     nT := nT + !nS^1^0!
   endif
 
   let nD as __stk_1_0
   !nD^1^0! := u_xtpl_amax(aNums)  // and in a do-case subject
+
   Do Case
     case !nD^1^0! > 5
       nT := 1

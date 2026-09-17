@@ -2967,7 +2967,14 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     head = parts[0].strip()
     rows = re_rows_head.match(head)
     reading = re_lines_head.match(head)
-    alias_arg = path_arg = seek_arg = None
+    alias_arg = path_arg = seek_arg = range_ends = None
+    # 'lo..hi' at the head of a chain. The same spelling 'in 1..100' uses, and
+    # the only source that walks without a collection behind it.
+    at = find_top_level(head, "..")
+    if at > 0 and not rows and not reading:
+      low, high = head[:at].strip(), head[at + 2:].strip()
+      if low and high:
+        range_ends = (low, high)
     if rows:
       inner, after_call = extract_parens(head, rows.end() - 1)
       if inner is None or head[after_call:].strip() or not inner.strip():
@@ -3158,6 +3165,29 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       step = [f"{indent}    FT_FSkip()"]
       after.append(f"{indent}  FT_FUse()")
       after.append(f"{indent}EndIf")
+      has_value = True
+    elif range_ends is not None:
+      # A range is the one source that needs no collection at all: the loop
+      # counter IS the element, so there is nothing to index and nothing to
+      # build. '1..999 |> filter(...) |> asum' walks a thousand numbers and
+      # allocates none of them.
+      low, high = range_ends
+      for name, part in (("fuse_lo", low), ("fuse_hi", high)):
+        if not is_literal_expr(part):
+          bound = next_temp(name, curr_scope)
+          before.append(f"{indent}{bound} := {part}")
+          if name == "fuse_lo":
+            low = bound
+          else:
+            high = bound
+      # The counter and the element are separate. Making the counter itself
+      # the element saved one assignment and broke the loop: a 'map' writes
+      # to the element, and writing to a For counter changes what it iterates.
+      index = next_temp("fuse_i", curr_scope)
+      opener = f"{indent}For {index} := {low} To {high}"
+      closer = f"{indent}Next"
+      first = [f"{indent}  {value} := {index}"]
+      step = []
       has_value = True
     elif alias_arg is None:
       source = next_temp("fuse_src", curr_scope)

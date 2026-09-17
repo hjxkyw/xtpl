@@ -845,6 +845,20 @@ inside the lambda works:
 In practice that removes almost every helper function the restriction appears
 to demand.
 
+### `lo..hi` as a source
+
+A range can head a chain, with the same spelling `in 1..100` uses. It is the
+only source that walks without a collection behind it: the loop counts, and
+nothing is allocated.
+
+```xtpl
+nEuler := 1..999 |> filter([x] x %% 3 .or. x %% 5) |> asum
+```
+
+Literal ends go straight into the header; anything else is bound before the
+loop, so a call does not sit inside it. As with every source, a `take` stops
+the walk -- `1..1000000 |> filter(...) |> take(4)` does not count to a million.
+
 ### `|>` — feed
 
 Sugar for chaining: the value on the left becomes the **first argument** of the

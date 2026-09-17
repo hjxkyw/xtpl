@@ -1,0 +1,22 @@
+// euler.xtpl -- o primeiro problema do Project Euler, em xtpl.
+//
+// Em Raku:
+//
+//    say sum((1..999).grep: * %% (3 | 5))
+//
+// Em xtpl a juncao '3 | 5' vira um '.or.' -- juncoes foram consideradas e
+// recusadas: anyof/allof/noneof dizem o mesmo sem operador novo, e aqui uma
+// palavra basta.
+//
+// '%%' e "divisivel por" nas duas linguagens, por coincidencia feliz.
+// --------------------------------------------------------------------------------
+
+user function euler1()
+  local nSoma := 1..999 |> filter([x] x %% 3 .or. x %% 5) |> asum
+
+  xconout("euler 1: ", nSoma, "   esperado: 233168")
+
+  return nSoma
+
+// --------------------------------------------------------------------------------
+// the end

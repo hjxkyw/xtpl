@@ -870,6 +870,32 @@ funciona:
 Na prática isso quase sempre dispensa a função auxiliar que a restrição
 parece exigir.
 
+### `lo..hi` como fonte
+
+Um intervalo pode encabeçar uma cadeia, com a mesma grafia que `in 1..100`
+usa. É a única fonte que percorre sem uma coleção atrás dela: o laço conta, e
+nada é alocado.
+
+```xtpl
+nEuler := 1..999 |> filter([x] x %% 3 .or. x %% 5) |> asum
+```
+
+```advpl
+__fuse_out_0_0 := 0
+
+For __fuse_i_0_0 := 1 To 999
+  __fuse_v_0_0 := __fuse_i_0_0
+  If (__fuse_v_0_0 % 3) == 0 .or. (__fuse_v_0_0 % 5) == 0
+    __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+  EndIf
+Next
+```
+
+Pontas literais entram direto no cabeçalho; qualquer outra coisa é ligada
+antes do laço, para uma chamada não ficar dentro dele. Como toda fonte, um
+`take` interrompe o percurso — `1..1000000 |> filter(...) |> take(4)` não
+conta até um milhão.
+
 ### `|>` — alimentação
 
 Açúcar para encadeamento: o valor da esquerda vira o **primeiro argumento** da

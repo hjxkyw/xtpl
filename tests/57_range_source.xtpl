@@ -1,0 +1,42 @@
+// 57_range_source.xtpl -- 'lo..hi' como fonte de uma cadeia.
+//
+// A mesma grafia que 'in 1..100' usa, e a unica fonte que percorre sem uma
+// colecao atras: o laco conta, e nada e alocado.
+//
+//    n := 1..999 |> filter([x] x %% 3 .or. x %% 5) |> asum
+//
+// que e o primeiro problema do Project Euler, e em Raku se escreve
+//
+//    say sum((1..999).grep: * %% (3 | 5))
+//
+// O contador e o elemento sao variaveis DIFERENTES. Fazer o contador ser o
+// elemento economizava uma atribuicao e quebrava o laco: um 'map' escreve no
+// elemento, e escrever no contador de um For muda o que ele percorre.
+// --------------------------------------------------------------------------------
+
+user function testRangeSource(nLo, nHi)
+  local nEuler := 0
+  local aDobros := {}
+  local nQuantos := 0
+  local nCalculado := 0
+  local aPrimeiros := {}
+
+  // literal dos dois lados: entra direto no cabecalho
+  nEuler := 1..999 |> filter([x] x %% 3 .or. x %% 5) |> asum
+
+  // um map escreve no elemento, entao o contador tem de ser outro
+  aDobros := 1..10 |> map([x] x * 2)
+
+  // contagem com teste, sem construir nada
+  nQuantos := 1..100 |> count([x] x %% 7)
+
+  // pontas calculadas: ligadas antes do laco
+  nCalculado := nLo..calcFim(nHi) |> filter([x] x > 0) |> asum
+
+  // take corta o percurso, nao o resultado
+  aPrimeiros := 1..1000000 |> filter([x] x %% 3) |> take(4)
+
+  return nEuler + len(aDobros) + nQuantos + nCalculado + len(aPrimeiros)
+
+// --------------------------------------------------------------------------------
+// the end

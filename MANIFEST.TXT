@@ -1,4 +1,4 @@
-# xtpl 108 -- the fixtures this release contains.
+# xtpl 109 -- the fixtures this release contains.
 # A file in tests/ or errors/ that is not listed here is a leftover
 # from an earlier release, and will fail for reasons of its own.
 errors/arity_too_many.xtpl
@@ -85,3 +85,4 @@ tests/53_kitchen_sink.xtpl
 tests/54_selftest.xtpl
 tests/55_envtest.xtpl
 tests/56_initialiser_chain.xtpl
+tests/57_range_source.xtpl

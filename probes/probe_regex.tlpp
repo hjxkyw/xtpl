@@ -1,0 +1,108 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+using namespace tlpp.regex
+
+// probe_regex.tlpp -- a classe Regex do TLPP, e a duvida que a documentacao
+// deixa em aberto.
+//
+// A doc do TDN mostra:
+//
+//    Local objeto := tlpp.regex.Regex():New('^(abc)*$')
+//    ConOut(objeto:partialMatch("abc123"))                     // .T.
+//    ConOut(tlpp.regex.Regex():matches('^(abc)*$', "abc123"))  // .T.
+//
+// '^(abc)*$' contra "abc123" dando .T. quer dizer que esses metodos PROCURAM
+// dentro da string em vez de ancorar nela inteira -- o '$' nao esta valendo.
+// E ha uma pergunta no DevForum sobre a diferenca entre fullMatch e matches,
+// o que sugere que fullMatch e o que ancora.
+//
+// Para validar "isto e um numero?" essa diferenca e tudo. Entao:
+//
+//   - matches, partialMatch e fullMatch: qual ancora e qual procura?
+//   - da para extrair grupos, ou so testar?
+//   - o namespace precisa do prefixo, ou 'using namespace' basta?
+//   - quanto custa compilar o padrao toda vez, contra guardar a instancia?
+//
+//    appserver.exe -env=zv -run=u_probeRegex
+// --------------------------------------------------------------------------------
+
+Static Function tenta(cNome, bBloco)
+  Local xResposta
+  Local bAntigo := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    xResposta := Eval(bBloco)
+    conout("  " + PadR(cNome, 44) + " [" + ValType(xResposta) + "] " + ;
+           cValToChar(xResposta))
+  RECOVER
+    conout("  " + PadR(cNome, 44) + " ERRO")
+  END SEQUENCE
+  ErrorBlock(bAntigo)
+Return nil
+
+User Function probeRegex()
+
+  Local cNum  := "^-?[0-9]+(\.[0-9]+)?$"
+  Local oRe
+
+  conout("--- a classe existe, e como se chega nela ---")
+  tenta("Regex() (com using namespace)",   {|| ValType(Regex()) })
+  tenta("tlpp.regex.Regex() (completo)",   {|| ValType(tlpp.regex.Regex()) })
+  tenta("Regex():New(pad)",                {|| ValType(Regex():New(cNum)) })
+
+  conout("--- ancora ou procura? o padrao exige a string inteira ---")
+  tenta("matches(num, '-12.50')",          {|| Regex():matches(cNum, "-12.50") })
+  tenta("matches(num, '12x50')",           {|| Regex():matches(cNum, "12x50") })
+  tenta("matches(num, 'abc 12 def')",      {|| Regex():matches(cNum, "abc 12 def") })
+  tenta("fullMatch(num, '-12.50')",        {|| Regex():fullMatch(cNum, "-12.50") })
+  tenta("fullMatch(num, '12x50')",         {|| Regex():fullMatch(cNum, "12x50") })
+  tenta("fullMatch(num, 'abc 12 def')",    {|| Regex():fullMatch(cNum, "abc 12 def") })
+  tenta("partialMatch(num, 'abc 12 def')", {|| Regex():partialMatch(cNum, "abc 12 def") })
+
+  conout("--- o exemplo da propria documentacao ---")
+  tenta("matches('^(abc)*$', 'abc123')",   {|| Regex():matches("^(abc)*$", "abc123") })
+  tenta("fullMatch('^(abc)*$', 'abc123')", {|| Regex():fullMatch("^(abc)*$", "abc123") })
+  tenta("matches('^(abc)*$', 'abcabc')",   {|| Regex():matches("^(abc)*$", "abcabc") })
+
+  conout("--- pela instancia ---")
+  tenta("guardar a instancia",             {|| u_reGuarda(cNum) })
+  tenta("oRe:matches('-12.50')",           {|| u_reChama("matches", "-12.50") })
+  tenta("oRe:fullMatch('-12.50')",         {|| u_reChama("fullMatch", "-12.50") })
+  tenta("oRe:partialMatch('12x50')",       {|| u_reChama("partialMatch", "12x50") })
+
+  conout("--- grupos: da para extrair, ou so testar? ---")
+  tenta("consume",                         {|| Regex():consume("([0-9]+)", "12abc") })
+  tenta("replace",                         {|| Regex():replace("[0-9]+", "12abc", "N") })
+  tenta("extract",                         {|| Regex():extract("([0-9]+)", "12abc") })
+  tenta("split",                           {|| Regex():split(",", "a,b,c") })
+  tenta("find",                            {|| Regex():find("[0-9]+", "abc12") })
+
+  conout("--- os prontos ---")
+  tenta("isCPF('333.222.111-00')",         {|| Regex():isCPF("333.222.111-00") })
+  tenta("isNumeric('-12.50')",             {|| Regex():isNumeric("-12.50") })
+  tenta("isDate('01/01/2026')",            {|| Regex():isDate("01/01/2026") })
+  tenta("isEmail('a@b.com')",              {|| Regex():isEmail("a@b.com") })
+
+Return nil
+
+// --------------------------------------------------------------------------------
+
+User Function reGuarda(cPad)
+  Private oReGlobal := Nil
+  oReGlobal := Regex():New(cPad)
+Return ValType(oReGlobal)
+
+User Function reChama(cMetodo, cTexto)
+  Local xResposta
+  If Type("oReGlobal") != "O"
+    Return "sem objeto"
+  EndIf
+  Do Case
+    Case cMetodo == "matches"      ; xResposta := oReGlobal:matches(cTexto)
+    Case cMetodo == "fullMatch"    ; xResposta := oReGlobal:fullMatch(cTexto)
+    Case cMetodo == "partialMatch" ; xResposta := oReGlobal:partialMatch(cTexto)
+  EndCase
+Return xResposta
+
+// --------------------------------------------------------------------------------
+// the end

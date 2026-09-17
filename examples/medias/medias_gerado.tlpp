@@ -1,0 +1,99 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
+// numeros o armazenamento e dividido e nao tem nome honesto --
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
+// leva o nome de quem o ocupa, que e o unico.
+//
+// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
+// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>! => __stk_<num>_<name>
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// medias.tlpp -- limpar um arquivo e tirar a media de cada linha, numa passada.
+//
+// Cada linha deve ter tres campos numericos separados por virgula. As que
+// tem, viram a media dos tres; as que nao tem sao descartadas e contadas.
+//
+//    12, 14, 16   ->  14
+//    8,9,10       ->  9
+//    1, x, 3      ->  descartada
+//
+// O 'tap' conta as linhas enquanto elas passam. Contar antes com um
+// 'lines(cArquivo) |> count' separado leria o arquivo duas vezes.
+//
+// Separa PRIMEIRO, apara depois: 'split(alltrim(l), ",")' apara a linha, e
+// entao so o primeiro e o ultimo campo ficam aparados -- '  100 ,  200  ' da
+// '100 ' e '  200'. 'map(split(l, ","), alltrim)' apara cada campo, que e o
+// que se queria, e ai o padrao nao precisa mais tolerar espacos nas pontas.
+//
+// Nao e uma cadeia dentro do lambda, que seria recusado, e sim os mesmos
+// verbos chamados como funcoes comuns.
+//
+// Nao ha funcao auxiliar nenhuma aqui, alem de ehNumero, que existe so porque
+// o padrao merece um nome. Uma CADEIA nao pode ficar dentro de um lambda --
+// icar as etapas para fora do bloco as faria rodar antes dele --, mas todo
+// verbo de cadeia tambem e uma funcao comum: 'allof(a, ehNumero)' e
+// 'asum(map(a, val))' fazem o mesmo dentro do lambda, sem cadeia.
+//
+// A validacao usa a classe Regex do TLPP. 'matches' e estatico e exige a
+// string INTEIRA -- verificado rodando, porque o exemplo do TDN diz que
+// matches('^(abc)*$', 'abc123') e .T. e na verdade e .F.
+// --------------------------------------------------------------------------------
+
+using namespace tlpp.regex
+
+user function medias(cArquivo)
+
+  Local nLidas := 0
+  Local aMedias
+
+  Local __blk_0___um
+  Local __fuse_out_0_0
+  Local __fuse_src_0_0
+  Local __fuse_v_0_0
+
+  __fuse_out_0_0 := {}
+  __fuse_src_0_0 := cArquivo
+
+  If File(__fuse_src_0_0)
+    FT_FUse(__fuse_src_0_0)
+    FT_FGoTop()
+    While !FT_FEof()
+      __fuse_v_0_0 := FT_FReadLn()
+      nLidas += 1
+      __fuse_v_0_0 := u_xtpl_map(u_xtpl_split(__fuse_v_0_0, ","), {|%__um^0%| alltrim(%__um^0%)})
+      If len(__fuse_v_0_0) == 3 .and. u_xtpl_allof(__fuse_v_0_0, {|%__um^0%| ehNumero(%__um^0%)})
+        __fuse_v_0_0 := u_xtpl_asum(u_xtpl_map(__fuse_v_0_0, {|%__um^0%| val(%__um^0%)})) / 3
+        AAdd(__fuse_out_0_0, __fuse_v_0_0)
+      EndIf
+      FT_FSkip()
+    EndDo
+    FT_FUse()
+  EndIf
+
+  aMedias := __fuse_out_0_0
+
+  conout("linhas: " + cValToChar(nLidas) + "  boas: " + cValToChar(len(aMedias)) + "  descartadas: " + cValToChar(nLidas - len(aMedias)))
+
+  return aMedias
+
+static function ehNumero(cTexto)
+
+  return Regex():matches("^-?[0-9]+(\.[0-9]+)?$", cTexto)
+
+// --------------------------------------------------------------------------------
+// the end

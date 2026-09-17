@@ -1,0 +1,88 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// medias_mao.tlpp -- a mesma coisa, escrita a mao em TL++.
+//
+// Cada linha deve ter tres campos numericos separados por virgula. As que
+// tem, viram a media dos tres; as que nao tem sao descartadas e contadas.
+// --------------------------------------------------------------------------------
+
+User Function MediasMao(cArquivo)
+
+  Local aMedias := {}
+  Local aCampos := {}
+  Local cLinha  := ""
+  Local nLidas  := 0
+  Local nSoma   := 0
+  Local nX      := 0
+
+  If !File(cArquivo)
+    Return aMedias
+  EndIf
+
+  FT_FUse(cArquivo)
+  FT_FGoTop()
+
+  While !FT_FEof()
+    cLinha := FT_FReadLn()
+    nLidas += 1
+
+    aCampos := StrTokArr(AllTrim(cLinha), ",")
+
+    If Len(aCampos) == 3 .And. TresNumeros(aCampos)
+      nSoma := 0
+      For nX := 1 To 3
+        nSoma += Val(aCampos[nX])
+      Next
+      AAdd(aMedias, nSoma / 3)
+    EndIf
+
+    FT_FSkip()
+  EndDo
+
+  FT_FUse()
+
+  conout("linhas: " + cValToChar(nLidas) + ;
+         "  boas: " + cValToChar(Len(aMedias)) + ;
+         "  descartadas: " + cValToChar(nLidas - Len(aMedias)))
+
+Return aMedias
+
+// --------------------------------------------------------------------------------
+
+Static Function TresNumeros(aCampos)
+  Local nX := 0
+  For nX := 1 To Len(aCampos)
+    If !EhNumero(aCampos[nX])
+      Return .F.
+    EndIf
+  Next
+Return .T.
+
+Static Function EhNumero(cTexto)
+  Local cLimpo := AllTrim(cTexto)
+  Local cSo    := ""
+
+  If Empty(cLimpo)
+    Return .F.
+  EndIf
+
+  cSo := StrTran(StrTran(cLimpo, "-", ""), ".", "")
+
+  If Empty(cSo)
+    Return .F.
+  EndIf
+
+Return SoDigitos(cSo)
+
+Static Function SoDigitos(cTexto)
+  Local nX := 0
+  For nX := 1 To Len(cTexto)
+    If !(SubStr(cTexto, nX, 1) $ "0123456789")
+      Return .F.
+    EndIf
+  Next
+Return .T.
+
+// --------------------------------------------------------------------------------
+// the end

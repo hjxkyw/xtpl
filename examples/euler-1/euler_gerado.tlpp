@@ -1,0 +1,31 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// euler.tlpp -- o primeiro problema do Project Euler, em xtpl.
+// --------------------------------------------------------------------------------
+
+user function euler1()
+
+  Local nSoma
+
+  Local __fuse_i_0_0
+  Local __fuse_out_0_0
+  Local __fuse_v_0_0
+
+  __fuse_out_0_0 := 0
+
+  For __fuse_i_0_0 := 1 To 999
+    __fuse_v_0_0 := __fuse_i_0_0
+    If (__fuse_v_0_0 % 3) == 0 .or. (__fuse_v_0_0 % 5) == 0
+      __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+    EndIf
+  Next
+
+  nSoma := __fuse_out_0_0
+
+  conout("euler 1: " + cValToChar(nSoma) + "   esperado: 233168")
+
+  return nSoma
+
+// --------------------------------------------------------------------------------
+// the end

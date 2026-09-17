@@ -1,0 +1,25 @@
+// euler.xtpl -- o primeiro problema do Project Euler, em xtpl
+// soma todos os numeros de 1 a 999 que sao divisiveis por 3 ou por 5
+//
+// um loop de 1 a 999
+// 1..999
+//
+// um loop de 1 a 999 que passa um valor por vez para a funcao filter
+// a funcao filter([n] n %% 3 .or. n %% 5) verifica se o valor e' divisivel por 3 ou por 5
+// 1..999 |> filter([n] n %% 3 .or. n %% 5)
+//
+// a funcao filter passa um valor (divisivel por 3 ou por 5) por vez para a funcao soma
+// a funcao soma acumula os valores da funcao filter
+// 1..999 |> filter([x] x %% 3 .or. x %% 5) |> asum
+
+// --------------------------------------------------------------------------------
+
+user function euler1()
+  local nSoma := 1..999 |> filter([n] n %% 3 .or. n %% 5) |> asum
+
+  xconout("euler 1: ", nSoma, "   esperado: 233168")
+
+  return nSoma
+
+// --------------------------------------------------------------------------------
+// the end

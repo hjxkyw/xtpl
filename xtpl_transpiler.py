@@ -363,13 +363,15 @@ def _in_group(nodes, index, found):
 
 
 
+# The note names storage, which no longer starts with '__'.
+_NOTE_PAIR = r'(?:__|[A-Za-z]+_\d+_)\w+ = \w+'
 _re_origin_note = re.compile(
-  r'^(.*?)\s*//\s*((?:__\w+ = \w+)(?:, __\w+ = \w+)*)\s*$')
+  r'^(.*?)\s*//\s*((?:' + _NOTE_PAIR + r')(?:, ' + _NOTE_PAIR + r')*)\s*$')
 # When the line already carried a comment, the note is folded into it in
 # parentheses instead. Both forms have to be read, or a line that happened to
 # have a comment keeps its slot numbers while its neighbours do not.
 _re_origin_tail = re.compile(
-  r'^(.*?)\s*\(((?:__\w+ = \w+)(?:, __\w+ = \w+)*)\)\s*$')
+  r'^(.*?)\s*\(((?:' + _NOTE_PAIR + r')(?:, ' + _NOTE_PAIR + r')*)\)\s*$')
 
 
 def split_origin_note(line):
@@ -388,6 +390,23 @@ def rejoin_origin_note(body, pairs, how):
     return body.rstrip()
   return (f"{body}  // {', '.join(pairs)}" if how == "//"
           else f"{body}  ({', '.join(pairs)})")
+
+
+# A generated temporary: one of the short kinds, then _<depth>_<index>.
+# Nothing written by hand looks like this, which is the point of keeping the
+# two numbers after shortening the prefix.
+_re_generated_temp = re.compile(
+  r'^(?:f(?:a|al|ar|bg|bs|ch|dr|fs|hd|hi|i|j|ky|ls|lm|lo|n|ok|ol|op|o|pv|pb|rd|rc|sn|sp|s|v)'
+  r'|et|gt|ht|pt)_\d+_\d+$', re.IGNORECASE)
+
+
+_re_generated_slot = re.compile(r'^[sb]_\d+_\w+$', re.IGNORECASE)
+
+
+def is_generated_name(word):
+  """Did the transpiler make this name, rather than the programmer?"""
+  return (word.startswith("__") or bool(_re_generated_temp.match(word))
+          or bool(_re_generated_slot.match(word)))
 
 
 def membership_span(nodes):
@@ -592,7 +611,7 @@ def is_literal_expr(expr):
 
 
 def scope_sort_key(var_name):
-  match_stk = re.match(r'^__stk_(\d+)_(\d+)$', var_name)
+  match_stk = re.match(r'^s_(\d+)_(\d+)$', var_name)
   if match_stk:
     # Stack slots sort ahead of everything, by nesting depth then slot index.
     return (-1, int(match_stk.group(1)), int(match_stk.group(2)))
@@ -600,7 +619,7 @@ def scope_sort_key(var_name):
   if match_tmp:
     # Generated temporaries: group by kind, then by scope and order created.
     return (9998, match_tmp.group(1), int(match_tmp.group(2)), int(match_tmp.group(3)))
-  match = re.match(r'^__blk_(\d+)_(.*)$', var_name)
+  match = re.match(r'^b_(\d+)_(.*)$', var_name)
   if match:
     return (int(match.group(1)), 1, match.group(2).lower())
   return (9999, 2, var_name.lower())
@@ -892,7 +911,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
 
   # Internal scope handles are allocated on block entry, but the number that
   # appears in a mangled name is handed out lazily on first use, so blocks that
-  # declare nothing don't burn an index and __blk_ numbering stays contiguous.
+  # declare nothing don't burn an index and b_ numbering stays contiguous.
   scope_display = {0: 0}
   display_counter = 0
 
@@ -1189,7 +1208,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     if (after.startswith("(") or after.startswith("->") or
         before.endswith("->") or before.endswith(":") or
         (text[:match.start()].endswith(".") and text[match.end():].startswith(".")) or
-        word.startswith("__") or word_lower in known_words or
+        is_generated_name(word) or word_lower in known_words or
         word_lower in defined_constants or word_lower in external_names or
         word_lower in private_names):
       return word
@@ -1341,6 +1360,14 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     v_lower = var_name.lower()
     if v_lower in reserved_words:
       raise SyntaxError(f"Cannot use reserved word '{var_name}' as a variable name.")
+    # The generated names are short now, so the shapes they take are reserved
+    # explicitly rather than by a '__' prefix nobody would type by accident.
+    # A collision would be silent: two different variables, one slot.
+    if is_generated_name(var_name):
+      raise SyntaxError(
+        f"Line {line_no}: '{var_name}' has the shape of a name xtpl "
+        f"generates, so it cannot be declared. Reserved: a leading '__', and "
+        f"'<kind>_<depth>_<index>' -- fo_0_0, fv_1_2, s_1_0, b_0_x.")
     if line_no is not None and v_lower in scope_vars[curr_scope]:
       # Real files declare a local over a parameter of the same name, and
       # Protheus takes it. Under --legacy the point is to read the file as it
@@ -1381,7 +1408,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       raise SyntaxError(f"Cannot use reserved word '{var_name}' as a variable name.")
     if v_lower not in scope_vars[curr_scope]:
       owner = curr_scope if name_scope is None else name_scope
-      mangled = f"__blk_{scope_number(owner)}_{var_name}"
+      mangled = f"b_{scope_number(owner)}_{var_name}"
       record_origin(mangled, var_name)
       scope_vars[curr_scope].add(v_lower)
       scope_var_mangling[curr_scope][v_lower] = mangled
@@ -1394,7 +1421,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
 
     A name is 'pinned' when the function ever captures it in a code block or
     passes it by reference with @. Either one outlives the block, so the
-    variable gets its own __blk_ storage instead of a recycled slot.
+    variable gets its own b_ storage instead of a recycled slot.
     """
     v_lower = var_name.lower()
     if v_lower in reserved_words:
@@ -1406,11 +1433,11 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     depth = scope_stack.index(target_scope)
     if depth == 0 or line_no in pinned_decls:
       owner = target_scope if name_scope is None else name_scope
-      mangled = f"__blk_{scope_number(owner)}_{var_name}"
+      mangled = f"b_{scope_number(owner)}_{var_name}"
     else:
       ordinal = stack_slot_next.get(depth, 0)
       stack_slot_next[depth] = ordinal + 1
-      mangled = f"__stk_{depth}_{ordinal}"
+      mangled = f"s_{depth}_{ordinal}"
 
     record_origin(mangled, var_name)
     # Where this declaration will land. Two blocks may declare the same name
@@ -1418,7 +1445,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     # is a declaration in its own right, so each wants its own 'let'.
     declared_lines.append((len(function_buffer), mangled, var_name))
     # '__each' and friends are the transpiler's, not the programmer's.
-    if not var_name.startswith("__"):
+    if not is_generated_name(var_name):
       declared_at[mangled] = (var_name, line_no)
     scope_vars[target_scope].add(v_lower)
     scope_var_mangling[target_scope][v_lower] = mangled
@@ -1475,14 +1502,14 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     it was that time. The preprocessor can do better: '~' is legal in a
     pattern and illegal in an identifier, so
 
-        #translate aTmp~1~0   => __stk_1_0
-        #translate aOther~1~0 => __stk_1_0
+        #translate aTmp~1~0   => s_1_0
+        #translate aOther~1~0 => s_1_0
 
     gives two readable spellings of one piece of storage, and no rule can ever
     collide with a name somebody wrote.
 
     The name carries the depth and the ordinal, so 'aTmp~1~0' can only mean
-    '__stk_1_0' in any function. Two functions emit the identical rule, which
+    's_1_0' in any function. Two functions emit the identical rule, which
     is harmless -- so the rules live at the top of the file and nothing is
     needed per block, nor an '#untranslate'.
 
@@ -1491,7 +1518,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     """
     shared = {}
     for slot, names in slot_origins.items():
-      match = re.match(r'^__stk_(\d+)_(\d+)$', slot)
+      match = re.match(r'^s_(\d+)_(\d+)$', slot)
       if match and len(names) > 1:
         shared[slot] = (match.group(1), match.group(2))
     if not shared:
@@ -1597,7 +1624,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     """'let <name> as <storage>' in front of every block-local declaration.
 
     A block variable is one whether it landed in a recycled slot or in private
-    storage of its own -- a captured one gets '__blk_1_nFator' and is no less
+    storage of its own -- a captured one gets 'b_1_nFator' and is no less
     block-scoped for it. The marker says so uniformly, and expands to nothing.
 
     Last of the three passes, so the storage it names is the final one.
@@ -1647,7 +1674,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     """'!nInner^2!' for a slot named after the one variable that uses it.
 
     Without this the body mixes two idioms: '!aTmp^1^0!' where storage is
-    shared and a bare '__stk_2_nInner' where it is not. Both are block
+    shared and a bare 's_2_nInner' where it is not. Both are block
     variables and both should look like one.
 
     The two rules cannot be confused: a shared slot carries two numbers and a
@@ -1656,7 +1683,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     """
     named = {}
     for slot in list(slot_origins):
-      match = re.match(r'^__stk_(\d+)_([A-Za-z_]\w*)$', slot)
+      match = re.match(r'^s_(\d+)_([A-Za-z_]\w*)$', slot)
       if match:
         named[slot] = (match.group(1), match.group(2))
     if not named:
@@ -1673,7 +1700,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     """'%nFator^1%' for storage that never got a slot.
 
     A variable pinned by a capture, a '@', a 'raw' line or a 'defer' gets
-    private '__blk_' storage, and so does a lambda's parameter. Both are block
+    private 'b_' storage, and so does a lambda's parameter. Both are block
     variables, and with this they read like the other two kinds.
 
     Verified by running it: a block built with the alias still sees an
@@ -1683,7 +1710,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     """
     private = {}
     for index, line in enumerate(function_buffer):
-      for found in re.finditer(r'\b__blk_(\d+)_([A-Za-z_]\w*)\b', line):
+      for found in re.finditer(r'\bb_(\d+)_([A-Za-z_]\w*)\b', line):
         private[found.group(0)] = (found.group(1), found.group(2))
     if not private:
       return
@@ -1702,7 +1729,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     """Give a slot the name of its occupant when it only ever has one.
 
     Four fifths of recycled slots are used by exactly one source variable, and
-    for those '__stk_1_0' tells a reader nothing that '__stk_1_aTmp' would not
+    for those 's_1_0' tells a reader nothing that 's_1_aTmp' would not
     tell them better. The depth stays in the name, so two variables of the
     same name at different depths remain distinct.
 
@@ -1712,12 +1739,12 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     """
     rename = {}
     for slot, names in slot_origins.items():
-      match = re.match(r'^__stk_(\d+)_(\d+)$', slot)
+      match = re.match(r'^s_(\d+)_(\d+)$', slot)
       if match and len(names) == 1:
         # The transpiler's own names lead with underscores -- '__each',
-        # '__usearea'. Stripped, since '__stk_1_each' is the readable form and
-        # '__stk_1___each' is not.
-        rename[slot] = f"__stk_{match.group(1)}_{names[0].lstrip('_')}"
+        # '__usearea'. Stripped, since 's_1_each' is the readable form and
+        # 's_1___each' is not.
+        rename[slot] = f"s_{match.group(1)}_{names[0].lstrip('_')}"
     if not rename:
       # Even with nothing to rename, a note the spelling pass left behind may
       # now say what the name already says.
@@ -1766,8 +1793,6 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       return
     spell_shared_slots()
     name_single_slots()
-    spell_named_slots()
-    spell_private_storage()
     mark_block_declarations()
     space_out_blocks()
     drop_unused_generated()
@@ -2152,7 +2177,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
   object_stack = []
   literal_parts = []
 
-  re_generated_name = re.compile(r'\b__(?:stk|blk)_\w+\b')
+  re_generated_name = re.compile(r'\b[sb]_\d+_\w+\b')
 
   def annotate_origins(text):
     """Tag a line with the source variable behind each generated name.
@@ -2367,12 +2392,20 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     print(f"warning: line {current_line_no}: {message}", file=sys.stderr)
 
   def emit(text):
-    """Restore masked literals and push one or more physical lines."""
+    """Restore masked literals and push one or more physical lines.
+
+    A statement that expands to several lines is followed by a blank, so the
+    tail of one and the head of the next do not run together -- 'n := fo_0_0'
+    sitting directly above 'fok_0_0 := File(cB)' reads as one statement when
+    it is two. Runs of blanks are collapsed afterwards, so this never doubles
+    up with the spacing around control structures.
+    """
     note_open_aliases(text)
     check_fields(text)
     check_types(text)
     check_arity(text)
-    for sub_line in unmask_literals(text, literal_parts).split("\n"):
+    produced = unmask_literals(text, literal_parts).split("\n")
+    for sub_line in produced:
       if not sub_line.strip():
         function_buffer.append(sub_line)
         continue
@@ -2385,6 +2418,8 @@ def transpile(source_code, dictionary=None, dict_strict=False,
         # this exists to remove.
         written = f"{written}  // xtpl:{current_line_no}"
       function_buffer.append(written)
+    if len(produced) > 1 and function_buffer and function_buffer[-1].strip():
+      function_buffer.append("")
 
   def apply_with_object(text):
     """Replace a subject-relative ':' with the innermost with-object holder.
@@ -2533,6 +2568,23 @@ def transpile(source_code, dictionary=None, dict_strict=False,
            f"command -- xtpl cannot check that it is not written to")
     emit(rendered)
 
+  # Short names for the generated temporaries. '__fuse_out_0_0' said nothing
+  # that 'fo_0_0' does not, and a fused chain puts six of them on screen at
+  # once. The trailing '_<depth>_<index>' is what makes them impossible to
+  # collide with anything written by hand, and it is kept.
+  _SHORT_TEMP = {
+    "fuse_acc": "fa", "fuse_alias": "fal", "fuse_area": "far",
+    "fuse_bag": "fbg", "fuse_best": "fbs", "fuse_chunk": "fch",
+    "fuse_drop": "fdr", "fuse_first": "ffs", "fuse_had": "fhd",
+    "fuse_hi": "fhi", "fuse_i": "fi", "fuse_j": "fj", "fuse_key": "fky",
+    "fuse_last": "fls", "fuse_lim": "flm", "fuse_lo": "flo", "fuse_n": "fn",
+    "fuse_older": "fol", "fuse_open": "fop", "fuse_out": "fo",
+    "fuse_prev": "fpv", "fuse_probe": "fpb", "fuse_ready": "frd",
+    "fuse_ok": "fok", "fuse_rec": "frc", "fuse_seen": "fsn", "fuse_sep": "fsp",
+    "fuse_src": "fs", "fuse_v": "fv",
+    "elvis_tmp": "et", "guard_tmp": "gt", "hash_tmp": "ht", "pipe_tmp": "pt",
+  }
+
   def next_temp(kind, curr_scope):
     """A generated temporary, drawn from a pool reset at every statement.
 
@@ -2543,7 +2595,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     """
     index = temp_counters.get(kind, 0)
     temp_counters[kind] = index + 1
-    name = f"__{kind}_{scope_number(curr_scope)}_{index}"
+    name = f"{_SHORT_TEMP[kind]}_{scope_number(curr_scope)}_{index}"
     add_generated(name)
     return name
 
@@ -2885,7 +2937,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     lower = args.lower()
     if any(lower in scope_vars[s_id] for s_id in scope_stack):
       return args
-    return f"[__um] {args}(__um)"
+    return f"[it] {args}(it)"
 
   re_rows_head = re.compile(r'^rows\s*\(', re.IGNORECASE)
   re_lines_head = re.compile(r'^lines\s*\(', re.IGNORECASE)
@@ -3125,8 +3177,6 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     if fold is not None:
       blocked_by = None
 
-    walk_indent = ""                  # a file source nests the walk one deeper
-
     if alias_arg is not None and taken < 1:
       raise SyntaxError(
         f"Line {line_idx + 1}: rows() is a source to walk, not a value. It has "
@@ -3149,22 +3199,35 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       # is the idiom Protheus already uses for a text file, and it reads one
       # line at a time -- so a 'take' really does stop the read rather than
       # trimming something already loaded.
-      source = next_temp("fuse_src", curr_scope)
-      walk_indent = "  "              # everything sits inside the If File()
+      # A path that is already a name is used as it is. The temp exists so an
+      # expression is evaluated once, and a name is already evaluated.
+      if re_bare_name.match(path_arg.strip()):
+        source = path_arg.strip()
+      else:
+        source = next_temp("fuse_src", curr_scope)
+        before.append(f"{indent}{source} := {path_arg}")
+      opened = next_temp("fuse_ok", curr_scope)
       # The file is tested ONCE, not in the loop condition. On a file that
       # never opened FT_FEof() stays .F. and the walk never ends -- a hang
       # rather than an error -- but asking File() per line is a filesystem
       # call per line, which on a large file costs more than the read.
-      before.extend([f"{indent}{source} := {path_arg}",
-                     f"{indent}If File({source})",
+      # Both the open and the close are guarded. A failed FT_FUse is NOT
+      # inert -- probed, and it displaces whatever file was current, after
+      # which the argument-less FT_FUse() closes somebody else's. A caller
+      # with a file open and a lines() over a path that does not exist would
+      # lose their handle, and the damage would surface elsewhere.
+      before.extend([f"{indent}{opened} := File({source})",
+                     f"{indent}If {opened}",
                      f"{indent}  FT_FUse({source})",
-                     f"{indent}  FT_FGoTop()"])
-      opener = f"{indent}  While !FT_FEof()"
-      closer = f"{indent}  EndDo"
-      first = [f"{indent}    {value} := FT_FReadLn()"]
-      step = [f"{indent}    FT_FSkip()"]
-      after.append(f"{indent}  FT_FUse()")
-      after.append(f"{indent}EndIf")
+                     f"{indent}  FT_FGoTop()",
+                     f"{indent}EndIf"])
+      opener = f"{indent}While {opened} .And. !FT_FEof()"
+      closer = f"{indent}EndDo"
+      first = [f"{indent}  {value} := FT_FReadLn()"]
+      step = [f"{indent}  FT_FSkip()"]
+      after.extend([f"{indent}If {opened}",
+                    f"{indent}  FT_FUse()",
+                    f"{indent}EndIf"])
       has_value = True
     elif range_ends is not None:
       # A range is the one source that needs no collection at all: the loop
@@ -3190,9 +3253,12 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       step = []
       has_value = True
     elif alias_arg is None:
-      source = next_temp("fuse_src", curr_scope)
+      if re_bare_name.match(head.strip()):
+        source = head.strip()
+      else:
+        source = next_temp("fuse_src", curr_scope)
+        before.append(f"{indent}{source} := {head}")
       index = next_temp("fuse_i", curr_scope)
-      before.append(f"{indent}{source} := {head}")
       opener = f"{indent}For {index} := 1 To Len({source})"
       closer = f"{indent}Next"
       first = [f"{indent}  {value} := {source}[{index}]"]
@@ -3229,12 +3295,13 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       has_value = False
 
     body, closers = list(first), []
+    prologue = len(first)             # the lines that fetch the element
 
     def push(text):
       # 'closers' is what each open block ends with, innermost last -- not a
       # count. A stage that opens a For rather than an If closes differently,
       # and the depth alone could not say which.
-      body.append(f"{indent}{walk_indent}  {'  ' * len(closers)}{text}")
+      body.append(f"{indent}  {'  ' * len(closers)}{text}")
 
     def writes_to(name, text):
       """Does this block body assign to its own parameter?"""
@@ -3581,12 +3648,17 @@ def transpile(source_code, dictionary=None, dict_strict=False,
         seed = _FUSE_FOLDS[fold]
       else:
         seed = "{}"
-      # Ahead of the 'If File()' when the source is a file: the result has to
-      # exist even when the file does not, or the caller reads a Nil.
-      if walk_indent:
-        before.insert(0, f"{indent}{result} := {seed}")
-      else:
-        before.append(f"{indent}{result} := {seed}")
+      before.append(f"{indent}{result} := {seed}")
+    # A source whose element nothing reads: 'count' with no test never looks
+    # at the line, but the read still has to happen for FT_FSkip to advance.
+    # The value is fetched and dropped, so the assignment goes.
+    if prologue:
+      rest = body[prologue:] + step + finish + after
+      if not any(re.search(rf'\b{re.escape(value)}\b', l) for l in rest):
+        for at in range(prologue):
+          body[at] = re.sub(rf'^(\s*){re.escape(value)}\s*:=\s*(\w+\()',
+                            r'\1\2', body[at])
+
     # 'finish' runs after the loop but before a work area is put back.
     lines = before + [opener] + body + step + [closer] + finish + after
     return lines, (None if for_effect else result), parts[1:][taken:], blocked_by
@@ -4383,8 +4455,10 @@ def transpile(source_code, dictionary=None, dict_strict=False,
         # not know about -- a flag does the same work.
         opened = register_block_local("__opened", curr_scope, idx + 1)
         emit(f"{indent}{opened} := File({holder})")
-        emit(f"{indent}FT_FUse({holder})")
-        emit(f"{indent}FT_FGoTop()")
+        emit(f"{indent}If {opened}")
+        emit(f"{indent}  FT_FUse({holder})")
+        emit(f"{indent}  FT_FGoTop()")
+        emit(f"{indent}EndIf")
         emit(f"{indent}{counter} := 0")
         emit(f"{indent}While {opened} .And. !FT_FEof(){loop_note}")
         emit(f"{indent}  {counter} := {counter} + 1")
@@ -4398,7 +4472,10 @@ def transpile(source_code, dictionary=None, dict_strict=False,
         # a 'return' out of the middle of the loop has to close it too.
         # A list of lines, like every other entry: a bare string here is
         # iterated character by character where the stack is read.
-        using_stack.append({"restore": ["FT_FUse()"], "line": idx + 1})
+        # Guarded, like the open: an argument-less FT_FUse() after a failed
+        # open closes whatever file was current before this loop.
+        using_stack.append({"restore": [f"If {opened}", "  FT_FUse()", "EndIf"],
+                            "line": idx + 1})
         continue
 
       lead, resolved = rewrite_value(source, curr_scope, idx, indent)
@@ -4434,6 +4511,25 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       mangled = register_declaration(var_name, curr_scope, idx + 1)
       lead, resolved_expr = rewrite_value(expr, curr_scope, idx, indent)
       cond_lead, resolved_cond = rewrite_value(cond, curr_scope, idx, indent)
+
+      # ':=' is an expression in AdvPL and yields the value assigned, so the
+      # whole thing fits in the condition and the loop-and-a-half disappears:
+      #
+      #   While (s_1_x := proximo(o)) != Nil
+      #
+      # Only when the variable's first appearance in the condition is
+      # evaluated unconditionally. Behind a '.and.' or inside an 'iif' it may
+      # never be reached, and then the assignment -- which is usually what
+      # advances something -- would not happen at all.
+      before_it = re.split(rf'\b{re.escape(mangled)}\b', resolved_cond, 1)[0]
+      reachable = not re.search(r'\.(?:and|or)\.|\biif\b', before_it,
+                                re.IGNORECASE)
+      if (not lead and not cond_lead and reachable
+          and re.search(rf'\b{re.escape(mangled)}\b', resolved_cond)):
+        folded = re.sub(rf'\b{re.escape(mangled)}\b',
+                        f"({mangled} := {resolved_expr})", resolved_cond, 1)
+        emit(f"{indent}While {folded}")
+        continue
 
       emit(f"{indent}While .T.")
       for part in lead + cond_lead:
@@ -4543,7 +4639,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
           mangled = register_block_local(var_name, curr_scope, idx + 1)
           # A recycled slot is shared, so a type from one declaration cannot
           # be claimed for it; only private storage keeps the annotation.
-          if typing and mangled.startswith("__blk_"):
+          if typing and mangled.startswith("b_"):
             declared_types[mangled] = typing
           if "const" in attrs:
             const_names[mangled] = idx + 1
@@ -4756,22 +4852,18 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       "// 'let' marca onde uma variavel de bloco e declarada e qual",
       "// armazenamento ela recebeu. Nao gera nada.",
       "//",
-      "// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois",
-      "// numeros o armazenamento e dividido e nao tem nome honesto --",
-      "// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot",
-      "// leva o nome de quem o ocupa, que e o unico.",
-      "//",
-      "// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',",
-      "// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.",
+      "// Onde um slot e dividido por mais de uma variavel ele nao tem nome",
+      "// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:",
+      "// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja",
+      "// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.",
       "//",
       "// Uma regra so, para todos os slots: os marcadores entram no proprio",
       "// nome do resultado. O '!' na frente impede que a regra case com uma",
       "// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem",
       "// o qual o ultimo marcador engole o que vem depois.",
       "#translate let <name1> as <name2> =>",
-      "#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>",
-      "#translate !<name>^<num>! => __stk_<num>_<name>",
-      "#translate %<name>^<num>% => __blk_<num>_<name>",
+      "#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>",
+
     ]
   if header:
     out_lines[:0] = header + [""]

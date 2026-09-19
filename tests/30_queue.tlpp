@@ -6,22 +6,17 @@
 // 'let' marca onde uma variavel de bloco e declarada e qual
 // armazenamento ela recebeu. Nao gera nada.
 //
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
 //
 // Uma regra so, para todos os slots: os marcadores entram no proprio
 // nome do resultado. O '!' na frente impede que a regra case com uma
 // potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
 // o qual o ultimo marcador engole o que vem depois.
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 // 30_queue.tlpp -- a ring-buffer queue, and method names that collide.
 //
@@ -43,21 +38,21 @@ user function testQueue(aPedidos, oModelo)
   Local xItem := Nil
   Local nOutro := 0
 
-  Local __stk_1_each
-  Local __stk_1_eachi
-  Local __stk_1_oPedido
+  Local s_1_each
+  Local s_1_eachi
+  Local s_1_oPedido
 
   oFila := u_xtpl_queue()
   oGrande := u_xtpl_queue(256)
 
-  let each as __stk_1_each
-  let oPedido as __stk_1_oPedido
-  let eachi as __stk_1_eachi
-  !each^1! := aPedidos
+  let each as s_1_each
+  let oPedido as s_1_oPedido
+  let eachi as s_1_eachi
+  s_1_each := aPedidos
 
-  For !eachi^1! := 1 To Len(!each^1!)
-    !oPedido^1! := !each^1![!eachi^1!]
-    oFila:Push(!oPedido^1!)
+  For s_1_eachi := 1 To Len(s_1_each)
+    s_1_oPedido := s_1_each[s_1_eachi]
+    oFila:Push(s_1_oPedido)
   next
 
   while !oFila:IsEmpty()

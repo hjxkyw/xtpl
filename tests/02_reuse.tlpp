@@ -6,22 +6,17 @@
 // 'let' marca onde uma variavel de bloco e declarada e qual
 // armazenamento ela recebeu. Nao gera nada.
 //
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
 //
 // Uma regra so, para todos os slots: os marcadores entram no proprio
 // nome do resultado. O '!' na frente impede que a regra case com uma
 // potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
 // o qual o ultimo marcador engole o que vem depois.
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 // 02_reuse.tlpp -- when a block local shares a slot and when it cannot
 // --------------------------------------------------------------------------------
@@ -32,65 +27,65 @@ user function testReuse(lFlag)
   Local aHandlers := {}
   Local aCarrier := {}
 
-  Local __stk_1_0        // nFirst, cSecond, nOuter, i, aRows, aInner, aWork, aScratch, aLent, aGiven
-  Local __blk_1_nFactor
-  Local __blk_2_cBuffer
-  Local __stk_1_nSquare
-  Local __stk_2_nInner
+  Local s_1_0        // nFirst, cSecond, nOuter, i, aRows, aInner, aWork, aScratch, aLent, aGiven
+  Local b_1_nFactor
+  Local b_2_cBuffer
+  Local s_1_nSquare
+  Local s_2_nInner
 
   // Sibling blocks at the same depth reuse one slot: each writes before it
   // reads, so nothing can leak across.
   if nTotal > 0
-    let nFirst as __stk_1_0
+    let nFirst as s_1_0
     !nFirst^1^0! := 1
     conout("first: " + cValToChar(!nFirst^1^0!))
   endif
 
   if nTotal > 0
-    let cSecond as __stk_1_0
+    let cSecond as s_1_0
     !cSecond^1^0! := "same storage, different type"
     conout("second: " + !cSecond^1^0!)
   endif
 
   // Nesting is not sharing: the inner block is one level deeper.
   if nTotal > 0
-    let nOuter as __stk_1_0
+    let nOuter as s_1_0
     !nOuter^1^0! := 1
     if nTotal > 1
-      let nInner as __stk_2_nInner
-      !nInner^2! := 2
-      conout("sum: " + cValToChar(!nOuter^1^0! + !nInner^2!))
+      let nInner as s_2_nInner
+      s_2_nInner := 2
+      conout("sum: " + cValToChar(!nOuter^1^0! + s_2_nInner))
     endif
   endif
 
   // A loop body re-enters its block on every pass, so the slot is cleared
   // each time rather than carrying the previous iteration's value.
-  let i as __stk_1_0
+  let i as s_1_0
 
   for !i^1^0! := 1 to 3
-    let nSquare as __stk_1_nSquare
-    !nSquare^1! := Nil
-    !nSquare^1! := !i^1^0! * !i^1^0!
-    conout("square: " + cValToChar(!nSquare^1!))
+    let nSquare as s_1_nSquare
+    s_1_nSquare := Nil
+    s_1_nSquare := !i^1^0! * !i^1^0!
+    conout("square: " + cValToChar(s_1_nSquare))
   next
 
   // PINNED 1 -- captured by a code block, which outlives the block.
   if nTotal > 0
-    let nFactor as __blk_1_nFactor
-    %nFactor^1% := 10
-    aadd(aHandlers, {|| %nFactor^1% * 2})
+    let nFactor as b_1_nFactor
+    b_1_nFactor := 10
+    aadd(aHandlers, {|| b_1_nFactor * 2})
   endif
 
   // PINNED 2 -- a reference handed to a function we cannot see into.
   if nTotal > 0
-    let aRows as __stk_1_0
+    let aRows as s_1_0
     !aRows^1^0! := {}
     processRows(!aRows^1^0!)
   endif
 
   // PINNED 3 -- escapes at the store, without ever being passed itself.
   if nTotal > 0
-    let aInner as __stk_1_0
+    let aInner as s_1_0
     !aInner^1^0! := {}
     aadd(aCarrier, !aInner^1^0!)
   endif
@@ -99,7 +94,7 @@ user function testReuse(lFlag)
   // aWork may not be passed, captured or aliased anywhere in the function.
   // Unlike , breaking it is a compile error rather than silent risk.
   if nTotal > 0
-    let aWork as __stk_1_0
+    let aWork as s_1_0
     !aWork^1^0! := {}
     aadd(!aWork^1^0!, "contained")
     conout("first row: " + !aWork^1^0![1])
@@ -107,7 +102,7 @@ user function testReuse(lFlag)
 
   // NOT pinned -- a reference built and read entirely in place.
   if nTotal > 0
-    let aScratch as __stk_1_0
+    let aScratch as s_1_0
     !aScratch^1^0! := {}
     aadd(!aScratch^1^0!, "stays home")
     conout("kept: " + cValToChar(len(!aScratch^1^0!)))
@@ -116,7 +111,7 @@ user function testReuse(lFlag)
   // NOT pinned --  is a promise that processRows will not keep aLent,
   // so the slot can be shared. aLent stays usable to the end of the block.
   if nTotal > 0
-    let aLent as __stk_1_0
+    let aLent as s_1_0
     !aLent^1^0! := {}
     aadd(!aLent^1^0!, "borrowed")
     processRows(!aLent^1^0!)
@@ -126,7 +121,7 @@ user function testReuse(lFlag)
   // give it up: the reference is dropped and aGiven is dead for the rest of
   // the block. Reading it below this line is a compile error.
   if nTotal > 0
-    let aGiven as __stk_1_0
+    let aGiven as s_1_0
     !aGiven^1^0! := {}
     aadd(!aGiven^1^0!, "handed off")
   endif
@@ -134,10 +129,10 @@ user function testReuse(lFlag)
   // NOT pinned -- a value passed by reference is copied back during the
   // call, so the callee cannot keep the binding.
   if nTotal > 0
-    let cBuffer as __blk_2_cBuffer
-    %cBuffer^2% := ""
-    fillBuffer(@%cBuffer^2%)
-    conout("buffer: " + %cBuffer^2%)
+    let cBuffer as b_2_cBuffer
+    b_2_cBuffer := ""
+    fillBuffer(@b_2_cBuffer)
+    conout("buffer: " + b_2_cBuffer)
   endif
 
   return nTotal

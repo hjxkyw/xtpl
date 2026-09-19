@@ -1,0 +1,87 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// probe_blk.tlpp -- '%<name>^<num>%' para armazenamento privado.
+//
+// Um slot dividido ja se escreve '!aTmp^1^0!' e um slot proprio '!nX^2!'.
+// Falta a terceira forma: a variavel FIXADA, que nao ganhou slot nenhum
+// porque um code block a capturou, um '@' a passou por referencia, uma linha
+// 'raw' a tocou ou um 'defer' a usou. Hoje ela sai crua, '__blk_1_nFator'.
+//
+//    #translate %<name>^<num>% => __blk_<num>_<name>
+//
+// '%' e o modulo, um token valido, e '%nome^1%' nao pode ser confundido com
+// uma conta de verdade.
+//
+// MAS a substituicao nao e a pergunta interessante. O motivo de esta variavel
+// ter armazenamento proprio e que um code block captura a VARIAVEL, nao o seu
+// valor -- o bloco segura uma referencia viva. Se o alias quebrar isso, a
+// analise de escape inteira do xtpl deixa de valer, e o estrago seria
+// silencioso.
+//
+// Entao o probe pergunta as duas coisas:
+//
+//   1. o alias compila e le o mesmo armazenamento?
+//   2. um bloco criado com o alias ainda VE uma atribuicao feita depois?
+//
+// Compile e rode u_probeBlk(). Deve imprimir, exatamente:
+//
+//    blk: leitura=10 captura=99 dois=99/7 raw=5 misto=8
+//
+// (misto: nSlot vale 3 e bOutro le nSegundo, que o passo 4 mudou para 5.)
+//    blk: ok
+// --------------------------------------------------------------------------------
+
+#translate %<name>^<num>% => __blk_<num>_<name>
+
+// e as outras duas, para o teste misto no fim
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+#translate !<name>^<num>!         => __stk_<num>_<name>
+
+User Function probeBlk()
+
+  Local cSaida := ""
+  Local bBloco
+  Local bOutro
+  Local aBlocos := {}
+  Local lOk
+
+  Local __blk_1_nFator
+  Local __blk_1_nSegundo
+  Local __stk_2_nSlot
+
+  // ---- 1. o alias le e escreve o mesmo armazenamento ---------------------
+  %nFator^1% := 10
+  cSaida := "leitura=" + cValToChar(__blk_1_nFator)
+
+  // ---- 2. o bloco captura a VARIAVEL, nao o valor ------------------------
+  // Criado enquanto vale 10; o valor muda depois; o bloco tem de ver 99.
+  bBloco := {|| %nFator^1% }
+  %nFator^1% := 99
+  cSaida += " captura=" + cValToChar(Eval(bBloco))
+
+  // ---- 3. dois blocos, duas variaveis, sem se misturarem -----------------
+  %nSegundo^1% := 7
+  bOutro := {|| %nSegundo^1% }
+  aAdd(aBlocos, bBloco)
+  aAdd(aBlocos, bOutro)
+  cSaida += " dois=" + cValToChar(Eval(aBlocos[1])) + "/" + ;
+            cValToChar(Eval(aBlocos[2]))
+
+  // ---- 4. o alias cru e o alias novo sao a mesma coisa -------------------
+  __blk_1_nSegundo := 5
+  cSaida += " raw=" + cValToChar(%nSegundo^1%)
+
+  // ---- 5. as tres formas na mesma linha ----------------------------------
+  !nSlot^2! := 3
+  cSaida += " misto=" + cValToChar(!nSlot^2! + Eval(bOutro))
+
+  conout("blk: " + cSaida)
+
+  lOk := cSaida == "leitura=10 captura=99 dois=99/7 raw=5 misto=8"
+  conout("blk: " + Iif(lOk, "ok", "FALHOU"))
+
+Return Iif(lOk, 0, 1)
+
+// --------------------------------------------------------------------------------
+// the end

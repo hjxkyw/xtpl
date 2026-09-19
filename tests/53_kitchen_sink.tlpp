@@ -6,22 +6,17 @@
 // 'let' marca onde uma variavel de bloco e declarada e qual
 // armazenamento ela recebeu. Nao gera nada.
 //
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
 //
 // Uma regra so, para todos os slots: os marcadores entram no proprio
 // nome do resultado. O '!' na frente impede que a regra case com uma
 // potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
 // o qual o ultimo marcador engole o que vem depois.
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 // 53_kitchen_sink.tlpp
 // --------------------------------------------------------------------------------
@@ -39,12 +34,12 @@ user function testKitchenSink()
   Local cName
   Local cPick
 
-  Local __stk_1_0        // idx, nDiscount, lSuccess, cNode, subList, conditionalList, k, nSlotA, cSlotB, nCount, nOuter, j, lReady, nScratch, aRows, aLocalOnly, aInner, nRowCount, nPlain
-  Local __stk_1_1        // nSquare, aBatch, aCarrier
-  Local __blk_1_nFactor
-  Local __blk_2_cBuffer
-  Local __elvis_tmp_0_0
-  Local __stk_2_nInner
+  Local s_1_0        // idx, nDiscount, lSuccess, cNode, subList, conditionalList, k, nSlotA, cSlotB, nCount, nOuter, j, lReady, nScratch, aRows, aLocalOnly, aInner, nRowCount, nPlain
+  Local s_1_1        // nSquare, aBatch, aCarrier
+  Local b_1_nFactor
+  Local b_2_cBuffer
+  Local et_0_0
+  Local s_2_nInner
 
   // 2. Traditional for loop (Passes safety check because 'i' is declared above)
   for i := 1 to 3
@@ -52,7 +47,7 @@ user function testKitchenSink()
   next
 
   // 3. Block-scoped for loop (loop counter takes a depth-1 stack slot)
-  let idx as __stk_1_0
+  let idx as s_1_0
 
   for !idx^1^0! := 1 to 5
     conout("Index: " + cValToChar(!idx^1^0!))
@@ -60,7 +55,7 @@ user function testKitchenSink()
 
   // 4. Block-scoped shadowing (First block)
   if nTotal > 50
-    let nDiscount as __stk_1_0
+    let nDiscount as s_1_0
     !nDiscount^1^0! := 10
     nTotal := nTotal - !nDiscount^1^0!
     conout("Discount A: " + cValToChar(!nDiscount^1^0!))
@@ -68,14 +63,14 @@ user function testKitchenSink()
 
   // 5. Block-scoped shadowing (Second block - isolated from the first)
   if nTotal > 20
-    let nDiscount as __stk_1_0
+    let nDiscount as s_1_0
     !nDiscount^1^0! := 5
     nTotal := nTotal - !nDiscount^1^0!
     conout("Discount B: " + cValToChar(!nDiscount^1^0!))
   endif
 
   // 6. 'if local' conditional binding with explicit condition after comma
-  let lSuccess as __stk_1_0
+  let lSuccess as s_1_0
   !lSuccess^1^0! := myAction("param1, with comma")
 
   If !lSuccess^1^0! == .T.
@@ -83,19 +78,15 @@ user function testKitchenSink()
   endif
 
   // 7. 'while local' loop binding with explicit condition after comma
-  let cNode as __stk_1_0
+  let cNode as s_1_0
 
-  While .T.
-    !cNode^1^0! := getNextNode()
-    If !(!cNode^1^0! != Nil)
-      Exit
-    EndIf
+  While (!cNode^1^0! := getNextNode()) != Nil
     conout("Processing: " + !cNode^1^0!)
   enddo
 
   // 8. Block-scoped array built in place
   if nTotal > 10
-    let subList as __stk_1_0
+    let subList as s_1_0
     !subList^1^0! := {}
     aadd(!subList^1^0!, "X")
     aadd(!subList^1^0!, "Y")
@@ -112,7 +103,7 @@ user function testKitchenSink()
 
   // 10. Conditional appends inside an 'if' block
   if nTotal > 50
-    let conditionalList as __stk_1_0
+    let conditionalList as s_1_0
     !conditionalList^1^0! := {}
     aadd(!conditionalList^1^0!, "DefaultItem")
     if nTotal > 75
@@ -122,7 +113,7 @@ user function testKitchenSink()
 
   // 11. Appends from inside a 'for' loop, some behind an inner 'if'
   aLoopList := {}
-  let k as __stk_1_0
+  let k as s_1_0
 
   for !k^1^0! := 1 to 4
     aadd(aLoopList, "Item_" + cValToChar(!k^1^0!))
@@ -133,20 +124,20 @@ user function testKitchenSink()
 
   // 12. Block locals: two sibling blocks share one slot
   if nTotal > 0
-    let nSlotA as __stk_1_0
+    let nSlotA as s_1_0
     !nSlotA^1^0! := 1
     conout("Slot A: " + cValToChar(!nSlotA^1^0!))
   endif
 
   if nTotal > 0
-    let cSlotB as __stk_1_0
+    let cSlotB as s_1_0
     !cSlotB^1^0! := "reuses the same storage"
     conout("Slot B: " + !cSlotB^1^0!)
   endif
 
   // 13. Shadowing: 'local' hides the function-level nCount inside the block only
   if nTotal > 0
-    let nCount as __stk_1_0
+    let nCount as s_1_0
     !nCount^1^0! := 999
     conout("Shadowed: " + cValToChar(!nCount^1^0!))
   endif
@@ -155,30 +146,30 @@ user function testKitchenSink()
 
   // 14. Nesting: the inner block sits one level deeper, so it gets its own slot
   if nTotal > 0
-    let nOuter as __stk_1_0
+    let nOuter as s_1_0
     !nOuter^1^0! := 1
     if nTotal > 1
-      let nInner as __stk_2_nInner
-      !nInner^2! := 2
-      conout("Sum: " + cValToChar(!nOuter^1^0! + !nInner^2!))
+      let nInner as s_2_nInner
+      s_2_nInner := 2
+      conout("Sum: " + cValToChar(!nOuter^1^0! + s_2_nInner))
     endif
   endif
 
   // 15. 'for local' counter, plus a body slot recycled on every iteration
-  let j as __stk_1_0
+  let j as s_1_0
 
   for !j^1^0! := 1 to 3
-    let nSquare as __stk_1_1
+    let nSquare as s_1_1
     !nSquare^1^1! := !j^1^0! * !j^1^0!
     conout("Square: " + cValToChar(!nSquare^1^1!))
   next
 
   // 16. 'if local' binding, with an array built inside the block
-  let lReady as __stk_1_0
+  let lReady as s_1_0
   !lReady^1^0! := checkReady()
 
   If !lReady^1^0!
-    let aBatch as __stk_1_1
+    let aBatch as s_1_1
     !aBatch^1^1! := {}
     aadd(!aBatch^1^1!, "batch1")
     aadd(!aBatch^1^1!, "batch2")
@@ -187,7 +178,7 @@ user function testKitchenSink()
 
   // 17. Bare 'local' is cleared on entry so no sibling value leaks in
   if nTotal > 0
-    let nScratch as __stk_1_0
+    let nScratch as s_1_0
     !nScratch^1^0! := Nil
     !nScratch^1^0! := nTotal * 2
     conout("Scratch: " + cValToChar(!nScratch^1^0!))
@@ -196,30 +187,30 @@ user function testKitchenSink()
   // 18. Captured by a code block: nFactor outlives the block, so it keeps
   //     private storage instead of a recycled slot
   if nTotal > 0
-    let nFactor as __blk_1_nFactor
-    %nFactor^1% := 10
-    aadd(aHandlers, {|| %nFactor^1% * 2})
+    let nFactor as b_1_nFactor
+    b_1_nFactor := 10
+    aadd(aHandlers, {|| b_1_nFactor * 2})
   endif
 
   // 19. Value variable passed with @: the callee writes back during the call
   //     and cannot keep the binding, so it still shares a slot
   if nTotal > 0
-    let cBuffer as __blk_2_cBuffer
-    %cBuffer^2% := ""
-    fillBuffer(@%cBuffer^2%)
-    conout("Buffer: " + %cBuffer^2%)
+    let cBuffer as b_2_cBuffer
+    b_2_cBuffer := ""
+    fillBuffer(@b_2_cBuffer)
+    conout("Buffer: " + b_2_cBuffer)
   endif
 
   // 20. Escapes: aRows is an array handed to a user function, which may keep it
   if nTotal > 0
-    let aRows as __stk_1_0
+    let aRows as s_1_0
     !aRows^1^0! := {}
     processRows(!aRows^1^0!)
   endif
 
   // 21. Contained: built up and read in place, so it still shares a slot
   if nTotal > 0
-    let aLocalOnly as __stk_1_0
+    let aLocalOnly as s_1_0
     !aLocalOnly^1^0! := {}
     aadd(!aLocalOnly^1^0!, "kept in the block")
     conout("Rows: " + cValToChar(len(!aLocalOnly^1^0!)))
@@ -229,8 +220,8 @@ user function testKitchenSink()
   //     storing it into aCarrier is itself the escape -- no need to prove
   //     where aCarrier goes afterwards
   if nTotal > 0
-    let aInner as __stk_1_0
-    let aCarrier as __stk_1_1
+    let aInner as s_1_0
+    let aCarrier as s_1_1
     !aInner^1^0! := {}
     !aCarrier^1^1! := {}
     aadd(!aCarrier^1^1!, !aInner^1^0!)
@@ -239,14 +230,14 @@ user function testKitchenSink()
 
   // 23. Scalar passed to a user function: copied, so sharing is safe
   if nTotal > 0
-    let nRowCount as __stk_1_0
+    let nRowCount as s_1_0
     !nRowCount^1^0! := 5
     processRows(!nRowCount^1^0!)
   endif
 
   // 24. Value variable, never captured, so it shares a slot
   if nTotal > 0
-    let nPlain as __stk_1_0
+    let nPlain as s_1_0
     !nPlain^1^0! := 42
     conout("Plain: " + cValToChar(!nPlain^1^0!))
   endif
@@ -264,20 +255,20 @@ user function testKitchenSink()
   conout("Cache: " + cCache)
 
   // 26. Elvis: same idea inline, with the left side evaluated exactly once
-  __elvis_tmp_0_0 := lookupName(nTotal)
-  cName := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, "anonymous")
+  et_0_0 := lookupName(nTotal)
+  cName := If(et_0_0 != Nil, et_0_0, "anonymous")
 
   // 27. Chained elvis: each fallback runs only if the one before came back Nil
-  __elvis_tmp_0_0 := firstChoice()
+  et_0_0 := firstChoice()
 
-  If __elvis_tmp_0_0 == Nil
-    __elvis_tmp_0_0 := secondChoice()
-    If __elvis_tmp_0_0 == Nil
-      __elvis_tmp_0_0 := "last resort"
+  If et_0_0 == Nil
+    et_0_0 := secondChoice()
+    If et_0_0 == Nil
+      et_0_0 := "last resort"
     EndIf
   EndIf
 
-  cPick := __elvis_tmp_0_0
+  cPick := et_0_0
 
   return nTotal
 

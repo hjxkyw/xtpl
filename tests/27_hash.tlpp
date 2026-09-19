@@ -16,51 +16,55 @@ user function testHash(nBase, cChave)
   Local nTotal := 0
   Local xValor
 
-  Local __hash_tmp_0_0
-  Local __hash_tmp_0_1
-  Local __hash_tmp_1_0
-  Local __hash_tmp_2_0
-  Local __hash_tmp_2_1
+  Local ht_0_0
+  Local ht_0_1
+  Local ht_1_0
+  Local ht_2_0
+  Local ht_2_1
 
   hCfg := THashMap():New()
   hCfg:Set("taxa", 0.05)
   hCfg:Set("limite", 1000)
+
   hVazio := THashMap():New()
 
   // read: Get leaves the variable alone on a miss, so the temp is cleared
   // first and an absent key reads back as Nil
-  __hash_tmp_0_0 := Nil
-  hCfg:Get("taxa", @__hash_tmp_0_0)
-  nTotal := nBase * __hash_tmp_0_0
-  __hash_tmp_0_0 := Nil
-  hCfg:Get(cChave, @__hash_tmp_0_0)
-  xValor := __hash_tmp_0_0
+  ht_0_0 := Nil
+  hCfg:Get("taxa", @ht_0_0)
+  nTotal := nBase * ht_0_0
+
+  ht_0_0 := Nil
+  hCfg:Get(cChave, @ht_0_0)
+  xValor := ht_0_0
 
   // write
   hCfg:Set("limite", 2000)
   hVazio:Set("novo", "valor")
 
   // two reads in one statement need two temps
-  __hash_tmp_0_0 := Nil
-  hCfg:Get("taxa", @__hash_tmp_0_0)
-  __hash_tmp_0_1 := Nil
-  hCfg:Get("limite", @__hash_tmp_0_1)
-  nTotal := __hash_tmp_0_0 + __hash_tmp_0_1
+  ht_0_0 := Nil
+  hCfg:Get("taxa", @ht_0_0)
+  ht_0_1 := Nil
+  hCfg:Get("limite", @ht_0_1)
+  nTotal := ht_0_0 + ht_0_1
 
   // arrays are untouched
   nTotal := nTotal + aLista[1]
 
   // 'has' rides on Get's logical return
-  __hash_tmp_1_0 := Nil
+  ht_1_0 := Nil
 
-  if hCfg:Get("taxa", @__hash_tmp_1_0)
+  if hCfg:Get("taxa", @ht_1_0)
+
     conout("tem taxa")
   endif
 
-  __hash_tmp_2_0 := Nil
-  __hash_tmp_2_1 := Nil
+  ht_2_0 := Nil
+  ht_2_1 := Nil
 
-  if hCfg:Get("a", @__hash_tmp_2_0) .and. hCfg:Get("b", @__hash_tmp_2_1)
+  if hCfg:Get("a", @ht_2_0) .and. hCfg:Get("b", @ht_2_1)
+
     conout("tem as duas")
   endif
 

@@ -1,0 +1,41 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// probe_hash3.tlpp -- a FORMA do que List(@a) preenche.
+//
+// Ja se sabe: List leva um parametro por referencia, devolve .T. e enche um
+// array. cValToChar de um array nao mostra nada, entao o probe anterior disse
+// '[A]' e parou ai.
+//
+// keys(), values() e pairs() do xtpl contam com {{chave, valor}, ...}. Se for
+// so as chaves, ou {chave, valor} alternados, os tres estao errados.
+// --------------------------------------------------------------------------------
+
+User Function probeHash3()
+
+  Local oH := THashMap():New()
+  Local aOut := {}
+  Local nX
+
+  oH:Set("taxa", 5)
+  oH:Set("nome", "abc")
+  oH:Set("dias", 30)
+
+  oH:List(@aOut)
+
+  conout("Len(aOut) = " + cValToChar(Len(aOut)) + "   (3 chaves postas)")
+
+  For nX := 1 To Len(aOut)
+    conout("  [" + cValToChar(nX) + "] tipo " + ValType(aOut[nX]) + ;
+           "  ->  " + cValToChar(aOut[nX]))
+    If ValType(aOut[nX]) == "A"
+      conout("        Len " + cValToChar(Len(aOut[nX])) + ;
+             "  [1]=" + cValToChar(aOut[nX][1]) + ;
+             "  [2]=" + cValToChar(Iif(Len(aOut[nX]) > 1, aOut[nX][2], "-")))
+    EndIf
+  Next
+
+Return nil
+
+// --------------------------------------------------------------------------------
+// the end

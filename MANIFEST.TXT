@@ -1,4 +1,4 @@
-# xtpl 109 -- the fixtures this release contains.
+# xtpl 116 -- the fixtures this release contains.
 # A file in tests/ or errors/ that is not listed here is a leftover
 # from an earlier release, and will fail for reasons of its own.
 errors/arity_too_many.xtpl
@@ -16,6 +16,7 @@ errors/external_assign.xtpl
 errors/fallback_over_source.xtpl
 errors/feed_in_block.xtpl
 errors/feed_no_head.xtpl
+errors/generated_name.xtpl
 errors/interp_unclosed.xtpl
 errors/out_of_scope.xtpl
 errors/prologue.xtpl
@@ -86,3 +87,4 @@ tests/54_selftest.xtpl
 tests/55_envtest.xtpl
 tests/56_initialiser_chain.xtpl
 tests/57_range_source.xtpl
+tests/58_while_assign.xtpl

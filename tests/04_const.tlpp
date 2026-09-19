@@ -6,22 +6,17 @@
 // 'let' marca onde uma variavel de bloco e declarada e qual
 // armazenamento ela recebeu. Nao gera nada.
 //
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
 //
 // Uma regra so, para todos os slots: os marcadores entram no proprio
 // nome do resultado. O '!' na frente impede que a regra case com uma
 // potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
 // o qual o ultimo marcador engole o que vem depois.
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 // 04_const.tlpp -- <const>, and what it does not promise
 //
@@ -39,8 +34,8 @@ user function testConst(aH)
   // <const> fixes the name, not the contents: a callee given this array can still change its elements
   Local nTotal := 0
 
-  Local __stk_1_nBase
-  Local __stk_1_nContador
+  Local s_1_nBase
+  Local s_1_nContador
 
   // reading is what a const is for
   nTotal := nLimite * 2
@@ -58,12 +53,12 @@ user function testConst(aH)
 
   // an attribute list, and a const beside an ordinary declarator
   if nTotal > 0
-    let nBase as __stk_1_nBase
-    let nContador as __stk_1_nContador
-    !nBase^1! := 50
-    !nContador^1! := Nil
-    !nContador^1! := !nBase^1! + 1
-    conout(cValToChar(!nContador^1!))
+    let nBase as s_1_nBase
+    let nContador as s_1_nContador
+    s_1_nBase := 50
+    s_1_nContador := Nil
+    s_1_nContador := s_1_nBase + 1
+    conout(cValToChar(s_1_nContador))
   endif
 
   return nTotal

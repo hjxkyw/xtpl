@@ -1,0 +1,46 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// dummy "declaration", anything goes
+#translate let <name1> as <name2> =>
+
+// aliasing a stack variable
+#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+
+User Function probeSharedSlot()
+
+  Local cSaida := ""
+  Local __stk_1_0    // aTmp, aOther, cTmp
+
+  // ESCAPA -- keepIt recebe este aTmp e pode guarda-lo depois do bloco
+  if .T.
+    let aTmp as __stk_1_0
+    !aTmp^1^0! := 1
+    cSaida += cValToChar(!aTmp^1^0!)
+  endif
+
+  // CONTIDO -- outra variavel que por acaso divide o slot
+  if .T.
+    let aOther as __stk_1_0
+    !aOther^1^0! := 2
+    cSaida += " depois " + cValToChar(!aOther^1^0!)
+  endif
+
+  // e uma terceira, de outro tipo, no mesmo armazenamento
+  if .T.
+    let cTmp as __stk_1_0
+    !cTmp^1^0! := "ABC"
+    cSaida += " depois " + !cTmp^1^0!
+  endif
+
+  let i as __stk_1_0
+  for !i^1^0! := 1 to 3
+    conout("i=" + cValToChar(!i^1^0!))
+  next
+
+conout("compartilhado: " + cSaida)
+
+Return nil
+
+// --------------------------------------------------------------------------------
+// the end

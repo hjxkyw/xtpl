@@ -80,23 +80,23 @@ endif
 ```
 
 ```advpl
-Local __stk_1_0   // nPrimeiro, cSegundo
+Local s_1_0   // nPrimeiro, cSegundo
 
 if nTotal > 0
-  __stk_1_0 := 1                            // __stk_1_0 = nPrimeiro
+  s_1_0 := 1                            // s_1_0 = nPrimeiro
 endif
 
 if nTotal > 0
-  __stk_1_0 := "outro tipo, mesmo armazenamento"  // __stk_1_0 = cSegundo
+  s_1_0 := "outro tipo, mesmo armazenamento"  // s_1_0 = cSegundo
 endif
 ```
 
 Um slot usado por uma só variável leva o nome dela —
-`__stk_1_aTmp` — e não precisa de comentário de origem. Só um slot
+`s_1_aTmp` — e não precisa de comentário de origem. Só um slot
 compartilhado por várias fica numerado, e aí os comentários dizem o que ele
 contém em cada linha.
 
-Os slots se chamam `__stk_<profundidade>_<slot>` e são agrupados por
+Os slots se chamam `s_<profundidade>_<slot>` e são agrupados por
 profundidade de aninhamento, então aninhar nunca compartilha — um bloco interno
 está um nível abaixo e recebe seu próprio slot. A declaração lista todas as
 variáveis que já usaram um slot, e cada linha diz o que o slot contém naquele
@@ -108,24 +108,24 @@ regra do pré-processador e cada linha o escreve com o nome de quem o ocupa:
 
 ```advpl
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 if nTotal > 0
-  let aTmp as __stk_1_0
+  let aTmp as s_1_0
   !aTmp^1^0! := {}
 endif
 
 if nTotal > 0
-  let cOutro as __stk_1_0
+  let cOutro as s_1_0
   !cOutro^1^0! := "outro tipo, mesmo armazenamento"
 endif
 ```
 
 `#translate`, não `#xtranslate` — os dois não se comportam igual aqui.
 
-**Toda variável de bloco se escreve `!nome^...!`.** Com dois números o
+**Só um slot dividido leva grafia.** Os outros nomes já dizem de quem são —
+`s_1_aTmp`, `b_0_nFator` —, e a grafia seria pontuação em volta de algo
+legível. Com dois números o
 armazenamento é dividido e não tem nome honesto; com um só, o slot leva o nome
 de quem o ocupa, que é o único. `%nome^n%` é a que não ganhou slot: fixada por uma captura, um `@`, uma linha
 `raw` ou um `defer`, ou o parâmetro de um lambda.
@@ -150,7 +150,7 @@ endif
 Um code block captura a *variável*, não seu valor — o AdvPL destaca o local e o
 bloco guarda uma referência viva àquele armazenamento. Reatribua o slot em um
 bloco posterior e o code block enxerga o novo valor. Por isso `nFator` recebe
-armazenamento privado `__blk_<escopo>_<nome>`.
+armazenamento privado `b_<escopo>_<nome>`.
 
 Isso não tem nada a ver com tipos. Um número capturado é exatamente tão inseguro
 quanto um array capturado.
@@ -183,9 +183,9 @@ não diz nada sobre a outra.
 Toda declaração de variável de bloco recebe um marcador no código gerado:
 
 ```advpl
-let nFator as __blk_1_nFator
-let aTmp as __stk_1_aTmp
-let cOutro as __stk_1_0
+let nFator as b_1_nFator
+let aTmp as s_1_aTmp
+let cOutro as s_1_0
 ```
 
 Diz o nome que você escreveu e o armazenamento que ele recebeu — privado
@@ -450,9 +450,9 @@ next
 ```
 
 ```advpl
-__stk_1_0 := aItens
-For __stk_1_2 := 1 To Len(__stk_1_0)
-  __stk_1_1 := __stk_1_0[__stk_1_2]
+s_1_0 := aItens
+For s_1_2 := 1 To Len(s_1_0)
+  s_1_1 := s_1_0[s_1_2]
   ...
 Next
 ```
@@ -487,12 +487,12 @@ next
 ```
 
 ```advpl
-For __stk_1_0 := 1 To 3
+For s_1_0 := 1 To 3
   conout("linha")
 Next
 
-__stk_1_1 := contaLinhas(oDoc)
-For __stk_1_0 := 1 To __stk_1_1
+s_1_1 := contaLinhas(oDoc)
+For s_1_0 := 1 To s_1_1
   nTotal := nTotal + 1
 Next
 ```
@@ -521,9 +521,9 @@ endcase
 ```
 
 ```advpl
-__stk_1_0 := calcTotal(n)
+s_1_0 := calcTotal(n)
 Do Case
-  case __stk_1_0 == 6
+  case s_1_0 == 6
   ...
 endcase
 ```
@@ -551,10 +551,10 @@ end with
 ```
 
 ```advpl
-__stk_1_0 := oModel:GetModel("SA1DETAIL")
-__stk_1_0:SetValue("A1_COD", cCod)
-__stk_1_0:SetValue("A1_NOME", cNome)
-cNome := __stk_1_0:GetValue("A1_NOME")
+s_1_0 := oModel:GetModel("SA1DETAIL")
+s_1_0:SetValue("A1_COD", cCod)
+s_1_0:SetValue("A1_NOME", cNome)
+cNome := s_1_0:GetValue("A1_NOME")
 ```
 
 `oModel:GetModel(...)` roda uma vez, e não uma vez por linha, o que é tão
@@ -582,24 +582,24 @@ end using
 ```
 
 ```advpl
-__stk_1_0 := Alias()
+s_1_0 := Alias()
 DbSelectArea("SA1")
-__stk_1_1 := SA1->(RecNo())
-__stk_1_2 := SA1->(IndexOrd())
+s_1_1 := SA1->(RecNo())
+s_1_2 := SA1->(IndexOrd())
 SA1->(DbSetOrder(1))
   nTotal := SA1->A1_SALDO
   If nTotal > 100
-    SA1->(DbSetOrder(__stk_1_2))
-    SA1->(DbGoto(__stk_1_1))
-    If !Empty(__stk_1_0)
-      DbSelectArea(__stk_1_0)
+    SA1->(DbSetOrder(s_1_2))
+    SA1->(DbGoto(s_1_1))
+    If !Empty(s_1_0)
+      DbSelectArea(s_1_0)
     EndIf
     Return nTotal
   EndIf
-SA1->(DbSetOrder(__stk_1_2))
-SA1->(DbGoto(__stk_1_1))
-If !Empty(__stk_1_0)
-  DbSelectArea(__stk_1_0)
+SA1->(DbSetOrder(s_1_2))
+SA1->(DbGoto(s_1_1))
+If !Empty(s_1_0)
+  DbSelectArea(s_1_0)
 EndIf
 ```
 
@@ -881,12 +881,12 @@ nEuler := 1..999 |> filter([x] x %% 3 .or. x %% 5) |> asum
 ```
 
 ```advpl
-__fuse_out_0_0 := 0
+fout_0_0 := 0
 
-For __fuse_i_0_0 := 1 To 999
-  __fuse_v_0_0 := __fuse_i_0_0
-  If (__fuse_v_0_0 % 3) == 0 .or. (__fuse_v_0_0 % 5) == 0
-    __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+For fi_0_0 := 1 To 999
+  fv_0_0 := fi_0_0
+  If (fv_0_0 % 3) == 0 .or. (fv_0_0 % 5) == 0
+    fout_0_0 := fout_0_0 + fv_0_0
   EndIf
 Next
 ```
@@ -909,8 +909,8 @@ aCodigos := aPedidos |> meuAuxiliar(3) |> ordenaLinhas
 ```
 
 ```advpl
-__pipe_tmp_0_1 := u_xtpl_filter(aPedidos, {|__blk_0_o| __blk_0_o:nValor > 1000})
-__pipe_tmp_0_2 := u_xtpl_map(__pipe_tmp_0_1, {|__blk_0_o| __blk_0_o:cCodigo})
+__pipe_tmp_0_1 := u_xtpl_filter(aPedidos, {|b_0_o| b_0_o:nValor > 1000})
+__pipe_tmp_0_2 := u_xtpl_map(__pipe_tmp_0_1, {|b_0_o| b_0_o:cCodigo})
 aCodigos := __pipe_tmp_0_2
 
 __pipe_tmp_0_3 := meuAuxiliar(aPedidos, 3)
@@ -940,13 +940,13 @@ sem acumulador** — vira exatamente o laço que alguém escreveria à mão:
 aCobertura |> filter([r] upper(r[1]) == cAlvo) |> tap([r] VarInfo("COBERTURA", r))
 ```
 ```advpl
-__fuse_src_0_0 := aCobertura
-For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-  __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-  __blk_0_r := __fuse_v_0_0
-  If upper(__blk_0_r[1]) == cAlvo
-    __blk_0_r := __fuse_v_0_0
-    VarInfo("COBERTURA", __blk_0_r)
+fsrc_0_0 := aCobertura
+For fi_0_0 := 1 To Len(fsrc_0_0)
+  fv_0_0 := fsrc_0_0[fi_0_0]
+  b_0_r := fv_0_0
+  If upper(b_0_r[1]) == cAlvo
+    b_0_r := fv_0_0
+    VarInfo("COBERTURA", b_0_r)
   EndIf
 Next
 ```
@@ -965,7 +965,7 @@ nTotal := aNums |> filter([x] x > 100) |> asum
 ```advpl
 nTotal := len(u_xtpl_distinct(aNums))
 
-__pipe_tmp_0_0 := u_xtpl_filter(aNums, {|__blk_0_x| __blk_0_x > 100})
+__pipe_tmp_0_0 := u_xtpl_filter(aNums, {|b_0_x| b_0_x > 100})
 nTotal := u_xtpl_asum(__pipe_tmp_0_0)
 ```
 
@@ -999,23 +999,23 @@ aTop := aLinhas |> filter([r] r:nSaldo > 0) |> map([r] r:cCod) |> take(10)
 ```
 
 ```advpl
-__fuse_src_0_0 := aLinhas
-__fuse_out_0_0 := {}
-__fuse_n_0_0 := 0
-For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-  __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-  __blk_0_r := __fuse_v_0_0
-  If __blk_0_r:nSaldo > 0
-    __blk_0_r := __fuse_v_0_0
-    __fuse_v_0_0 := __blk_0_r:cCod
-    If __fuse_n_0_0 >= 10
+fsrc_0_0 := aLinhas
+fout_0_0 := {}
+fn_0_0 := 0
+For fi_0_0 := 1 To Len(fsrc_0_0)
+  fv_0_0 := fsrc_0_0[fi_0_0]
+  b_0_r := fv_0_0
+  If b_0_r:nSaldo > 0
+    b_0_r := fv_0_0
+    fv_0_0 := b_0_r:cCod
+    If fn_0_0 >= 10
       Exit
     EndIf
-    __fuse_n_0_0 := __fuse_n_0_0 + 1
-    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    fn_0_0 := fn_0_0 + 1
+    AAdd(fout_0_0, fv_0_0)
   EndIf
 Next
-aTop := __fuse_out_0_0
+aTop := fout_0_0
 ```
 
 Nenhum array entre as etapas, e `take` é um `Exit` em vez de uma função que
@@ -1350,23 +1350,23 @@ nTotal := rows("SA1") |> filter([r] r:A1_SALDO > 0) |> map([r] r:A1_VALOR) |> as
 ```
 
 ```advpl
-__fuse_area_0_0 := Alias()
+farea_0_0 := Alias()
 DbSelectArea("SA1")
-__fuse_rec_0_0 := SA1->(RecNo())
+frec_0_0 := SA1->(RecNo())
 SA1->(DbGoTop())
-__fuse_out_0_0 := 0
+fout_0_0 := 0
 While !SA1->(Eof())
   If SA1->A1_SALDO > 0
-    __fuse_v_0_0 := SA1->A1_VALOR
-    __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+    fv_0_0 := SA1->A1_VALOR
+    fout_0_0 := fout_0_0 + fv_0_0
   EndIf
   SA1->(DbSkip())
 EndDo
-SA1->(DbGoto(__fuse_rec_0_0))
-If !Empty(__fuse_area_0_0)
-  DbSelectArea(__fuse_area_0_0)
+SA1->(DbGoto(frec_0_0))
+If !Empty(farea_0_0)
+  DbSelectArea(farea_0_0)
 EndIf
-nTotal := __fuse_out_0_0
+nTotal := fout_0_0
 ```
 
 A área selecionada e o ponteiro de registro são devolvidos depois. Deixar um
@@ -1408,27 +1408,27 @@ aTop := lines("dados.txt") |> filter([l] !empty(l)) |> map([l] alltrim(l)) |> ta
 ```
 
 ```advpl
-__fuse_src_0_0 := "dados.txt"
-FT_FUse(__fuse_src_0_0)
+fsrc_0_0 := "dados.txt"
+FT_FUse(fsrc_0_0)
 FT_FGoTop()
-__fuse_n_0_0 := 0
-__fuse_out_0_0 := {}
+fn_0_0 := 0
+fout_0_0 := {}
 While !FT_FEof()
-  __fuse_v_0_0 := FT_FReadLn()
-  __blk_0_l := __fuse_v_0_0
-  If !empty(__blk_0_l)
-    __blk_0_l := __fuse_v_0_0
-    __fuse_v_0_0 := alltrim(__blk_0_l)
-    If __fuse_n_0_0 >= 10
+  fv_0_0 := FT_FReadLn()
+  b_0_l := fv_0_0
+  If !empty(b_0_l)
+    b_0_l := fv_0_0
+    fv_0_0 := alltrim(b_0_l)
+    If fn_0_0 >= 10
       Exit
     EndIf
-    __fuse_n_0_0 := __fuse_n_0_0 + 1
-    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    fn_0_0 := fn_0_0 + 1
+    AAdd(fout_0_0, fv_0_0)
   EndIf
   FT_FSkip()
 EndDo
 FT_FUse()
-aTop := __fuse_out_0_0
+aTop := fout_0_0
 ```
 
 Diferente do `rows`, aqui o elemento **é** um valor — a linha — então um
@@ -1526,7 +1526,7 @@ aLista := (chamadaArriscada(2) fallback {}) |> filter([x] x > 1) |> map([x] x * 
 ```
 ```advpl
 __guard_tmp_0_0 := u_xtpl_safe_pipe({|| chamadaArriscada(2)}, {|| {}})
-__fuse_src_0_0 := __guard_tmp_0_0
+fsrc_0_0 := __guard_tmp_0_0
 For ...
 ```
 
@@ -1799,9 +1799,9 @@ python3 xtpl_transpiler.py --map pedido.xtpl pedido.tlpp
 ```
 
 ```advpl
-__fuse_src_0_0 := aNums  // xtpl:11
-For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)  // xtpl:11
-  __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]  // xtpl:11
+fsrc_0_0 := aNums  // xtpl:11
+For fi_0_0 := 1 To Len(fsrc_0_0)  // xtpl:11
+  fv_0_0 := fsrc_0_0[fi_0_0]  // xtpl:11
 ```
 
 Uma linha de origem vira uma dúzia com frequência, então a marca vai em todas e

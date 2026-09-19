@@ -1,0 +1,82 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
+
+// 58_while_assign.tlpp -- a atribuicao dobrada na condicao do while.
+//
+// ':=' e uma expressao em AdvPL e devolve o valor atribuido -- verificado
+// rodando. Entao 'while local x := prox(o), x != nil' cabe inteiro na
+// condicao, e o laco-e-meio some:
+//
+//    While (s_1_x := prox(o)) != nil
+//
+// So quando a primeira aparicao da variavel na condicao e alcancada sempre.
+// Atras de um '.and.' ou dentro de um 'iif' ela pode nao ser avaliada, e ai
+// a atribuicao -- que normalmente e o que avanca alguma coisa -- nao
+// aconteceria.
+// --------------------------------------------------------------------------------
+
+user function testWhileAssign(oQry, lQuero, aItens)
+
+  Local nTotal := 0
+  Local nConta := 0
+  Local nSoma := 0
+
+  Local s_1_0  // xItem, cNome, nX, nY
+
+  // dobra: a variavel abre a condicao
+  let xItem as s_1_0
+
+  While (!xItem^1^0! := proximo(oQry)) != nil
+    nTotal := nTotal + !xItem^1^0!
+  enddo
+
+  // dobra: a variavel esta dentro de uma chamada, mas avaliada sempre
+  let cNome as s_1_0
+
+  While !empty((!cNome^1^0! := proxNome(oQry)))
+    nConta := nConta + 1
+  enddo
+
+  // NAO dobra: atras de um '.and.', pode nunca ser avaliada
+  let nX as s_1_0
+
+  While .T.
+    !nX^1^0! := proxNum(oQry)
+    If !(lQuero .and. !nX^1^0! > 0)
+      Exit
+    EndIf
+    nSoma := nSoma + !nX^1^0!
+  enddo
+
+  // NAO dobra: a condicao nem menciona a variavel
+  let nY as s_1_0
+
+  While .T.
+    !nY^1^0! := proxNum(oQry)
+    If !(nConta < 10)
+      Exit
+    EndIf
+    nSoma := nSoma + !nY^1^0!
+  enddo
+
+  return nTotal + nConta + nSoma + len(aItens)
+
+// --------------------------------------------------------------------------------
+// the end

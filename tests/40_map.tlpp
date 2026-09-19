@@ -12,27 +12,26 @@ user function testMap(aNums, hCfg)
   Local nT := 0
   Local cOut := ""
 
-  Local __fuse_i_0_0
-  Local __fuse_out_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
-  Local __hash_tmp_0_0
+  Local fi_0_0
+  Local fo_0_0
+  Local fv_0_0
+  Local ht_0_0
 
-  __fuse_src_0_0 := aNums  // xtpl:11
-  __fuse_out_0_0 := 0  // xtpl:11
+  fo_0_0 := 0  // xtpl:11
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)  // xtpl:11
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]  // xtpl:11
-    If __fuse_v_0_0 > 1  // xtpl:11
-      __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0  // xtpl:11
+  For fi_0_0 := 1 To Len(aNums)  // xtpl:11
+    fv_0_0 := aNums[fi_0_0]  // xtpl:11
+    If fv_0_0 > 1  // xtpl:11
+      fo_0_0 := fo_0_0 + fv_0_0  // xtpl:11
     EndIf  // xtpl:11
   Next  // xtpl:11
 
-  nT := __fuse_out_0_0  // xtpl:11
+  nT := fo_0_0  // xtpl:11
+
   cOut := ("total " + cValToChar(nT))  // xtpl:12
-  __hash_tmp_0_0 := Nil  // xtpl:13
-  hCfg:Get("extra", @__hash_tmp_0_0)  // xtpl:13
-  nT := nT + __hash_tmp_0_0  // xtpl:13
+  ht_0_0 := Nil  // xtpl:13
+  hCfg:Get("extra", @ht_0_0)  // xtpl:13
+  nT := nT + ht_0_0  // xtpl:13
 
   return nT  // xtpl:15
 

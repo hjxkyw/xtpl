@@ -14,37 +14,35 @@ user function testStrings(cNome, nTotal, hCfg, aLinhas)
   Local cOut := ""
   Local lHit := .F.
 
-  Local __fuse_first_0_0
-  Local __fuse_i_0_0
-  Local __fuse_out_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
-  Local __hash_tmp_0_0
-  Local __pipe_tmp_0_0
-  Local __pipe_tmp_0_1
+  Local ffs_0_0
+  Local fi_0_0
+  Local fo_0_0
+  Local fv_0_0
+  Local ht_0_0
+  Local pt_0_0
+  Local pt_0_1
 
   aPartes := u_xtpl_split(cNome, ",")
-  __fuse_src_0_0 := aPartes
-  __fuse_first_0_0 := .T.
-  __fuse_out_0_0 := ""
+  ffs_0_0 := .T.
+  fo_0_0 := ""
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_v_0_0 := alltrim(__fuse_v_0_0)
-    If __fuse_first_0_0
-      __fuse_first_0_0 := .F.
+  For fi_0_0 := 1 To Len(aPartes)
+    fv_0_0 := aPartes[fi_0_0]
+    fv_0_0 := alltrim(fv_0_0)
+    If ffs_0_0
+      ffs_0_0 := .F.
     Else
-      __fuse_out_0_0 := __fuse_out_0_0 + "; "
+      fo_0_0 := fo_0_0 + "; "
     EndIf
-    __fuse_out_0_0 := __fuse_out_0_0 + cValToChar(__fuse_v_0_0)
+    fo_0_0 := fo_0_0 + cValToChar(fv_0_0)
   Next
 
-  cOut := __fuse_out_0_0
+  cOut := fo_0_0
 
   // AdvPL's own functions need nothing from the runtime
-  __pipe_tmp_0_0 := alltrim(cNome)
-  __pipe_tmp_0_1 := upper(__pipe_tmp_0_0)
-  cOut := __pipe_tmp_0_1
+  pt_0_0 := alltrim(cNome)
+  pt_0_1 := upper(pt_0_0)
+  cOut := pt_0_1
 
   lHit := u_xtpl_starts(cNome, "SA") .or. u_xtpl_ends(cNome, "01") .or. u_xtpl_contains(cNome, "X")
 
@@ -53,9 +51,10 @@ user function testStrings(cNome, nTotal, hCfg, aLinhas)
   cOut := ("total = " + cValToChar(nTotal) + " itens")
   cOut := ("ola " + cValToChar(cNome))
   cOut := cValToChar(cNome)
-  __hash_tmp_0_0 := Nil
-  hCfg:Get('t', @__hash_tmp_0_0)
-  cOut := ("taxa " + cValToChar(__hash_tmp_0_0) + " fim")
+  ht_0_0 := Nil
+  hCfg:Get('t', @ht_0_0)
+  cOut := ("taxa " + cValToChar(ht_0_0) + " fim")
+
   cOut := "nada para trocar"
 
   conout(("a " + cValToChar(nTotal) + " b"))

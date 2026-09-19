@@ -17,96 +17,92 @@ user function testStreamStages(aMovs, aRows, aLeituras)
   Local aDeltas := {}
   Local aProdutos := {}
 
-  Local __fuse_acc_0_0
-  Local __fuse_area_0_0
-  Local __fuse_bag_0_0
-  Local __fuse_had_0_0
-  Local __fuse_i_0_0
-  Local __fuse_j_0_0
-  Local __fuse_older_0_0
-  Local __fuse_out_0_0
-  Local __fuse_prev_0_0
-  Local __fuse_ready_0_0
-  Local __fuse_rec_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
+  Local fa_0_0
+  Local far_0_0
+  Local fbg_0_0
+  Local fhd_0_0
+  Local fi_0_0
+  Local fj_0_0
+  Local fo_0_0
+  Local fol_0_0
+  Local fpv_0_0
+  Local frc_0_0
+  Local frd_0_0
+  Local fv_0_0
 
   // the balance after each movement, not just the closing one
-  __fuse_src_0_0 := aMovs
-  __fuse_acc_0_0 := 0
-  __fuse_out_0_0 := {}
+  fa_0_0 := 0
+  fo_0_0 := {}
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_v_0_0 := __fuse_v_0_0:nValor
-    __fuse_acc_0_0 := __fuse_acc_0_0 + __fuse_v_0_0
-    __fuse_v_0_0 := __fuse_acc_0_0
-    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+  For fi_0_0 := 1 To Len(aMovs)
+    fv_0_0 := aMovs[fi_0_0]
+    fv_0_0 := fv_0_0:nValor
+    fa_0_0 := fa_0_0 + fv_0_0
+    fv_0_0 := fa_0_0
+    AAdd(fo_0_0, fv_0_0)
   Next
 
-  aSaldos := __fuse_out_0_0
+  aSaldos := fo_0_0
 
   // look into the chain without taking it apart: the value is untouched
-  __fuse_src_0_0 := aRows
-  __fuse_out_0_0 := {}
+  fo_0_0 := {}
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_v_0_0:nSaldo > 0
-      conout("passou: " + __fuse_v_0_0:cCod)
-      __fuse_v_0_0 := __fuse_v_0_0:cCod
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    If fv_0_0:nSaldo > 0
+      conout("passou: " + fv_0_0:cCod)
+      fv_0_0 := fv_0_0:cCod
+      AAdd(fo_0_0, fv_0_0)
     EndIf
   Next
 
-  aCodigos := __fuse_out_0_0
+  aCodigos := fo_0_0
 
   // each reading with the one before it: n readings give n-1 deltas
-  __fuse_src_0_0 := aLeituras
-  __fuse_prev_0_0 := Nil
-  __fuse_had_0_0 := .F.
-  __fuse_out_0_0 := {}
+  fpv_0_0 := Nil
+  fhd_0_0 := .F.
+  fo_0_0 := {}
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_v_0_0 := __fuse_v_0_0:nMedidor
-    __fuse_older_0_0 := __fuse_prev_0_0
-    __fuse_ready_0_0 := __fuse_had_0_0
-    __fuse_prev_0_0 := __fuse_v_0_0
-    __fuse_had_0_0 := .T.
-    If __fuse_ready_0_0
-      __fuse_v_0_0 := {__fuse_older_0_0, __fuse_v_0_0}
-      __fuse_v_0_0 := __fuse_v_0_0[2] - __fuse_v_0_0[1]
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+  For fi_0_0 := 1 To Len(aLeituras)
+    fv_0_0 := aLeituras[fi_0_0]
+    fv_0_0 := fv_0_0:nMedidor
+    fol_0_0 := fpv_0_0
+    frd_0_0 := fhd_0_0
+    fpv_0_0 := fv_0_0
+    fhd_0_0 := .T.
+    If frd_0_0
+      fv_0_0 := {fol_0_0, fv_0_0}
+      fv_0_0 := fv_0_0[2] - fv_0_0[1]
+      AAdd(fo_0_0, fv_0_0)
     EndIf
   Next
 
-  aDeltas := __fuse_out_0_0
+  aDeltas := fo_0_0
 
   // one order becomes its items, and the chain carries on with the items
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("SC5")
-  __fuse_rec_0_0 := SC5->(RecNo())
+  frc_0_0 := SC5->(RecNo())
   SC5->(DbGoTop())
-  __fuse_out_0_0 := {}
+  fo_0_0 := {}
 
   While !SC5->(Eof())
-    __fuse_bag_0_0 := itensDoPedido(SC5->C5_NUM)
-    For __fuse_j_0_0 := 1 To Len(__fuse_bag_0_0)
-      __fuse_v_0_0 := __fuse_bag_0_0[__fuse_j_0_0]
-      __fuse_v_0_0 := __fuse_v_0_0:cProduto
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    fbg_0_0 := itensDoPedido(SC5->C5_NUM)
+    For fj_0_0 := 1 To Len(fbg_0_0)
+      fv_0_0 := fbg_0_0[fj_0_0]
+      fv_0_0 := fv_0_0:cProduto
+      AAdd(fo_0_0, fv_0_0)
     Next
     SC5->(DbSkip())
   EndDo
 
-  SC5->(DbGoto(__fuse_rec_0_0))
+  SC5->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  aProdutos := __fuse_out_0_0
+  aProdutos := fo_0_0
 
   return len(aSaldos) + len(aCodigos) + len(aDeltas) + len(aProdutos)
 

@@ -13,27 +13,27 @@ user function testCrossPass(hCfg, aNums, lFlag, nX)
   Local nB := 0
   Local nC := 0
 
-  Local __hash_tmp_0_0
-  Local __pipe_tmp_0_0
+  Local ht_0_0
+  Local pt_0_0
 
   // The hash read turns one line into three. 'fallback' has to be peeled
   // before that happens, or the assignment ends up inside the guard and a
   // failure leaves nA untouched.
-  nA := u_xtpl_safe_pipe({|| __hash_tmp_0_0 := Nil, hCfg:Get("k", @__hash_tmp_0_0), __hash_tmp_0_0}, {|| 0})
+  nA := u_xtpl_safe_pipe({|| ht_0_0 := Nil, hCfg:Get("k", @ht_0_0), ht_0_0}, {|| 0})
 
   // The modifier has to come off before the chain pass, which would take
   // 'asum if lFlag' as a stage name and keep only the name. Every line the
   // statement becomes belongs inside the If, not just the last.
   If lFlag
-    __pipe_tmp_0_0 := u_xtpl_asum(aNums)
-    nB := __pipe_tmp_0_0
+    pt_0_0 := u_xtpl_asum(aNums)
+    nB := pt_0_0
   EndIf
 
   // A condition can lift statements of its own; they go above the block.
-  __hash_tmp_0_0 := Nil
-  hCfg:Get("n", @__hash_tmp_0_0)
+  ht_0_0 := Nil
+  hCfg:Get("n", @ht_0_0)
 
-  If __hash_tmp_0_0 > 0
+  If ht_0_0 > 0
     nC := 1
   EndIf
 

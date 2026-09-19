@@ -1,28 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
-
 // 31_feed.tlpp -- '=>' chaining, the fold operators, and 'fallback'
 //
 // '=>' has exactly one rule: the value on the left becomes the first
@@ -38,88 +16,85 @@ user function testFeed(aOrders, aNums)
   Local nMax := 0
   Local nSafe := 0
 
-  Local __blk_0_o
-  Local __blk_0_x
-  Local __fuse_i_0_0
-  Local __fuse_out_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
-  Local __pipe_tmp_0_0
-  Local __pipe_tmp_0_1
+  Local b_0_o
+  Local b_0_x
+  Local fi_0_0
+  Local fo_0_0
+  Local fv_0_0
+  Local pt_0_0
+  Local pt_0_1
 
   // chaining runtime functions
-  __fuse_src_0_0 := aOrders
-  __fuse_out_0_0 := {}
+  fo_0_0 := {}
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_v_0_0:nValue > 1000
-      __fuse_v_0_0 := __fuse_v_0_0:cCode
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+  For fi_0_0 := 1 To Len(aOrders)
+    fv_0_0 := aOrders[fi_0_0]
+    If fv_0_0:nValue > 1000
+      fv_0_0 := fv_0_0:cCode
+      AAdd(fo_0_0, fv_0_0)
     EndIf
   Next
 
-  aCodes := __fuse_out_0_0
-  __pipe_tmp_0_0 := u_xtpl_sortby(aOrders, {|%o^0%| %o^0%:nValue}, .T.)
-  __pipe_tmp_0_1 := u_xtpl_take(__pipe_tmp_0_0, 10)
-  aTop := __pipe_tmp_0_1
+  aCodes := fo_0_0
+
+  pt_0_0 := u_xtpl_sortby(aOrders, {|b_0_o| b_0_o:nValue}, .T.)
+  pt_0_1 := u_xtpl_take(pt_0_0, 10)
+  aTop := pt_0_1
 
   // a stage with no arguments needs no parentheses
-  __pipe_tmp_0_0 := u_xtpl_distinct(aNums)
-  __pipe_tmp_0_1 := u_xtpl_reverse(__pipe_tmp_0_0)
-  aCodes := __pipe_tmp_0_1
+  pt_0_0 := u_xtpl_distinct(aNums)
+  pt_0_1 := u_xtpl_reverse(pt_0_0)
+  aCodes := pt_0_1
 
   // the same rule covers a function of your own
-  __pipe_tmp_0_0 := myOwnHelper(aOrders, 3)
-  __pipe_tmp_0_1 := sortRows(__pipe_tmp_0_0)
-  aCodes := __pipe_tmp_0_1
+  pt_0_0 := myOwnHelper(aOrders, 3)
+  pt_0_1 := sortRows(pt_0_0)
+  aCodes := pt_0_1
 
   // folding: named functions, not operators. The 'a' prefix keeps amax and
   // amin clear of AdvPL's own two-argument Max and Min.
   nTotal := u_xtpl_asum(aNums)
   nMax := u_xtpl_amax(aNums)
-  nTotal := u_xtpl_asum(u_xtpl_map(aOrders, {|%o^0%| %o^0%:nValue}))
+  nTotal := u_xtpl_asum(u_xtpl_map(aOrders, {|b_0_o| b_0_o:nValue}))
 
   // and as a chain stage, since they are ordinary calls
-  __fuse_src_0_0 := aOrders
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_v_0_0:lPaid
-      __fuse_v_0_0 := __fuse_v_0_0:nValue
-      __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+  For fi_0_0 := 1 To Len(aOrders)
+    fv_0_0 := aOrders[fi_0_0]
+    If fv_0_0:lPaid
+      fv_0_0 := fv_0_0:nValue
+      fo_0_0 := fo_0_0 + fv_0_0
     EndIf
   Next
 
-  nTotal := __fuse_out_0_0
+  nTotal := fo_0_0
 
   // a chain inside an expression is lifted into its own statement first
   nTotal := len(u_xtpl_distinct(aNums))
-  nTotal := len(u_xtpl_filter(aNums, {|%x^0%| %x^0% > 100})) + len(aOrders)
+  nTotal := len(u_xtpl_filter(aNums, {|b_0_x| b_0_x > 100})) + len(aOrders)
 
   // reduce chains like any other call, so no parentheses are needed
-  __fuse_src_0_0 := aOrders
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_v_0_0 := __fuse_v_0_0:nValue
-    __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+  For fi_0_0 := 1 To Len(aOrders)
+    fv_0_0 := aOrders[fi_0_0]
+    fv_0_0 := fv_0_0:nValue
+    fo_0_0 := fo_0_0 + fv_0_0
   Next
 
-  nTotal := __fuse_out_0_0
+  nTotal := fo_0_0
 
   // the lifted result can be indexed like any other expression
   nTotal := len(aNums) + (u_xtpl_distinct(aNums))[1]
 
   // run for its effects: no assignment, so no result is kept
-  __pipe_tmp_0_0 := myOwnHelper(aOrders, 3)
-  sortRows(__pipe_tmp_0_0)
+  pt_0_0 := myOwnHelper(aOrders, 3)
+  sortRows(pt_0_0)
 
   // fallback guards a bare call, a chain, or a return
   nSafe := u_xtpl_safe_pipe({|| riskyCall(1)}, {|| 0})
-  nSafe := u_xtpl_safe_pipe({|| __pipe_tmp_0_0 := u_xtpl_filter(aNums, {|%x^0%| %x^0% > 100}), __pipe_tmp_0_1 := u_xtpl_asum(__pipe_tmp_0_0), __pipe_tmp_0_1}, {|| 0})
+  nSafe := u_xtpl_safe_pipe({|| pt_0_0 := u_xtpl_filter(aNums, {|b_0_x| b_0_x > 100}), pt_0_1 := u_xtpl_asum(pt_0_0), pt_0_1}, {|| 0})
 
   conout(cValToChar(nMax) + cValToChar(nSafe))
 

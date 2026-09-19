@@ -14,26 +14,23 @@
 user function testEffectChains(aCobertura, cAlvo, aPedidos)
 
   // exatamente o laço que alguém escreveria à mão
-  Local __fuse_area_0_0
-  Local __fuse_i_0_0
-  Local __fuse_rec_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
-  Local __pipe_tmp_0_0
+  Local far_0_0
+  Local fi_0_0
+  Local frc_0_0
+  Local fv_0_0
+  Local pt_0_0
 
-  __fuse_src_0_0 := aCobertura
-
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If upper(__fuse_v_0_0[1]) == cAlvo
-      VarInfo("COBERTURA", __fuse_v_0_0)
+  For fi_0_0 := 1 To Len(aCobertura)
+    fv_0_0 := aCobertura[fi_0_0]
+    If upper(fv_0_0[1]) == cAlvo
+      VarInfo("COBERTURA", fv_0_0)
     EndIf
   Next
 
   // sobre uma área de trabalho, também sem acumulador
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("SA1")
-  __fuse_rec_0_0 := SA1->(RecNo())
+  frc_0_0 := SA1->(RecNo())
   SA1->(DbGoTop())
 
   While !SA1->(Eof())
@@ -41,15 +38,15 @@ user function testEffectChains(aCobertura, cAlvo, aPedidos)
     SA1->(DbSkip())
   EndDo
 
-  SA1->(DbGoto(__fuse_rec_0_0))
+  SA1->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
   // funções comuns: continua uma chamada por etapa
-  __pipe_tmp_0_0 := valida(aPedidos)
-  grava(__pipe_tmp_0_0)
+  pt_0_0 := valida(aPedidos)
+  grava(pt_0_0)
 
   return
 

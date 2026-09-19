@@ -1,28 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
-
 // 56_initialiser_chain.tlpp -- uma cadeia no inicializador de uma declaracao.
 //
 // Um inicializador nao tem atribuicao na frente, e sem dizer que o valor e
@@ -47,48 +25,54 @@ user function testInitialiserChain(cArquivo, aNums, bMeu)
   Local nQuantas := 0
   Local aFiltrado := {}
 
-  Local __blk_0___um
-  Local __blk_0_a
-  Local __fuse_i_0_0
-  Local __fuse_out_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
-  Local __pipe_tmp_0_0
+  Local b_0_a
+  Local b_0_it
+  Local fi_0_0
+  Local fo_0_0
+  Local fok_0_0
+  Local fv_0_0
+  Local pt_0_0
 
-  __fuse_out_0_0 := {}
-  __fuse_src_0_0 := cArquivo
+  fok_0_0 := File(cArquivo)
 
-  If File(__fuse_src_0_0)
-    FT_FUse(__fuse_src_0_0)
+  If fok_0_0
+    FT_FUse(cArquivo)
     FT_FGoTop()
-    While !FT_FEof()
-      __fuse_v_0_0 := FT_FReadLn()
-      __fuse_v_0_0 := alltrim(__fuse_v_0_0)
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
-      FT_FSkip()
-    EndDo
+  EndIf
+
+  fo_0_0 := {}
+
+  While fok_0_0 .And. !FT_FEof()
+    fv_0_0 := FT_FReadLn()
+    fv_0_0 := alltrim(fv_0_0)
+    AAdd(fo_0_0, fv_0_0)
+    FT_FSkip()
+  EndDo
+
+  If fok_0_0
     FT_FUse()
   EndIf
 
-  aTudo := __fuse_out_0_0
-  __fuse_src_0_0 := aNums
-  __fuse_out_0_0 := 0
+  aTudo := fo_0_0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_v_0_0 := dobro(__fuse_v_0_0)
-    __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+  fo_0_0 := 0
+
+  For fi_0_0 := 1 To Len(aNums)
+    fv_0_0 := aNums[fi_0_0]
+    fv_0_0 := dobro(fv_0_0)
+    fo_0_0 := fo_0_0 + fv_0_0
   Next
 
-  nSoma := __fuse_out_0_0
+  nSoma := fo_0_0
+
   aBloco := u_xtpl_map(aNums, bMeu)
 
   // Uma CADEIA nao pode ficar dentro de um lambda, mas todo verbo de cadeia
   // tambem e uma funcao comum -- e ai o nome solto vale para o ULTIMO
   // argumento, que e onde o bloco fica. 'a' e o parametro do proprio lambda
   // e tem de passar intacto.
-  __pipe_tmp_0_0 := u_xtpl_filter(aNums, {|%a^0%| u_xtpl_allof({%a^0%}, {|%__um^0%| dobroEhPar(%__um^0%)})})
-  aFiltrado := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_filter(aNums, {|b_0_a| u_xtpl_allof({b_0_a}, {|b_0_it| dobroEhPar(b_0_it)})})
+  aFiltrado := pt_0_0
 
   nQuantas := len(aTudo) + nSoma + len(aBloco) + len(aFiltrado)
 

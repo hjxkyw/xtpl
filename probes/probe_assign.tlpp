@@ -1,0 +1,125 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// probe_assign.tlpp -- ':=' e uma EXPRESSAO em AdvPL/TL++?
+//
+// Em C, 'if ((n = f()))' atribui e testa de uma vez. Se o AdvPL fizer o
+// mesmo, algumas coisas que o xtpl gera ficam melhores -- sobretudo um
+// 'while local x := proximo(), x != Nil', que hoje precisa repetir a chamada
+// ou desdobrar o laco.
+//
+// Nao basta compilar: uma atribuicao dentro de um teste pode compilar e
+// devolver outra coisa que nao o valor atribuido. Entao cada caso confere o
+// resultado E o que sobrou na variavel.
+//
+//    appserver.exe -env=zv -run=u_probeAssign
+//
+// Esperado, se ':=' for uma expressao que devolve o valor atribuido:
+//
+//    if      -> entrou, n vale 7
+//    while   -> 3 voltas, soma 6
+//    encad.  -> a vale 5, b vale 5
+//    dentro  -> f(n := 9) viu 9, n ficou 9
+//    logico  -> entrou, l vale .T.
+//    assign: ok
+// --------------------------------------------------------------------------------
+
+Static Function proximo(nQual)
+Return Iif(nQual >= 3, Nil, nQual + 1)
+
+User Function probeAssign()
+
+  Local cSaida := ""
+  Local lOk := .F.
+  Local bAntigo
+  Local n := 0
+  Local a := 0
+  Local b := 0
+  Local l := .F.
+  Local x
+  Local nVoltas := 0
+  Local nSoma := 0
+
+  // ---- 1. atribuir dentro de um If ---------------------------------------
+  bAntigo := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    If (n := 7) > 0
+      cSaida := "if -> entrou, n vale " + cValToChar(n)
+    Else
+      cSaida := "if -> NAO entrou, n vale " + cValToChar(n)
+    EndIf
+  RECOVER
+    cSaida := "if -> ERRO"
+  END SEQUENCE
+  ErrorBlock(bAntigo)
+  conout(cSaida)
+
+  // ---- 2. atribuir na condicao de um While -------------------------------
+  // O caso que interessa de verdade: ler ate acabar, sem repetir a chamada.
+  bAntigo := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    nVoltas := 0
+    nSoma := 0
+    x := 0
+    While (x := proximo(x)) != Nil
+      nVoltas += 1
+      nSoma += x
+      If nVoltas > 10
+        Exit                          // rede de seguranca
+      EndIf
+    EndDo
+    conout("while -> " + cValToChar(nVoltas) + " voltas, soma " + ;
+           cValToChar(nSoma))
+  RECOVER
+    conout("while -> ERRO")
+  END SEQUENCE
+  ErrorBlock(bAntigo)
+
+  // ---- 3. atribuicao encadeada -------------------------------------------
+  bAntigo := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    a := (b := 5)
+    conout("encad. -> a vale " + cValToChar(a) + ", b vale " + cValToChar(b))
+  RECOVER
+    conout("encad. -> ERRO")
+  END SEQUENCE
+  ErrorBlock(bAntigo)
+
+  // ---- 4. atribuicao como argumento ---------------------------------------
+  bAntigo := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    n := 0
+    conout("dentro -> f(n := 9) viu " + cValToChar(u_assVe(n := 9)) + ;
+           ", n ficou " + cValToChar(n))
+  RECOVER
+    conout("dentro -> ERRO")
+  END SEQUENCE
+  ErrorBlock(bAntigo)
+
+  // ---- 5. atribuir um logico e testa-lo direto ----------------------------
+  // A forma pedida: 'if (fok := File(cArq))'.
+  bAntigo := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    l := .F.
+    If (l := .T.)
+      conout("logico -> entrou, l vale " + cValToChar(l))
+    Else
+      conout("logico -> NAO entrou, l vale " + cValToChar(l))
+    EndIf
+  RECOVER
+    conout("logico -> ERRO")
+  END SEQUENCE
+  ErrorBlock(bAntigo)
+
+  lOk := (n == 9 .And. a == 5 .And. b == 5 .And. l .And. nVoltas == 3)
+  conout("assign: " + Iif(lOk, "ok", "FALHOU"))
+
+Return Iif(lOk, 0, 1)
+
+// --------------------------------------------------------------------------------
+
+User Function assVe(nValor)
+Return nValor
+
+// --------------------------------------------------------------------------------
+// the end

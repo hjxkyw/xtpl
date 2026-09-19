@@ -6,22 +6,17 @@
 // 'let' marca onde uma variavel de bloco e declarada e qual
 // armazenamento ela recebeu. Nao gera nada.
 //
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
 //
 // Uma regra so, para todos os slots: os marcadores entram no proprio
 // nome do resultado. O '!' na frente impede que a regra case com uma
 // potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
 // o qual o ultimo marcador engole o que vem depois.
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 // 20_object.tlpp -- 'with object', for code that repeats the same subject
 //
@@ -36,15 +31,15 @@ user function testObject(oModel, oOutro, aRows)
   Local cNome := ""
   Local nTam := 0
 
-  Local __stk_1_obj
-  Local __stk_2_obj
+  Local s_1_obj
+  Local s_2_obj
 
-  let obj as __stk_1_obj
-  !obj^1! := oModel:GetModel("SA1DETAIL")
-    !obj^1!:SetValue("A1_COD", "000001")
-    !obj^1!:SetValue("A1_NOME", "ACME")
-    cNome := !obj^1!:GetValue("A1_NOME")
-    nTam := len(!obj^1!:GetValue("A1_COD"))
+  let obj as s_1_obj
+  s_1_obj := oModel:GetModel("SA1DETAIL")
+    s_1_obj:SetValue("A1_COD", "000001")
+    s_1_obj:SetValue("A1_NOME", "ACME")
+    cNome := s_1_obj:GetValue("A1_NOME")
+    nTam := len(s_1_obj:GetValue("A1_COD"))
 
     // untouched: another object, an index, an assignment, self
     cNome := oOutro:cRazao
@@ -53,12 +48,12 @@ user function testObject(oModel, oOutro, aRows)
     cNome := ::cUltimo
 
     // nesting: the innermost subject wins, then the outer resumes
-    let obj as __stk_2_obj
-    !obj^2! := oOutro
-      !obj^2!:Ativa()
-      cNome := !obj^2!:cRazao
+    let obj as s_2_obj
+    s_2_obj := oOutro
+      s_2_obj:Ativa()
+      cNome := s_2_obj:cRazao
 
-    !obj^1!:Grava()
+    s_1_obj:Grava()
 
   conout(cValToChar(nTam))
 

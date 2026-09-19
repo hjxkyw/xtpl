@@ -1,28 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
-
 // 32_fusion.tlpp -- element-wise chains become one loop.
 //
 // Each stage is otherwise a call that walks its input and builds a new array.
@@ -44,158 +22,151 @@ user function testFusion(aRows, nLimit)
   Local nFold := 0
   Local cLong := ""
 
-  Local __blk_0_r
-  Local __fuse_first_0_0
-  Local __fuse_i_0_0
-  Local __fuse_lim_0_0
-  Local __fuse_n_0_0
-  Local __fuse_out_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
-  Local __pipe_tmp_0_0
+  Local b_0_r
+  Local ffs_0_0
+  Local fi_0_0
+  Local flm_0_0
+  Local fn_0_0
+  Local fo_0_0
+  Local fv_0_0
+  Local pt_0_0
 
   // filter, map and take: one pass, and it stops at ten
-  __fuse_src_0_0 := aRows
-  __fuse_n_0_0 := 0
-  __fuse_out_0_0 := {}
+  fn_0_0 := 0
+  fo_0_0 := {}
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_v_0_0:nSaldo > 0
-      __fuse_v_0_0 := __fuse_v_0_0:cCod
-      If __fuse_n_0_0 >= 10
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    If fv_0_0:nSaldo > 0
+      fv_0_0 := fv_0_0:cCod
+      If fn_0_0 >= 10
         Exit
       EndIf
-      __fuse_n_0_0 := __fuse_n_0_0 + 1
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+      fn_0_0 := fn_0_0 + 1
+      AAdd(fo_0_0, fv_0_0)
     EndIf
   Next
 
-  aTop := __fuse_out_0_0
+  aTop := fo_0_0
 
   // drop with a bound limit, and reject
-  __fuse_src_0_0 := aRows
-  __fuse_lim_0_0 := nLimit
-  __fuse_n_0_0 := 0
-  __fuse_out_0_0 := {}
+  flm_0_0 := nLimit
+  fn_0_0 := 0
+  fo_0_0 := {}
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_n_0_0 < __fuse_lim_0_0
-      __fuse_n_0_0 := __fuse_n_0_0 + 1
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    If fn_0_0 < flm_0_0
+      fn_0_0 := fn_0_0 + 1
     Else
-      If !(__fuse_v_0_0:lCancelled)
-        AAdd(__fuse_out_0_0, __fuse_v_0_0)
+      If !(fv_0_0:lCancelled)
+        AAdd(fo_0_0, fv_0_0)
       EndIf
     EndIf
   Next
 
-  aRest := __fuse_out_0_0
+  aRest := fo_0_0
 
   // a fold as the last stage: no array is built at all
-  __fuse_src_0_0 := aRows
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_v_0_0:lPago
-      __fuse_v_0_0 := __fuse_v_0_0:nValor
-      __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    If fv_0_0:lPago
+      fv_0_0 := fv_0_0:nValor
+      fo_0_0 := fo_0_0 + fv_0_0
     EndIf
   Next
 
-  nSum := __fuse_out_0_0
-  __fuse_src_0_0 := aRows
-  __fuse_out_0_0 := Nil
+  nSum := fo_0_0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_v_0_0 := __fuse_v_0_0:nValor
-    If __fuse_out_0_0 == Nil
-      __fuse_out_0_0 := __fuse_v_0_0
+  fo_0_0 := Nil
+
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    fv_0_0 := fv_0_0:nValor
+    If fo_0_0 == Nil
+      fo_0_0 := fv_0_0
     Else
-      __fuse_out_0_0 := Max(__fuse_out_0_0, __fuse_v_0_0)
+      fo_0_0 := Max(fo_0_0, fv_0_0)
     EndIf
   Next
 
-  nBest := __fuse_out_0_0
+  nBest := fo_0_0
 
   // one stage on its own stays an ordinary call -- a loop either way
-  __pipe_tmp_0_0 := u_xtpl_filter(aRows, {|%r^0%| %r^0%:nSaldo > 0})
-  aOne := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_filter(aRows, {|b_0_r| b_0_r:nSaldo > 0})
+  aOne := pt_0_0
 
   // the leading run fuses; sort carries on from the array it built
-  __fuse_src_0_0 := aRows
-  __fuse_out_0_0 := {}
+  fo_0_0 := {}
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_v_0_0:nSaldo > 0
-      __fuse_v_0_0 := __fuse_v_0_0:cCod
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    If fv_0_0:nSaldo > 0
+      fv_0_0 := fv_0_0:cCod
+      AAdd(fo_0_0, fv_0_0)
     EndIf
   Next
 
-  __pipe_tmp_0_0 := u_xtpl_sort(__fuse_out_0_0)
-  aSorted := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_sort(fo_0_0)
+  aSorted := pt_0_0
 
   // join is the one terminal that takes an argument -- the separator. A flag
   // marks the first element, because testing the accumulator for emptiness
   // would lose the separator after a legitimately empty first element.
-  __fuse_src_0_0 := aRows
-  __fuse_first_0_0 := .T.
-  __fuse_out_0_0 := ""
+  ffs_0_0 := .T.
+  fo_0_0 := ""
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_v_0_0 := __fuse_v_0_0:cCod
-    If __fuse_first_0_0
-      __fuse_first_0_0 := .F.
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    fv_0_0 := fv_0_0:cCod
+    If ffs_0_0
+      ffs_0_0 := .F.
     Else
-      __fuse_out_0_0 := __fuse_out_0_0 + "; "
+      fo_0_0 := fo_0_0 + "; "
     EndIf
-    __fuse_out_0_0 := __fuse_out_0_0 + cValToChar(__fuse_v_0_0)
+    fo_0_0 := fo_0_0 + cValToChar(fv_0_0)
   Next
 
-  cJoined := __fuse_out_0_0
-  __fuse_src_0_0 := aRows
-  __fuse_out_0_0 := ""
+  cJoined := fo_0_0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_v_0_0 := __fuse_v_0_0:cCod
-    __fuse_out_0_0 := __fuse_out_0_0 + cValToChar(__fuse_v_0_0)
+  fo_0_0 := ""
+
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    fv_0_0 := fv_0_0:cCod
+    fo_0_0 := fo_0_0 + cValToChar(fv_0_0)
   Next
 
-  cBare := __fuse_out_0_0
+  cBare := fo_0_0
 
   // reduce carries its own combining step, so it needs no name known in
   // advance -- which is what stops the fusable terminals being a closed list.
   // fold is the seedless form: the first element is the starting value.
-  __fuse_src_0_0 := aRows
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_v_0_0 := __fuse_v_0_0:nValor
-    __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0 * 2
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    fv_0_0 := fv_0_0:nValor
+    fo_0_0 := fo_0_0 + fv_0_0 * 2
   Next
 
-  nFold := __fuse_out_0_0
-  __fuse_src_0_0 := aRows
-  __fuse_out_0_0 := Nil
+  nFold := fo_0_0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_v_0_0 := __fuse_v_0_0:cCod
-    If __fuse_out_0_0 == Nil
-      __fuse_out_0_0 := __fuse_v_0_0
+  fo_0_0 := Nil
+
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    fv_0_0 := fv_0_0:cCod
+    If fo_0_0 == Nil
+      fo_0_0 := fv_0_0
     Else
-      __fuse_out_0_0 := Iif(len(__fuse_v_0_0) > len(__fuse_out_0_0), __fuse_v_0_0, __fuse_out_0_0)
+      fo_0_0 := Iif(len(fv_0_0) > len(fo_0_0), fv_0_0, fo_0_0)
     EndIf
   Next
 
-  cLong := __fuse_out_0_0
+  cLong := fo_0_0
 
   return len(aTop) + len(aRest) + nSum + nBest + len(aOne) + len(aSorted) + nFold + len(cLong) + len(cJoined) + len(cBare)
 

@@ -1,0 +1,83 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// probe_ftuse.tlpp -- FT_FUse num arquivo que nao existe e inerte?
+//
+// O xtpl gera hoje, para 'lines(cArq)':
+//
+//    fok_0_0 := File(cArq)
+//    FT_FUse(cArq)          <-- chamado mesmo se o arquivo nao existe
+//    FT_FGoTop()
+//    While fok_0_0 .And. !FT_FEof()
+//    ...
+//    FT_FUse()              <-- fecha, tambem sem guarda
+//
+// Isso so e aceitavel se uma abertura que falha nao mexer em nada. Se ela
+// deixar um handle de OUTRO alguem como corrente, o nosso FT_FUse() sem
+// argumento fecha o arquivo DELE -- e o estrago aparece em outro lugar.
+//
+// O teste: abrir um arquivo de verdade, ler uma linha, tentar abrir um que
+// nao existe, fechar, e ver se o primeiro ainda esta la e na mesma posicao.
+//
+//    appserver.exe -env=zv -run=u_probeFtUse
+//
+// Se imprimir 'inerte: sim', a forma plana atual esta certa. Se imprimir
+// 'inerte: nao', tanto a abertura quanto o fechamento precisam de guarda.
+// --------------------------------------------------------------------------------
+
+User Function probeFtUse()
+
+  Local cBom  := "ZXPROBE.TXT"
+  Local cMau  := "ZXNAOEXISTE.TXT"
+  Local cUm   := ""
+  Local cDois := ""
+  Local cTres := ""
+  Local lInerte := .F.
+  Local lOk := .F.
+
+  MemoWrite(cBom, "linha um" + CRLF + "linha dois" + CRLF + "linha tres")
+
+  conout("existe o bom? " + cValToChar(File(cBom)) + ;
+         "   existe o mau? " + cValToChar(File(cMau)))
+
+  // ---- abre o bom e le a primeira linha -----------------------------------
+  FT_FUse(cBom)
+  FT_FGoTop()
+  cUm := FT_FReadLn()
+  conout("1. do arquivo bom: " + cUm)
+
+  // ---- tenta abrir o que nao existe ---------------------------------------
+  FT_FUse(cMau)
+  conout("2. depois de abrir o inexistente, FT_FEof() = " + ;
+         cValToChar(FT_FEof()))
+
+  // ---- o bom ainda esta la, e onde estava? --------------------------------
+  FT_FSkip()
+  cDois := FT_FReadLn()
+  conout("3. a proxima linha deveria ser 'linha dois': " + cDois)
+
+  // ---- agora o fechamento sem guarda --------------------------------------
+  // Se a abertura falha deixou o handle do BOM como corrente, este FT_FUse()
+  // fecha o arquivo bom -- que e exatamente o risco.
+  FT_FUse()
+  conout("4. fechado uma vez")
+
+  // ---- ainda da para ler? -------------------------------------------------
+  cTres := "NAO LEU"
+  FT_FSkip()
+  cTres := FT_FReadLn()
+  conout("5. depois do fechamento, leu: " + cTres)
+
+  FT_FUse()
+  FErase(cBom)
+
+  lInerte := (cDois == "linha dois")
+  conout("inerte: " + Iif(lInerte, "sim", "nao"))
+
+  lOk := (cUm == "linha um")
+  conout("ftuse: " + Iif(lOk, "ok", "FALHOU -- nem o caso normal funcionou"))
+
+Return 0
+
+// --------------------------------------------------------------------------------
+// the end

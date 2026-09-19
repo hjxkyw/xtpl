@@ -1,28 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
-
 // 29_array.tlpp -- the runtime's array functions, as ordinary calls
 //
 // Collection first, matching aEval and aScan. A lambda is '[name] body',
@@ -38,23 +16,23 @@ user function testArray(aOrders, aNums, aCodes, aDesc)
   Local aPairs := {}
   Local nTotal := 0
 
-  Local __blk_0_a
-  Local __blk_0_acc
-  Local __blk_0_b
-  Local __blk_0_c
-  Local __blk_0_d
-  Local __blk_0_n
-  Local __blk_0_o
-  Local __blk_0_x
+  Local b_0_a
+  Local b_0_acc
+  Local b_0_b
+  Local b_0_c
+  Local b_0_d
+  Local b_0_n
+  Local b_0_o
+  Local b_0_x
 
   // transform, keep, discard
-  aVals := u_xtpl_map(aOrders, {|%o^0%| %o^0%:nValue})
-  aBig  := u_xtpl_filter(aOrders, {|%o^0%| %o^0%:nValue > 1000})
-  aLive := u_xtpl_reject(aOrders, {|%o^0%| %o^0%:lCancelled})
+  aVals := u_xtpl_map(aOrders, {|b_0_o| b_0_o:nValue})
+  aBig  := u_xtpl_filter(aOrders, {|b_0_o| b_0_o:nValue > 1000})
+  aLive := u_xtpl_reject(aOrders, {|b_0_o| b_0_o:lCancelled})
 
   // fold with an explicit seed; fold() starts from the first element instead
-  nTotal := u_xtpl_reduce(aNums, {|%acc^0%, %x^0%| %acc^0% + %x^0%}, 0)
-  nTotal := u_xtpl_fold(aNums, {|%acc^0%, %x^0%| Max(%acc^0%, %x^0%)})
+  nTotal := u_xtpl_reduce(aNums, {|b_0_acc, b_0_x| b_0_acc + b_0_x}, 0)
+  nTotal := u_xtpl_fold(aNums, {|b_0_acc, b_0_x| Max(b_0_acc, b_0_x)})
 
   // slicing and reshaping
   aVals := u_xtpl_take(aNums, 5)
@@ -69,15 +47,15 @@ user function testArray(aOrders, aNums, aCodes, aDesc)
 
   // sorting copies first, so aOrders keeps its own order
   aVals := u_xtpl_sort(aNums)
-  aVals := u_xtpl_sort(aOrders, {|%a^0%, %b^0%| %a^0%:nValue < %b^0%:nValue})
-  aVals := u_xtpl_sortby(aOrders, {|%o^0%| %o^0%:nValue})
-  aVals := u_xtpl_sortby(aOrders, {|%o^0%| %o^0%:nValue}, .T.)
+  aVals := u_xtpl_sort(aOrders, {|b_0_a, b_0_b| b_0_a:nValue < b_0_b:nValue})
+  aVals := u_xtpl_sortby(aOrders, {|b_0_o| b_0_o:nValue})
+  aVals := u_xtpl_sortby(aOrders, {|b_0_o| b_0_o:nValue}, .T.)
 
   // zip takes two to six arrays; a block in any position is the combiner
   aPairs := u_xtpl_zip(aCodes, aDesc)
   aPairs := u_xtpl_zip(aCodes, aDesc, aNums)
-  aPairs := u_xtpl_zip(aCodes, aDesc, {|%c^0%, %d^0%| %c^0% + " " + %d^0%})
-  aPairs := u_xtpl_zip(aCodes, aDesc, aNums, {|%c^0%, %d^0%, %n^0%| %c^0% + %d^0% + cValToChar(%n^0%)})
+  aPairs := u_xtpl_zip(aCodes, aDesc, {|b_0_c, b_0_d| b_0_c + " " + b_0_d})
+  aPairs := u_xtpl_zip(aCodes, aDesc, aNums, {|b_0_c, b_0_d, b_0_n| b_0_c + b_0_d + cValToChar(b_0_n)})
 
   conout(cValToChar(len(aBig)) + cValToChar(len(aLive)) + cValToChar(len(aPairs)))
 

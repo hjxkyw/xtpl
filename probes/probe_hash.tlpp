@@ -1,0 +1,75 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// probe_hash.tlpp -- qual e a assinatura de verdade do THashMap?
+//
+// O xtpl gera 'oHash:Get(cChave, @xValor)', duas formas de uma vez: o valor
+// sai pela referencia e o retorno diz se a chave existe. Isso foi inferido de
+// um exemplo, nunca verificado, e o log de decisoes ja dizia que precisava
+// ser conferido. Nao esta certo:
+//
+//    Invalid number of parameters. on ::THASHMAP:GET
+//
+// Este arquivo tenta cada forma dentro de uma guarda, entao um erro de
+// parametro nao derruba o resto, e imprime o que cada uma fez.
+//
+// Compile e rode u_probeHash(). O que importa e saber:
+//
+//   - Get leva uma chave ou duas coisas?
+//   - Como se pergunta se a chave existe?
+//   - O que acontece quando ela nao existe?
+//   - O que List() devolve, e em que ordem?
+// --------------------------------------------------------------------------------
+
+Static Function tenta(cNome, bBloco)
+  Local xResposta
+  Local bAntigo := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    xResposta := Eval(bBloco)
+    conout("  " + PadR(cNome, 34) + " -> " + cValToChar(xResposta))
+  RECOVER
+    conout("  " + PadR(cNome, 34) + " -> ERRO")
+  END SEQUENCE
+  ErrorBlock(bAntigo)
+Return nil
+
+User Function probeHash()
+
+  Local oH := THashMap():New()
+  Local xOut
+
+  oH:Set("taxa", 5)
+  oH:Set("nome", "abc")
+
+  conout("--- leitura de uma chave existente ---")
+  tenta("Get(k)",            {|| oH:Get("taxa") })
+  tenta("Get(k, @x)",        {|| oH:Get("taxa", @xOut) })
+  tenta("  xOut depois disso", {|| xOut })
+  tenta("oH['taxa']",        {|| oH["taxa"] })
+  tenta("GetValue(k)",       {|| oH:GetValue("taxa") })
+
+  conout("--- chave que nao existe ---")
+  tenta("Get(ausente)",      {|| oH:Get("nada") })
+  tenta("HasKey(taxa)",      {|| oH:HasKey("taxa") })
+  tenta("HasKey(nada)",      {|| oH:HasKey("nada") })
+  tenta("Exist(taxa)",       {|| oH:Exist("taxa") })
+  tenta("ContainsKey(taxa)", {|| oH:ContainsKey("taxa") })
+
+  conout("--- tamanho e listagem ---")
+  tenta("Count()",           {|| oH:Count() })
+  tenta("Len()",             {|| oH:Len() })
+  tenta("Len(oH:List())",    {|| Len(oH:List()) })
+  tenta("List()[1][1]",      {|| oH:List()[1][1] })
+  tenta("List()[1][2]",      {|| oH:List()[1][2] })
+  tenta("Len(oH:List()[1])", {|| Len(oH:List()[1]) })
+
+  conout("--- escrita e remocao ---")
+  tenta("Set(k, v) devolve",  {|| oH:Set("taxa", 9) })
+  tenta("Get(taxa) depois",   {|| oH:Get("taxa") })
+  tenta("Delete(nome)",       {|| oH:Delete("nome") })
+  tenta("Count() depois",     {|| oH:Count() })
+
+Return nil
+
+// --------------------------------------------------------------------------------
+// the end

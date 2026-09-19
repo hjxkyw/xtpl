@@ -6,22 +6,17 @@
 // 'let' marca onde uma variavel de bloco e declarada e qual
 // armazenamento ela recebeu. Nao gera nada.
 //
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
 //
 // Uma regra so, para todos os slots: os marcadores entram no proprio
 // nome do resultado. O '!' na frente impede que a regra case com uma
 // potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
 // o qual o ultimo marcador engole o que vem depois.
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 // 21_using.tlpp -- scoped work areas.
 //
@@ -38,77 +33,78 @@ user function testUsing(cAlias, nX)
   Local nT := 0
   Local aC := {}
 
-  Local __fuse_area_0_0
-  Local __fuse_out_0_0
-  Local __fuse_rec_0_0
-  Local __fuse_v_0_0
-  Local __stk_1_usearea
-  Local __stk_1_useord
-  Local __stk_1_userec
-  Local __stk_2_usealias
-  Local __stk_2_usearea
-  Local __stk_2_userec
+  Local far_0_0
+  Local fo_0_0
+  Local frc_0_0
+  Local fv_0_0
+  Local s_1_usearea
+  Local s_1_useord
+  Local s_1_userec
+  Local s_2_usealias
+  Local s_2_usearea
+  Local s_2_userec
 
-  let usearea as __stk_1_usearea
-  let userec as __stk_1_userec
-  !usearea^1! := Alias()
+  let usearea as s_1_usearea
+  let userec as s_1_userec
+  s_1_usearea := Alias()
   DbSelectArea("SA1")
-  !userec^1! := SA1->(RecNo())
-  let useord as __stk_1_useord
-  !useord^1! := SA1->(IndexOrd())
+  s_1_userec := SA1->(RecNo())
+  let useord as s_1_useord
+  s_1_useord := SA1->(IndexOrd())
   SA1->(DbSetOrder(1))
     nT := SA1->A1_SALDO
     If nX > 100  // restored before the return
-      SA1->(DbSetOrder(!useord^1!))
-      SA1->(DbGoto(!userec^1!))
-      If !Empty(!usearea^1!)
-        DbSelectArea(!usearea^1!)
+      SA1->(DbSetOrder(s_1_useord))
+      SA1->(DbGoto(s_1_userec))
+      If !Empty(s_1_usearea)
+        DbSelectArea(s_1_usearea)
       EndIf
       Return nT
     EndIf
+
     nT := nT + 1
 
-    let usearea as __stk_2_usearea
-    let userec as __stk_2_userec
-    let usealias as __stk_2_usealias
-    !usealias^2! := cAlias
-    !usearea^2! := Alias()
-    DbSelectArea(!usealias^2!)  // a variable holds the alias here
-    !userec^2! := (!usealias^2!)->(RecNo())
+    let usearea as s_2_usearea
+    let userec as s_2_userec
+    let usealias as s_2_usealias
+    s_2_usealias := cAlias
+    s_2_usearea := Alias()
+    DbSelectArea(s_2_usealias)  // a variable holds the alias here
+    s_2_userec := (s_2_usealias)->(RecNo())
       nT := nT + 1
-    (!usealias^2!)->(DbGoto(!userec^2!))
-    If !Empty(!usearea^2!)
-      DbSelectArea(!usearea^2!)
+    (s_2_usealias)->(DbGoto(s_2_userec))
+    If !Empty(s_2_usearea)
+      DbSelectArea(s_2_usearea)
     EndIf
-  SA1->(DbSetOrder(!useord^1!))
-  SA1->(DbGoto(!userec^1!))
+  SA1->(DbSetOrder(s_1_useord))
+  SA1->(DbGoto(s_1_userec))
 
-  If !Empty(!usearea^1!)
-    DbSelectArea(!usearea^1!)
+  If !Empty(s_1_usearea)
+    DbSelectArea(s_1_usearea)
   EndIf
 
   // a chain walks its own area and restores it the same way
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("SA1")
-  __fuse_rec_0_0 := SA1->(RecNo())
+  frc_0_0 := SA1->(RecNo())
   SA1->(DbGoTop())
-  __fuse_out_0_0 := {}
+  fo_0_0 := {}
 
   While !SA1->(Eof())
     If SA1->A1_SALDO > 0
-      __fuse_v_0_0 := SA1->A1_COD
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+      fv_0_0 := SA1->A1_COD
+      AAdd(fo_0_0, fv_0_0)
     EndIf
     SA1->(DbSkip())
   EndDo
 
-  SA1->(DbGoto(__fuse_rec_0_0))
+  SA1->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  aC := __fuse_out_0_0
+  aC := fo_0_0
 
   return nT + len(aC)
 

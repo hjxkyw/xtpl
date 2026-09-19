@@ -1,0 +1,43 @@
+// 58_while_assign.xtpl -- a atribuicao dobrada na condicao do while.
+//
+// ':=' e uma expressao em AdvPL e devolve o valor atribuido -- verificado
+// rodando. Entao 'while local x := prox(o), x != nil' cabe inteiro na
+// condicao, e o laco-e-meio some:
+//
+//    While (s_1_x := prox(o)) != nil
+//
+// So quando a primeira aparicao da variavel na condicao e alcancada sempre.
+// Atras de um '.and.' ou dentro de um 'iif' ela pode nao ser avaliada, e ai
+// a atribuicao -- que normalmente e o que avanca alguma coisa -- nao
+// aconteceria.
+// --------------------------------------------------------------------------------
+
+user function testWhileAssign(oQry, lQuero, aItens)
+  local nTotal := 0
+  local nConta := 0
+  local nSoma := 0
+
+  // dobra: a variavel abre a condicao
+  while local xItem := proximo(oQry), xItem != nil
+    nTotal := nTotal + xItem
+  enddo
+
+  // dobra: a variavel esta dentro de uma chamada, mas avaliada sempre
+  while local cNome := proxNome(oQry), !empty(cNome)
+    nConta := nConta + 1
+  enddo
+
+  // NAO dobra: atras de um '.and.', pode nunca ser avaliada
+  while local nX := proxNum(oQry), lQuero .and. nX > 0
+    nSoma := nSoma + nX
+  enddo
+
+  // NAO dobra: a condicao nem menciona a variavel
+  while local nY := proxNum(oQry), nConta < 10
+    nSoma := nSoma + nY
+  enddo
+
+  return nTotal + nConta + nSoma + len(aItens)
+
+// --------------------------------------------------------------------------------
+// the end

@@ -19,89 +19,111 @@ user function testLines(cPath)
   Local nBytes := 0
   Local aSorted := {}
 
-  Local __fuse_n_0_0
-  Local __fuse_out_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
-  Local __pipe_tmp_0_0
+  Local fn_0_0
+  Local fo_0_0
+  Local fok_0_0
+  Local fs_0_0
+  Local fv_0_0
+  Local pt_0_0
 
   // filter, map and take: one pass, and it stops after ten lines
-  __fuse_out_0_0 := {}
-  __fuse_src_0_0 := "dados.txt"
+  fs_0_0 := "dados.txt"
+  fok_0_0 := File(fs_0_0)
 
-  If File(__fuse_src_0_0)
-    FT_FUse(__fuse_src_0_0)
+  If fok_0_0
+    FT_FUse(fs_0_0)
     FT_FGoTop()
-  __fuse_n_0_0 := 0
-    While !FT_FEof()
-      __fuse_v_0_0 := FT_FReadLn()
-      If !empty(__fuse_v_0_0)
-        __fuse_v_0_0 := alltrim(__fuse_v_0_0)
-        If __fuse_n_0_0 >= 10
-          Exit
-        EndIf
-        __fuse_n_0_0 := __fuse_n_0_0 + 1
-        AAdd(__fuse_out_0_0, __fuse_v_0_0)
+  EndIf
+
+  fn_0_0 := 0
+  fo_0_0 := {}
+
+  While fok_0_0 .And. !FT_FEof()
+    fv_0_0 := FT_FReadLn()
+    If !empty(fv_0_0)
+      fv_0_0 := alltrim(fv_0_0)
+      If fn_0_0 >= 10
+        Exit
       EndIf
-      FT_FSkip()
-    EndDo
+      fn_0_0 := fn_0_0 + 1
+      AAdd(fo_0_0, fv_0_0)
+    EndIf
+    FT_FSkip()
+  EndDo
+
+  If fok_0_0
     FT_FUse()
   EndIf
 
-  aTop := __fuse_out_0_0
+  aTop := fo_0_0
 
   // no stages at all is still a chain: every line of the file
-  __fuse_out_0_0 := {}
-  __fuse_src_0_0 := cPath
+  fok_0_0 := File(cPath)
 
-  If File(__fuse_src_0_0)
-    FT_FUse(__fuse_src_0_0)
+  If fok_0_0
+    FT_FUse(cPath)
     FT_FGoTop()
-    While !FT_FEof()
-      __fuse_v_0_0 := FT_FReadLn()
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
-      FT_FSkip()
-    EndDo
+  EndIf
+
+  fo_0_0 := {}
+
+  While fok_0_0 .And. !FT_FEof()
+    fv_0_0 := FT_FReadLn()
+    AAdd(fo_0_0, fv_0_0)
+    FT_FSkip()
+  EndDo
+
+  If fok_0_0
     FT_FUse()
   EndIf
 
-  aAll := __fuse_out_0_0
+  aAll := fo_0_0
 
   // a fold as the last stage builds no array
-  __fuse_out_0_0 := 0
-  __fuse_src_0_0 := cPath
+  fok_0_0 := File(cPath)
 
-  If File(__fuse_src_0_0)
-    FT_FUse(__fuse_src_0_0)
+  If fok_0_0
+    FT_FUse(cPath)
     FT_FGoTop()
-    While !FT_FEof()
-      __fuse_v_0_0 := FT_FReadLn()
-      __fuse_v_0_0 := len(__fuse_v_0_0)
-      __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
-      FT_FSkip()
-    EndDo
+  EndIf
+
+  fo_0_0 := 0
+
+  While fok_0_0 .And. !FT_FEof()
+    fv_0_0 := FT_FReadLn()
+    fv_0_0 := len(fv_0_0)
+    fo_0_0 := fo_0_0 + fv_0_0
+    FT_FSkip()
+  EndDo
+
+  If fok_0_0
     FT_FUse()
   EndIf
 
-  nBytes := __fuse_out_0_0
+  nBytes := fo_0_0
 
   // sort cannot be fused, so the walk collects and sort carries on from there
-  __fuse_out_0_0 := {}
-  __fuse_src_0_0 := cPath
+  fok_0_0 := File(cPath)
 
-  If File(__fuse_src_0_0)
-    FT_FUse(__fuse_src_0_0)
+  If fok_0_0
+    FT_FUse(cPath)
     FT_FGoTop()
-    While !FT_FEof()
-      __fuse_v_0_0 := FT_FReadLn()
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
-      FT_FSkip()
-    EndDo
+  EndIf
+
+  fo_0_0 := {}
+
+  While fok_0_0 .And. !FT_FEof()
+    fv_0_0 := FT_FReadLn()
+    AAdd(fo_0_0, fv_0_0)
+    FT_FSkip()
+  EndDo
+
+  If fok_0_0
     FT_FUse()
   EndIf
 
-  __pipe_tmp_0_0 := u_xtpl_sort(__fuse_out_0_0)
-  aSorted := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_sort(fo_0_0)
+  aSorted := pt_0_0
 
   return nBytes + len(aTop) + len(aAll) + len(aSorted)
 

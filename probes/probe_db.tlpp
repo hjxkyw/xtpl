@@ -1,0 +1,133 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// probe_db.tlpp -- acesso basico ao banco, na sequencia que funciona.
+//
+// A primeira versao deste probe tentava dez variantes para descobrir quais
+// existiam. Esta usa as que existem e confere as respostas, entao serve para
+// dizer se o ambiente esta em pe antes de rodar 55_envtest -- que monta a
+// tabela exatamente assim.
+//
+//    appserver.exe -env=zv -run=u_probeDb
+//
+//    db: link=0 criou=.T. abriu=ZXTPL campos=3 postas=10 lidas=10 soma=55
+//    db: primeira=001 ultima=010 apagou=.T.
+//    db: ok
+//
+// O que cada passo exige, aprendido a duras penas:
+//
+//   TCLink()                      um job de '-run=' comeca SEM conexao, e
+//                                 tudo que toca tabela falha ate isto rodar.
+//                                 Devolve negativo se der errado.
+//   DbCreate(nome, estr, TOPCONN) o terceiro argumento e obrigatorio; sem
+//                                 ele, 'DB driver not initialized'.
+//   DbUseArea(.T., TOPCONN, ...)  abre.
+//   __DbZap()                     esvazia, para o probe poder repetir.
+//   DbAppend(.F.)                 com o argumento. RecLock/MsUnlock e do
+//                                 ERP, nao do acesso basico.
+//   DbCommit()                    grava.
+//   TCDelFile(nome)               apaga. DbDrop nao existe.
+//   TCUnlink()                    desconecta.
+//
+// A tabela se chama ZXTPL e e apagada no fim.
+// --------------------------------------------------------------------------------
+
+User Function probeDb()
+
+  Local aEstr := {}
+  Local cSaida := ""
+  Local cMais := ""
+  Local nLink := 0
+  Local nX
+  Local nLidas := 0
+  Local nSoma := 0
+  Local cPrimeira := ""
+  Local cUltima := ""
+  Local lApagou := .F.
+  Local lOk := .F.
+
+  aAdd(aEstr, {"ZX_COD",   "C",  3, 0})
+  aAdd(aEstr, {"ZX_NOME",  "C", 20, 0})
+  aAdd(aEstr, {"ZX_VALOR", "N", 10, 2})
+
+  // ---- conectar ----------------------------------------------------------
+  nLink := TCLink()
+  cSaida := "link=" + cValToChar(nLink)
+  If nLink < 0
+    conout("db: " + cSaida)
+    conout("db: FALHOU -- sem conexao nada mais pode rodar")
+    Return 1
+  EndIf
+
+  // ---- criar -------------------------------------------------------------
+  If !TCCanOpen("ZXTPL")
+    DbCreate("ZXTPL", aEstr, "TOPCONN")
+  EndIf
+  cSaida += " criou=" + cValToChar(TCCanOpen("ZXTPL"))
+
+  If !TCCanOpen("ZXTPL")
+    conout("db: " + cSaida)
+    conout("db: FALHOU -- a tabela nao foi criada")
+    TCUnlink()
+    Return 1
+  EndIf
+
+  // ---- abrir -------------------------------------------------------------
+  DbUseArea(.T., "TOPCONN", "ZXTPL", "ZXTPL", .F., .F.)
+  cSaida += " abriu=" + Alias()
+  cSaida += " campos=" + cValToChar(ZXTPL->(FCount()))
+
+  If Select("ZXTPL") == 0
+    conout("db: " + cSaida)
+    conout("db: FALHOU -- a tabela nao abriu")
+    TCUnlink()
+    Return 1
+  EndIf
+
+  // ---- popular -----------------------------------------------------------
+  // __DbZap primeiro, para o probe poder ser rodado de novo.
+  __DbZap()
+
+  For nX := 1 To 10
+    ZXTPL->(DbAppend(.F.))
+    ZXTPL->ZX_COD   := StrZero(nX, 3)
+    ZXTPL->ZX_NOME  := "linha " + cValToChar(nX)
+    ZXTPL->ZX_VALOR := nX
+    ZXTPL->(DbCommit())
+  Next
+  cSaida += " postas=" + cValToChar(ZXTPL->(RecCount()))
+
+  // ---- ler de volta ------------------------------------------------------
+  ZXTPL->(DbGoTop())
+  cPrimeira := AllTrim(ZXTPL->ZX_COD)
+
+  While !ZXTPL->(Eof())
+    nLidas += 1
+    nSoma  += ZXTPL->ZX_VALOR
+    cUltima := AllTrim(ZXTPL->ZX_COD)
+    ZXTPL->(DbSkip())
+  EndDo
+
+  cSaida += " lidas=" + cValToChar(nLidas) + " soma=" + cValToChar(nSoma)
+  cMais := "primeira=" + cPrimeira + " ultima=" + cUltima
+
+  // ---- fechar e apagar ---------------------------------------------------
+  ZXTPL->(DbCloseArea())
+  TCDelFile("ZXTPL")
+  lApagou := !TCCanOpen("ZXTPL")
+  cMais += " apagou=" + cValToChar(lApagou)
+
+  TCUnlink()
+
+  conout("db: " + cSaida)
+  conout("db: " + cMais)
+
+  // 1..10 somam 55; a primeira e 001 e a ultima 010.
+  lOk := nLink == 0 .And. nLidas == 10 .And. nSoma == 55 .And. ;
+         cPrimeira == "001" .And. cUltima == "010" .And. lApagou
+  conout("db: " + Iif(lOk, "ok", "FALHOU"))
+
+Return Iif(lOk, 0, 1)
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,39 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// probe_translate.tlpp -- does the preprocessor accept '~' in a pattern?
+//
+// The question: can two source names be given two spellings of ONE piece of
+// storage, so a recycled slot reads as what it holds on each line?
+//
+//    #translate aTmp~1   => __stk_1_0
+//    #translate aOther~1 => __stk_1_0
+//
+// '~' is used because no real identifier can contain one, so a pattern can
+// never collide with a name somebody wrote.
+//
+// Compile this. If it compiles, call u_probeTranslate() -- it should print
+//
+//    probe: 1 2
+//
+// which would mean both spellings reached the same slot. Anything else, or a
+// compile error, and the idea does not work.
+// --------------------------------------------------------------------------------
+
+#translate aTmp~1   => __stk_1_0
+#translate aOther~1 => __stk_1_0
+
+User Function probeTranslate()
+
+  Local __stk_1_0    // aTmp, aOther
+
+  aTmp~1 := 1
+  conout("probe: " + cValToChar(aTmp~1) + " " + cValToChar(__stk_1_0))
+
+  aOther~1 := 2
+  conout("probe: " + cValToChar(aTmp~1) + " " + cValToChar(aOther~1))
+
+Return nil
+
+// --------------------------------------------------------------------------------
+// the end

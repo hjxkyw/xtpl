@@ -1,0 +1,1 @@
+SyntaxError: Line 12: 'fo_0_0' has the shape of a name xtpl generates, so it cannot be declared. Reserved: a leading '__', and '<kind>_<depth>_<index>' -- fo_0_0, fv_1_2, s_1_0, b_0_x.

@@ -35,6 +35,7 @@ user function testPostfixReturn(nX, lSkip)
     If nX == 0  // not a block word: still a modifier
       exit
     EndIf
+
   enddo
 
   closeCursor()

@@ -6,22 +6,17 @@
 // 'let' marca onde uma variavel de bloco e declarada e qual
 // armazenamento ela recebeu. Nao gera nada.
 //
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
 //
 // Uma regra so, para todos os slots: os marcadores entram no proprio
 // nome do resultado. O '!' na frente impede que a regra case com uma
 // potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
 // o qual o ultimo marcador engole o que vem depois.
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 // 37_chunkby.tlpp -- grouping consecutive elements by a key.
 //
@@ -41,109 +36,107 @@ user function testChunkby(aRows, cNum)
   Local aGrupos := {}
   Local aTamanhos := {}
 
-  Local __blk_0_r
-  Local __fuse_area_1_0
-  Local __fuse_chunk_0_0
-  Local __fuse_chunk_1_0
-  Local __fuse_i_0_0
-  Local __fuse_key_0_0
-  Local __fuse_key_1_0
-  Local __fuse_open_0_0
-  Local __fuse_open_1_0
-  Local __fuse_out_0_0
-  Local __fuse_out_1_0
-  Local __fuse_rec_1_0
-  Local __fuse_seen_0_0
-  Local __fuse_seen_1_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
-  Local __fuse_v_1_0
-  Local __pipe_tmp_0_0
-  Local __stk_1_usearea
-  Local __stk_1_useord
-  Local __stk_1_userec
+  Local b_0_r
+  Local far_1_0
+  Local fch_0_0
+  Local fch_1_0
+  Local fi_0_0
+  Local fky_0_0
+  Local fky_1_0
+  Local fo_0_0
+  Local fo_1_0
+  Local fop_0_0
+  Local fop_1_0
+  Local frc_1_0
+  Local fsn_0_0
+  Local fsn_1_0
+  Local fv_0_0
+  Local fv_1_0
+  Local pt_0_0
+  Local s_1_usearea
+  Local s_1_useord
+  Local s_1_userec
 
   // one stage on its own stays a call
-  __pipe_tmp_0_0 := u_xtpl_chunkby(aRows, {|%r^0%| %r^0%:cPedido})
-  aPedidos := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_chunkby(aRows, {|b_0_r| b_0_r:cPedido})
+  aPedidos := pt_0_0
 
   // the header/detail walk: seek to the range, group by the key, one pass
-  let usearea as __stk_1_usearea
-  let userec as __stk_1_userec
-  !usearea^1! := Alias()
+  let usearea as s_1_usearea
+  let userec as s_1_userec
+  s_1_usearea := Alias()
   DbSelectArea("SC6")
-  !userec^1! := SC6->(RecNo())
-  let useord as __stk_1_useord
-  !useord^1! := SC6->(IndexOrd())
+  s_1_userec := SC6->(RecNo())
+  let useord as s_1_useord
+  s_1_useord := SC6->(IndexOrd())
   SC6->(DbSetOrder(1))
-    __fuse_area_1_0 := Alias()
+    far_1_0 := Alias()
     DbSelectArea("SC6")
-    __fuse_rec_1_0 := SC6->(RecNo())
+    frc_1_0 := SC6->(RecNo())
     SC6->(DbSeek(xFilial("SC6") + cNum))
-    __fuse_chunk_1_0 := {}
-    __fuse_key_1_0 := Nil
-    __fuse_open_1_0 := .F.
-    __fuse_seen_1_0 := Nil
-    __fuse_out_1_0 := {}
+    fch_1_0 := {}
+    fky_1_0 := Nil
+    fop_1_0 := .F.
+    fsn_1_0 := Nil
+    fo_1_0 := {}
     While !SC6->(Eof())
-      __fuse_v_1_0 := {SC6->C6_NUM, SC6->C6_PRODUTO}
-      __fuse_seen_1_0 := __fuse_v_1_0[1]
-      If !__fuse_open_1_0
-        __fuse_open_1_0 := .T.
-        __fuse_key_1_0 := __fuse_seen_1_0
-      ElseIf !(__fuse_seen_1_0 == __fuse_key_1_0)
-        AAdd(__fuse_out_1_0, __fuse_chunk_1_0)
-        __fuse_chunk_1_0 := {}
-        __fuse_key_1_0 := __fuse_seen_1_0
+      fv_1_0 := {SC6->C6_NUM, SC6->C6_PRODUTO}
+      fsn_1_0 := fv_1_0[1]
+      If !fop_1_0
+        fop_1_0 := .T.
+        fky_1_0 := fsn_1_0
+      ElseIf !(fsn_1_0 == fky_1_0)
+        AAdd(fo_1_0, fch_1_0)
+        fch_1_0 := {}
+        fky_1_0 := fsn_1_0
       EndIf
-      AAdd(__fuse_chunk_1_0, __fuse_v_1_0)
+      AAdd(fch_1_0, fv_1_0)
       SC6->(DbSkip())
     EndDo
-    If __fuse_open_1_0
-      AAdd(__fuse_out_1_0, __fuse_chunk_1_0)
+    If fop_1_0
+      AAdd(fo_1_0, fch_1_0)
     EndIf
-    SC6->(DbGoto(__fuse_rec_1_0))
-    If !Empty(__fuse_area_1_0)
-      DbSelectArea(__fuse_area_1_0)
+    SC6->(DbGoto(frc_1_0))
+    If !Empty(far_1_0)
+      DbSelectArea(far_1_0)
     EndIf
-    aGrupos := __fuse_out_1_0
+    aGrupos := fo_1_0
 
-  SC6->(DbSetOrder(!useord^1!))
-  SC6->(DbGoto(!userec^1!))
+  SC6->(DbSetOrder(s_1_useord))
+  SC6->(DbGoto(s_1_userec))
 
-  If !Empty(!usearea^1!)
-    DbSelectArea(!usearea^1!)
+  If !Empty(s_1_usearea)
+    DbSelectArea(s_1_usearea)
   EndIf
 
   // the key block reads the mapped value, not the record: after a map the
   // element is whatever the map produced
-  __fuse_src_0_0 := aRows
-  __fuse_chunk_0_0 := {}
-  __fuse_key_0_0 := Nil
-  __fuse_open_0_0 := .F.
-  __fuse_seen_0_0 := Nil
-  __fuse_out_0_0 := {}
+  fch_0_0 := {}
+  fky_0_0 := Nil
+  fop_0_0 := .F.
+  fsn_0_0 := Nil
+  fo_0_0 := {}
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_v_0_0 := __fuse_v_0_0:cPedido
-    __fuse_seen_0_0 := __fuse_v_0_0
-    If !__fuse_open_0_0
-      __fuse_open_0_0 := .T.
-      __fuse_key_0_0 := __fuse_seen_0_0
-    ElseIf !(__fuse_seen_0_0 == __fuse_key_0_0)
-      AAdd(__fuse_out_0_0, __fuse_chunk_0_0)
-      __fuse_chunk_0_0 := {}
-      __fuse_key_0_0 := __fuse_seen_0_0
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    fv_0_0 := fv_0_0:cPedido
+    fsn_0_0 := fv_0_0
+    If !fop_0_0
+      fop_0_0 := .T.
+      fky_0_0 := fsn_0_0
+    ElseIf !(fsn_0_0 == fky_0_0)
+      AAdd(fo_0_0, fch_0_0)
+      fch_0_0 := {}
+      fky_0_0 := fsn_0_0
     EndIf
-    AAdd(__fuse_chunk_0_0, __fuse_v_0_0)
+    AAdd(fch_0_0, fv_0_0)
   Next
 
-  If __fuse_open_0_0
-    AAdd(__fuse_out_0_0, __fuse_chunk_0_0)
+  If fop_0_0
+    AAdd(fo_0_0, fch_0_0)
   EndIf
 
-  aTamanhos := __fuse_out_0_0
+  aTamanhos := fo_0_0
 
   return len(aPedidos) + len(aGrupos) + len(aTamanhos)
 

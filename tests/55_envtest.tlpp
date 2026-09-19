@@ -6,22 +6,17 @@
 // 'let' marca onde uma variavel de bloco e declarada e qual
 // armazenamento ela recebeu. Nao gera nada.
 //
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
 //
 // Uma regra so, para todos os slots: os marcadores entram no proprio
 // nome do resultado. O '!' na frente impede que a regra case com uma
 // potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
 // o qual o ultimo marcador engole o que vem depois.
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 // 55_envtest.tlpp -- rows(), lines(), using alias e raw, contra dados proprios.
 //
@@ -58,22 +53,23 @@ user function envtest()
   Local aTmp := {}
   Local lTmp := .F.
 
-  Local __blk_2_cDentro
-  Local __fuse_area_0_0
-  Local __fuse_n_0_0
-  Local __fuse_n_1_0
-  Local __fuse_out_0_0
-  Local __fuse_out_1_0
-  Local __fuse_rec_0_0
-  Local __fuse_src_1_0
-  Local __fuse_v_0_0
-  Local __fuse_v_1_0
-  Local __stk_1_usearea
-  Local __stk_1_userec
-  Local __stk_2_cLinha
-  Local __stk_2_each
-  Local __stk_2_eachi
-  Local __stk_2_opened
+  Local b_2_cDentro
+  Local far_0_0
+  Local fn_0_0
+  Local fn_1_0
+  Local fo_0_0
+  Local fo_1_0
+  Local fok_1_0
+  Local frc_0_0
+  Local fs_1_0
+  Local fv_0_0
+  Local fv_1_0
+  Local s_1_usearea
+  Local s_1_userec
+  Local s_2_cLinha
+  Local s_2_each
+  Local s_2_eachi
+  Local s_2_opened
   Private cEnvNota := ""
 
   // O comando raw escreve aqui. Uma PRIVATE vive enquanto a funcao que a
@@ -95,209 +91,219 @@ user function envtest()
     conout("envtest: nao consegui criar a tabela, nada mais pode rodar")
     envLimpa(cDir)
     return 1
+
   endif
 
   // ---- rows(): percorrer, filtrar, somar ---------------------------------
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("ZXTPL")
-  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  frc_0_0 := ZXTPL->(RecNo())
   ZXTPL->(DbGoTop())
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
   While !ZXTPL->(Eof())
-    __fuse_v_0_0 := ZXTPL->ZX_VALOR
-    __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+    fv_0_0 := ZXTPL->ZX_VALOR
+    fo_0_0 := fo_0_0 + fv_0_0
     ZXTPL->(DbSkip())
   EndDo
 
-  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  ZXTPL->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  nTmp := __fuse_out_0_0
+  nTmp := fo_0_0
+
   check("rows soma tudo", nTmp == 60, nTmp, @nOk, @nBad)
 
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("ZXTPL")
-  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  frc_0_0 := ZXTPL->(RecNo())
   ZXTPL->(DbGoTop())
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
   While !ZXTPL->(Eof())
     If ZXTPL->ZX_VALOR > 15
-      __fuse_v_0_0 := ZXTPL->ZX_VALOR
-      __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+      fv_0_0 := ZXTPL->ZX_VALOR
+      fo_0_0 := fo_0_0 + fv_0_0
     EndIf
     ZXTPL->(DbSkip())
   EndDo
 
-  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  ZXTPL->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  nTmp := __fuse_out_0_0
+  nTmp := fo_0_0
+
   check("rows filtra", nTmp == 45, nTmp, @nOk, @nBad)  // 20 + 25
 
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("ZXTPL")
-  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  frc_0_0 := ZXTPL->(RecNo())
   ZXTPL->(DbGoTop())
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
   While !ZXTPL->(Eof())
-    __fuse_out_0_0 := __fuse_out_0_0 + 1
+    fo_0_0 := fo_0_0 + 1
     ZXTPL->(DbSkip())
   EndDo
 
-  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  ZXTPL->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  nTmp := __fuse_out_0_0
+  nTmp := fo_0_0
+
   check("rows conta", nTmp == 4, nTmp, @nOk, @nBad)
 
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("ZXTPL")
-  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  frc_0_0 := ZXTPL->(RecNo())
   ZXTPL->(DbGoTop())
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
   While !ZXTPL->(Eof())
     If ZXTPL->ZX_COD == "002"
-      __fuse_out_0_0 := __fuse_out_0_0 + 1
+      fo_0_0 := fo_0_0 + 1
     EndIf
     ZXTPL->(DbSkip())
   EndDo
 
-  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  ZXTPL->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  nTmp := __fuse_out_0_0
+  nTmp := fo_0_0
+
   check("rows conta com teste", nTmp == 1, nTmp, @nOk, @nBad)
 
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("ZXTPL")
-  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  frc_0_0 := ZXTPL->(RecNo())
   ZXTPL->(DbGoTop())
-  __fuse_out_0_0 := {}
+  fo_0_0 := {}
 
   While !ZXTPL->(Eof())
-    __fuse_v_0_0 := alltrim(ZXTPL->ZX_COD)
-    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    fv_0_0 := alltrim(ZXTPL->ZX_COD)
+    AAdd(fo_0_0, fv_0_0)
     ZXTPL->(DbSkip())
   EndDo
 
-  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  ZXTPL->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  aTmp := __fuse_out_0_0
+  aTmp := fo_0_0
+
   check("rows na ordem", len(aTmp) == 4 .and. aTmp[1] == "001", len(aTmp), @nOk, @nBad)
 
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("ZXTPL")
-  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  frc_0_0 := ZXTPL->(RecNo())
   ZXTPL->(DbGoTop())
-  __fuse_out_0_0 := .F.
+  fo_0_0 := .F.
 
   While !ZXTPL->(Eof())
     If ZXTPL->ZX_VALOR > 20
-      __fuse_out_0_0 := .T.
+      fo_0_0 := .T.
       Exit
     EndIf
     ZXTPL->(DbSkip())
   EndDo
 
-  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  ZXTPL->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  lTmp := __fuse_out_0_0  // o maior e 25
+  lTmp := fo_0_0  // o maior e 25
+
   check("rows anyof acha", lTmp, 0, @nOk, @nBad)
 
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("ZXTPL")
-  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  frc_0_0 := ZXTPL->(RecNo())
   ZXTPL->(DbGoTop())
-  __fuse_out_0_0 := .F.
+  fo_0_0 := .F.
 
   While !ZXTPL->(Eof())
     If ZXTPL->ZX_VALOR > 999
-      __fuse_out_0_0 := .T.
+      fo_0_0 := .T.
       Exit
     EndIf
     ZXTPL->(DbSkip())
   EndDo
 
-  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  ZXTPL->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  lTmp := __fuse_out_0_0
+  lTmp := fo_0_0
+
   check("rows anyof nao acha", !lTmp, 0, @nOk, @nBad)
 
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("ZXTPL")
-  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  frc_0_0 := ZXTPL->(RecNo())
   ZXTPL->(DbGoTop())
-  __fuse_n_0_0 := 0
-  __fuse_out_0_0 := 0
+  fn_0_0 := 0
+  fo_0_0 := 0
 
   While !ZXTPL->(Eof())
-    __fuse_v_0_0 := ZXTPL->ZX_VALOR
-    If __fuse_n_0_0 >= 2
+    fv_0_0 := ZXTPL->ZX_VALOR
+    If fn_0_0 >= 2
       Exit
     EndIf
-    __fuse_n_0_0 := __fuse_n_0_0 + 1
-    __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+    fn_0_0 := fn_0_0 + 1
+    fo_0_0 := fo_0_0 + fv_0_0
     ZXTPL->(DbSkip())
   EndDo
 
-  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  ZXTPL->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  nTmp := __fuse_out_0_0
+  nTmp := fo_0_0
+
   check("rows para cedo", nTmp == 15, nTmp, @nOk, @nBad)
 
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("ZXTPL")
-  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  frc_0_0 := ZXTPL->(RecNo())
   ZXTPL->(DbGoTop())
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
   While !ZXTPL->(Eof())
     If !(ZXTPL->ZX_VALOR < 20)
       Exit
     EndIf
-    __fuse_out_0_0 := __fuse_out_0_0 + 1
+    fo_0_0 := fo_0_0 + 1
     ZXTPL->(DbSkip())
   EndDo
 
-  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  ZXTPL->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  nTmp := __fuse_out_0_0
+  nTmp := fo_0_0
+
   check("rows takewhile", nTmp == 2, nTmp, @nOk, @nBad)
 
   // ---- rows() deixa a area como achou ------------------------------------
@@ -305,41 +311,42 @@ user function envtest()
   ZXTPL->(DbGoTop())
   ZXTPL->(DbSkip())
   nTmp := ZXTPL->(RecNo())
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("ZXTPL")
-  __fuse_rec_0_0 := ZXTPL->(RecNo())
+  frc_0_0 := ZXTPL->(RecNo())
   ZXTPL->(DbGoTop())
-  __fuse_out_0_0 := {}
+  fo_0_0 := {}
 
   While !ZXTPL->(Eof())
-    __fuse_v_0_0 := ZXTPL->ZX_COD
-    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    fv_0_0 := ZXTPL->ZX_COD
+    AAdd(fo_0_0, fv_0_0)
     ZXTPL->(DbSkip())
   EndDo
 
-  ZXTPL->(DbGoto(__fuse_rec_0_0))
+  ZXTPL->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  aTmp := __fuse_out_0_0
+  aTmp := fo_0_0
+
   check("rows devolve o registro", ZXTPL->(RecNo()) == nTmp, ZXTPL->(RecNo()), @nOk, @nBad)
 
   // ---- using alias -------------------------------------------------------
   ZXTPL->(DbGoTop())
   nTmp := ZXTPL->(RecNo())
-  let usearea as __stk_1_usearea
-  let userec as __stk_1_userec
-  !usearea^1! := Alias()
+  let usearea as s_1_usearea
+  let userec as s_1_userec
+  s_1_usearea := Alias()
   DbSelectArea("ZXTPL")
-  !userec^1! := ZXTPL->(RecNo())
+  s_1_userec := ZXTPL->(RecNo())
     ZXTPL->(DbSkip())
     ZXTPL->(DbSkip())
-  ZXTPL->(DbGoto(!userec^1!))
+  ZXTPL->(DbGoto(s_1_userec))
 
-  If !Empty(!usearea^1!)
-    DbSelectArea(!usearea^1!)
+  If !Empty(s_1_usearea)
+    DbSelectArea(s_1_usearea)
   EndIf
 
   check("using devolve o registro", ZXTPL->(RecNo()) == nTmp, ZXTPL->(RecNo()), @nOk, @nBad)
@@ -349,134 +356,162 @@ user function envtest()
 
   // ---- lines(): o arquivo texto ------------------------------------------
   if !envTexto(cDir)
-    let each as __stk_2_each
-    let cLinha as __stk_2_cLinha
-    let eachi as __stk_2_eachi
-    let opened as __stk_2_opened
+    let each as s_2_each
+    let cLinha as s_2_cLinha
+    let eachi as s_2_eachi
+    let opened as s_2_opened
     conout("envtest: nao consegui escrever o texto")
   else
-    __fuse_out_1_0 := {}
-    __fuse_src_1_0 := cDir + "ZXTPL.TXT"
-    If File(__fuse_src_1_0)
-      FT_FUse(__fuse_src_1_0)
+    fs_1_0 := cDir + "ZXTPL.TXT"
+    fok_1_0 := File(fs_1_0)
+    If fok_1_0
+      FT_FUse(fs_1_0)
       FT_FGoTop()
-      While !FT_FEof()
-        __fuse_v_1_0 := FT_FReadLn()
-        AAdd(__fuse_out_1_0, __fuse_v_1_0)
-        FT_FSkip()
-      EndDo
+    EndIf
+    fo_1_0 := {}
+    While fok_1_0 .And. !FT_FEof()
+      fv_1_0 := FT_FReadLn()
+      AAdd(fo_1_0, fv_1_0)
+      FT_FSkip()
+    EndDo
+    If fok_1_0
       FT_FUse()
     EndIf
-    aTmp := __fuse_out_1_0
+    aTmp := fo_1_0
+
     check("lines le tudo", len(aTmp) == 5, len(aTmp), @nOk, @nBad)
 
-    __fuse_out_1_0 := 0
-    __fuse_src_1_0 := cDir + "ZXTPL.TXT"
-    If File(__fuse_src_1_0)
-      FT_FUse(__fuse_src_1_0)
+    fs_1_0 := cDir + "ZXTPL.TXT"
+    fok_1_0 := File(fs_1_0)
+    If fok_1_0
+      FT_FUse(fs_1_0)
       FT_FGoTop()
-      While !FT_FEof()
-        __fuse_v_1_0 := FT_FReadLn()
-        __fuse_out_1_0 := __fuse_out_1_0 + 1
-        FT_FSkip()
-      EndDo
+    EndIf
+    fo_1_0 := 0
+    While fok_1_0 .And. !FT_FEof()
+      FT_FReadLn()
+      fo_1_0 := fo_1_0 + 1
+      FT_FSkip()
+    EndDo
+    If fok_1_0
       FT_FUse()
     EndIf
-    nTmp := __fuse_out_1_0
+    nTmp := fo_1_0
+
     check("lines conta", nTmp == 5, nTmp, @nOk, @nBad)
 
-    __fuse_out_1_0 := {}
-    __fuse_src_1_0 := cDir + "ZXTPL.TXT"
-    If File(__fuse_src_1_0)
-      FT_FUse(__fuse_src_1_0)
+    fs_1_0 := cDir + "ZXTPL.TXT"
+    fok_1_0 := File(fs_1_0)
+    If fok_1_0
+      FT_FUse(fs_1_0)
       FT_FGoTop()
-      While !FT_FEof()
-        __fuse_v_1_0 := FT_FReadLn()
-        If !empty(__fuse_v_1_0)
-          __fuse_v_1_0 := alltrim(__fuse_v_1_0)
-          AAdd(__fuse_out_1_0, __fuse_v_1_0)
-        EndIf
-        FT_FSkip()
-      EndDo
+    EndIf
+    fo_1_0 := {}
+    While fok_1_0 .And. !FT_FEof()
+      fv_1_0 := FT_FReadLn()
+      If !empty(fv_1_0)
+        fv_1_0 := alltrim(fv_1_0)
+        AAdd(fo_1_0, fv_1_0)
+      EndIf
+      FT_FSkip()
+    EndDo
+    If fok_1_0
       FT_FUse()
     EndIf
-    aTmp := __fuse_out_1_0
+    aTmp := fo_1_0
+
     check("lines filtra vazias", len(aTmp) == 4, len(aTmp), @nOk, @nBad)
 
-    __fuse_out_1_0 := {}
-    __fuse_src_1_0 := cDir + "ZXTPL.TXT"
-    If File(__fuse_src_1_0)
-      FT_FUse(__fuse_src_1_0)
+    fs_1_0 := cDir + "ZXTPL.TXT"
+    fok_1_0 := File(fs_1_0)
+    If fok_1_0
+      FT_FUse(fs_1_0)
       FT_FGoTop()
-    __fuse_n_1_0 := 0
-      While !FT_FEof()
-        __fuse_v_1_0 := FT_FReadLn()
-        If __fuse_n_1_0 >= 2
-          Exit
-        EndIf
-        __fuse_n_1_0 := __fuse_n_1_0 + 1
-        AAdd(__fuse_out_1_0, __fuse_v_1_0)
-        FT_FSkip()
-      EndDo
+    EndIf
+    fn_1_0 := 0
+    fo_1_0 := {}
+    While fok_1_0 .And. !FT_FEof()
+      fv_1_0 := FT_FReadLn()
+      If fn_1_0 >= 2
+        Exit
+      EndIf
+      fn_1_0 := fn_1_0 + 1
+      AAdd(fo_1_0, fv_1_0)
+      FT_FSkip()
+    EndDo
+    If fok_1_0
       FT_FUse()
     EndIf
-    aTmp := __fuse_out_1_0
+    aTmp := fo_1_0
+
     check("lines para cedo", len(aTmp) == 2 .and. alltrim(aTmp[1]) == "um", len(aTmp), @nOk, @nBad)
 
-    __fuse_out_1_0 := Nil
-    __fuse_src_1_0 := cDir + "ZXTPL.TXT"
-    If File(__fuse_src_1_0)
-      FT_FUse(__fuse_src_1_0)
+    fs_1_0 := cDir + "ZXTPL.TXT"
+    fok_1_0 := File(fs_1_0)
+    If fok_1_0
+      FT_FUse(fs_1_0)
       FT_FGoTop()
-      While !FT_FEof()
-        __fuse_v_1_0 := FT_FReadLn()
-        __fuse_v_1_0 := alltrim(__fuse_v_1_0)
-        If __fuse_v_1_0 == "tres"
-          __fuse_out_1_0 := __fuse_v_1_0
-          Exit
-        EndIf
-        FT_FSkip()
-      EndDo
+    EndIf
+    fo_1_0 := Nil
+    While fok_1_0 .And. !FT_FEof()
+      fv_1_0 := FT_FReadLn()
+      fv_1_0 := alltrim(fv_1_0)
+      If fv_1_0 == "tres"
+        fo_1_0 := fv_1_0
+        Exit
+      EndIf
+      FT_FSkip()
+    EndDo
+    If fok_1_0
       FT_FUse()
     EndIf
-    cTmp := __fuse_out_1_0
+    cTmp := fo_1_0
+
     check("lines first", cTmp == "tres", cTmp, @nOk, @nBad)
 
     // for sobre lines, com loop e return antecipado
     nTmp := 0
-    !each^2! := cDir + "ZXTPL.TXT"
-    !opened^2! := File(!each^2!)
-    FT_FUse(!each^2!)
-    FT_FGoTop()
-    !eachi^2! := 0
-    While !opened^2! .And. !FT_FEof()
-      !eachi^2! := !eachi^2! + 1
-      !cLinha^2! := FT_FReadLn()
+    s_2_each := cDir + "ZXTPL.TXT"
+    s_2_opened := File(s_2_each)
+    If s_2_opened
+      FT_FUse(s_2_each)
+      FT_FGoTop()
+    EndIf
+    s_2_eachi := 0
+    While s_2_opened .And. !FT_FEof()
+      s_2_eachi := s_2_eachi + 1
+      s_2_cLinha := FT_FReadLn()
       FT_FSkip()
-      if empty(!cLinha^2!)
+      if empty(s_2_cLinha)
         loop
       endif
       nTmp := nTmp + 1
     EndDo
-    FT_FUse()
+    If s_2_opened
+      FT_FUse()
+    EndIf
     check("for sobre lines, com loop", nTmp == 4, nTmp, @nOk, @nBad)
 
     nTmp := envLinhaAte(cDir, "tres")
     check("for sobre lines, return", nTmp == 4, nTmp, @nOk, @nBad)  // a vazia conta
 
-    __fuse_out_1_0 := {}
-    __fuse_src_1_0 := cDir + "NAOEXISTE.TXT"
-    If File(__fuse_src_1_0)
-      FT_FUse(__fuse_src_1_0)
+    fs_1_0 := cDir + "NAOEXISTE.TXT"
+    fok_1_0 := File(fs_1_0)
+    If fok_1_0
+      FT_FUse(fs_1_0)
       FT_FGoTop()
-      While !FT_FEof()
-        __fuse_v_1_0 := FT_FReadLn()
-        AAdd(__fuse_out_1_0, __fuse_v_1_0)
-        FT_FSkip()
-      EndDo
+    EndIf
+    fo_1_0 := {}
+    While fok_1_0 .And. !FT_FEof()
+      fv_1_0 := FT_FReadLn()
+      AAdd(fo_1_0, fv_1_0)
+      FT_FSkip()
+    EndDo
+    If fok_1_0
       FT_FUse()
     EndIf
-    aTmp := __fuse_out_1_0
+    aTmp := fo_1_0
+
     check("lines de arquivo ausente", len(aTmp) == 0, len(aTmp), @nOk, @nBad)
   endif
 
@@ -491,10 +526,10 @@ user function envtest()
 
   // uma variavel declarada continua renomeada dentro do raw
   if .T.
-    let cDentro as __blk_2_cDentro
-    %cDentro^2% := "vem do bloco"
+    let cDentro as b_2_cDentro
+    b_2_cDentro := "vem do bloco"
     envZeraNota()
-    ANOTE %cDentro^2%
+    ANOTE b_2_cDentro
     check("raw renomeia o que e declarado", envNotaFoi() == "vem do bloco", envNotaFoi(), @nOk, @nBad)
 
   endif
@@ -589,32 +624,41 @@ static function envLinhaAte(cDir, cProcurado)
 
   Local nOnde := 0
 
-  Local __stk_1_cLinha
-  Local __stk_1_each
-  Local __stk_1_nNum
-  Local __stk_1_opened
+  Local s_1_cLinha
+  Local s_1_each
+  Local s_1_nNum
+  Local s_1_opened
 
-  let each as __stk_1_each
-  let cLinha as __stk_1_cLinha
-  let nNum as __stk_1_nNum
-  !each^1! := cDir + "ZXTPL.TXT"
-  let opened as __stk_1_opened
-  !opened^1! := File(!each^1!)
-  FT_FUse(!each^1!)
-  FT_FGoTop()
-  !nNum^1! := 0
+  let each as s_1_each
+  let cLinha as s_1_cLinha
+  let nNum as s_1_nNum
+  s_1_each := cDir + "ZXTPL.TXT"
+  let opened as s_1_opened
+  s_1_opened := File(s_1_each)
 
-  While !opened^1! .And. !FT_FEof()
-    !nNum^1! := !nNum^1! + 1
-    !cLinha^1! := FT_FReadLn()
+  If s_1_opened
+    FT_FUse(s_1_each)
+    FT_FGoTop()
+  EndIf
+
+  s_1_nNum := 0
+
+  While s_1_opened .And. !FT_FEof()
+    s_1_nNum := s_1_nNum + 1
+    s_1_cLinha := FT_FReadLn()
     FT_FSkip()
-    If alltrim(!cLinha^1!) == cProcurado
-      FT_FUse()
-      Return !nNum^1!
+    If alltrim(s_1_cLinha) == cProcurado
+      If s_1_opened
+        FT_FUse()
+      EndIf
+      Return s_1_nNum
     EndIf
+
   EndDo
 
-  FT_FUse()
+  If s_1_opened
+    FT_FUse()
+  EndIf
 
 return nOnde
 
@@ -623,26 +667,27 @@ static function envUsingSai()
 
   Local cAntes
 
-  Local __stk_1_usearea
-  Local __stk_1_userec
+  Local s_1_usearea
+  Local s_1_userec
 
   cAntes := alias()
 
-  let usearea as __stk_1_usearea
-  let userec as __stk_1_userec
-  !usearea^1! := Alias()
+  let usearea as s_1_usearea
+  let userec as s_1_userec
+  s_1_usearea := Alias()
   DbSelectArea("ZXTPL")
-  !userec^1! := ZXTPL->(RecNo())
+  s_1_userec := ZXTPL->(RecNo())
     ZXTPL->(DbGoTop())
-    ZXTPL->(DbGoto(!userec^1!))
-    If !Empty(!usearea^1!)
-      DbSelectArea(!usearea^1!)
+    ZXTPL->(DbGoto(s_1_userec))
+    If !Empty(s_1_usearea)
+      DbSelectArea(s_1_usearea)
     EndIf
     return alias()
-  ZXTPL->(DbGoto(!userec^1!))
 
-  If !Empty(!usearea^1!)
-    DbSelectArea(!usearea^1!)
+  ZXTPL->(DbGoto(s_1_userec))
+
+  If !Empty(s_1_usearea)
+    DbSelectArea(s_1_usearea)
   EndIf
 
 return cAntes

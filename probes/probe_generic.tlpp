@@ -1,0 +1,44 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// probe_generic.tlpp -- uma regra por SLOT em vez de uma por nome.
+//
+// A forma generica foi recusada:
+//
+//   #translate <name>~1~0 => __stk_1_0
+//   SSLex0105e: Invalid token, Line 14, Offset 18, ~
+//
+// O '~' logo depois de um marcador nao passa pelo lexer. Com um identificador
+// antes dele passa, que e por isso que a forma por nome compila.
+//
+// Aqui estao quatro variantes. Descomente UMA de cada vez e compile, para
+// descobrir se alguma aceita a forma generica. Se nenhuma aceitar, uma regra
+// por nome fica, e nao ha perda -- so mais linhas.
+// --------------------------------------------------------------------------------
+
+// (1) espaco depois do marcador
+#translate <name> ~1~0 => __stk_1_0
+
+// (2) xtranslate, que pode lexar diferente
+// #xtranslate <name>~1~0 => __stk_1_0
+
+// (3) o til separado dos numeros tambem
+// #translate <name> ~ 1 ~ 0 => __stk_1_0
+
+// (4) um marcador depois do til, nao antes
+// #translate v~1~0<name> => __stk_1_0
+
+User Function probeGeneric()
+
+  Local __stk_1_0
+
+  aTmp~1~0 := 1
+  conout("generico a: " + cValToChar(__stk_1_0))
+
+  cOutro~1~0 := "dois"
+  conout("generico b: " + __stk_1_0)
+
+Return nil
+
+// --------------------------------------------------------------------------------
+// the end

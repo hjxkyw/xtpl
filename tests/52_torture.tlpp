@@ -6,22 +6,17 @@
 // 'let' marca onde uma variavel de bloco e declarada e qual
 // armazenamento ela recebeu. Nao gera nada.
 //
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
 //
 // Uma regra so, para todos os slots: os marcadores entram no proprio
 // nome do resultado. O '!' na frente impede que a regra case com uma
 // potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
 // o qual o ultimo marcador engole o que vem depois.
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 // 52_torture.tlpp -- constructs that meet each other in unusual ways.
 //
@@ -39,166 +34,164 @@ user function testTorture(hCfg, cNum, aRows, cPath, nX)
   Local aQ := {}
   Local aX := {}
 
-  Local __blk_0_g
-  Local __fuse_area_1_0
-  Local __fuse_bag_0_0
-  Local __fuse_chunk_0_0
-  Local __fuse_i_0_0
-  Local __fuse_j_0_0
-  Local __fuse_key_0_0
-  Local __fuse_last_1_0
-  Local __fuse_lim_0_0
-  Local __fuse_n_0_0
-  Local __fuse_open_0_0
-  Local __fuse_open_1_0
-  Local __fuse_out_0_0
-  Local __fuse_out_1_0
-  Local __fuse_probe_1_0
-  Local __fuse_rec_1_0
-  Local __fuse_seen_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
-  Local __fuse_v_1_0
-  Local __hash_tmp_0_0
-  Local __hash_tmp_1_0
-  Local __pipe_tmp_0_0
-  Local __stk_1_usearea
-  Local __stk_1_useord
-  Local __stk_1_userec
-  Local __stk_2_usearea
-  Local __stk_2_useord
-  Local __stk_2_userec
+  Local b_0_g
+  Local far_1_0
+  Local fbg_0_0
+  Local fch_0_0
+  Local fi_0_0
+  Local fj_0_0
+  Local fky_0_0
+  Local flm_0_0
+  Local fls_1_0
+  Local fn_0_0
+  Local fo_0_0
+  Local fo_1_0
+  Local fop_0_0
+  Local fop_1_0
+  Local fpb_1_0
+  Local frc_1_0
+  Local fsn_0_0
+  Local fv_0_0
+  Local fv_1_0
+  Local ht_0_0
+  Local ht_1_0
+  Local pt_0_0
+  Local s_1_usearea
+  Local s_1_useord
+  Local s_1_userec
+  Local s_2_usearea
+  Local s_2_useord
+  Local s_2_userec
 
   // a string literal inside an interpolated expression
-  __hash_tmp_0_0 := Nil
-  hCfg:Get('moeda', @__hash_tmp_0_0)
-  cMsg := ("moeda " + cValToChar(__hash_tmp_0_0) + " fim")
+  ht_0_0 := Nil
+  hCfg:Get('moeda', @ht_0_0)
+  cMsg := ("moeda " + cValToChar(ht_0_0) + " fim")
 
   // nested using, both restored at an early return, with a hash in the key
-  let usearea as __stk_1_usearea
-  let userec as __stk_1_userec
-  !usearea^1! := Alias()
+  let usearea as s_1_usearea
+  let userec as s_1_userec
+  s_1_usearea := Alias()
   DbSelectArea("SA1")
-  !userec^1! := SA1->(RecNo())
-  let useord as __stk_1_useord
-  !useord^1! := SA1->(IndexOrd())
+  s_1_userec := SA1->(RecNo())
+  let useord as s_1_useord
+  s_1_useord := SA1->(IndexOrd())
   SA1->(DbSetOrder(1))
-    let usearea as __stk_2_usearea
-    let userec as __stk_2_userec
-    !usearea^2! := Alias()
+    let usearea as s_2_usearea
+    let userec as s_2_userec
+    s_2_usearea := Alias()
     DbSelectArea("SC6")
-    !userec^2! := SC6->(RecNo())
-    let useord as __stk_2_useord
-    !useord^2! := SC6->(IndexOrd())
+    s_2_userec := SC6->(RecNo())
+    let useord as s_2_useord
+    s_2_useord := SC6->(IndexOrd())
     SC6->(DbSetOrder(2))
-      __hash_tmp_1_0 := Nil
-      hCfg:Get("chave", @__hash_tmp_1_0)
-      __fuse_area_1_0 := Alias()
+      ht_1_0 := Nil
+      hCfg:Get("chave", @ht_1_0)
+      far_1_0 := Alias()
       DbSelectArea("SC6")
-      __fuse_rec_1_0 := SC6->(RecNo())
-      SC6->(DbSeek(__hash_tmp_1_0))
-      __fuse_open_1_0 := .F.
-      __fuse_last_1_0 := Nil
-      __fuse_probe_1_0 := Nil
-      __fuse_out_1_0 := {}
+      frc_1_0 := SC6->(RecNo())
+      SC6->(DbSeek(ht_1_0))
+      fop_1_0 := .F.
+      fls_1_0 := Nil
+      fpb_1_0 := Nil
+      fo_1_0 := {}
       While !SC6->(Eof())
         If !(SC6->C6_NUM == cNum)
           Exit
         EndIf
-        __fuse_v_1_0 := SC6->C6_PRODUTO
-        __fuse_probe_1_0 := __fuse_v_1_0
-        If !(__fuse_open_1_0 .And. (__fuse_probe_1_0 == __fuse_last_1_0))
-          __fuse_open_1_0 := .T.
-          __fuse_last_1_0 := __fuse_probe_1_0
-          AAdd(__fuse_out_1_0, __fuse_v_1_0)
+        fv_1_0 := SC6->C6_PRODUTO
+        fpb_1_0 := fv_1_0
+        If !(fop_1_0 .And. (fpb_1_0 == fls_1_0))
+          fop_1_0 := .T.
+          fls_1_0 := fpb_1_0
+          AAdd(fo_1_0, fv_1_0)
         EndIf
         SC6->(DbSkip())
       EndDo
-      SC6->(DbGoto(__fuse_rec_1_0))
-      If !Empty(__fuse_area_1_0)
-        DbSelectArea(__fuse_area_1_0)
+      SC6->(DbGoto(frc_1_0))
+      If !Empty(far_1_0)
+        DbSelectArea(far_1_0)
       EndIf
-      aOut := __fuse_out_1_0  // split mid-chain // and a block comment
+      aOut := fo_1_0  // split mid-chain // and a block comment
 
-      __hash_tmp_1_0 := Nil
-      hCfg:Get("parar", @__hash_tmp_1_0)
-      If __hash_tmp_1_0
+      ht_1_0 := Nil
+      hCfg:Get("parar", @ht_1_0)
+      If ht_1_0
         conout("saindo")
-        SC6->(DbSetOrder(!useord^2!))
-        SC6->(DbGoto(!userec^2!))
-        If !Empty(!usearea^2!)
-          DbSelectArea(!usearea^2!)
+        SC6->(DbSetOrder(s_2_useord))
+        SC6->(DbGoto(s_2_userec))
+        If !Empty(s_2_usearea)
+          DbSelectArea(s_2_usearea)
         EndIf
-        SA1->(DbSetOrder(!useord^1!))
-        SA1->(DbGoto(!userec^1!))
-        If !Empty(!usearea^1!)
-          DbSelectArea(!usearea^1!)
+        SA1->(DbSetOrder(s_1_useord))
+        SA1->(DbGoto(s_1_userec))
+        If !Empty(s_1_usearea)
+          DbSelectArea(s_1_usearea)
         EndIf
         Return len(aOut)
       EndIf
-      nT := SA1->A1_SALDO + SC6->C6_QUANT
-    SC6->(DbSetOrder(!useord^2!))
-    SC6->(DbGoto(!userec^2!))
-    If !Empty(!usearea^2!)
-      DbSelectArea(!usearea^2!)
-    EndIf
-  SA1->(DbSetOrder(!useord^1!))
-  SA1->(DbGoto(!userec^1!))
 
-  If !Empty(!usearea^1!)
-    DbSelectArea(!usearea^1!)
+      nT := SA1->A1_SALDO + SC6->C6_QUANT
+    SC6->(DbSetOrder(s_2_useord))
+    SC6->(DbGoto(s_2_userec))
+    If !Empty(s_2_usearea)
+      DbSelectArea(s_2_usearea)
+    EndIf
+  SA1->(DbSetOrder(s_1_useord))
+  SA1->(DbGoto(s_1_userec))
+
+  If !Empty(s_1_usearea)
+    DbSelectArea(s_1_usearea)
   EndIf
 
   // a chain inside a stage's own argument
-  __fuse_src_0_0 := aRows
-  __fuse_lim_0_0 := len(u_xtpl_distinct(aRows))
-  __fuse_n_0_0 := 0
-  __fuse_out_0_0 := {}
+  flm_0_0 := len(u_xtpl_distinct(aRows))
+  fn_0_0 := 0
+  fo_0_0 := {}
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_n_0_0 >= __fuse_lim_0_0
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    If fn_0_0 >= flm_0_0
       Exit
     EndIf
-    __fuse_n_0_0 := __fuse_n_0_0 + 1
-    __fuse_v_0_0 := __fuse_v_0_0:cCod
-    AAdd(__fuse_out_0_0, __fuse_v_0_0)
+    fn_0_0 := fn_0_0 + 1
+    fv_0_0 := fv_0_0:cCod
+    AAdd(fo_0_0, fv_0_0)
   Next
 
-  aX := __fuse_out_0_0
+  aX := fo_0_0
 
   // a terminal that is not the last stage
-  __fuse_src_0_0 := aRows
-  __fuse_chunk_0_0 := {}
-  __fuse_key_0_0 := Nil
-  __fuse_open_0_0 := .F.
-  __fuse_seen_0_0 := Nil
-  __fuse_out_0_0 := {}
+  fch_0_0 := {}
+  fky_0_0 := Nil
+  fop_0_0 := .F.
+  fsn_0_0 := Nil
+  fo_0_0 := {}
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_bag_0_0 := __fuse_v_0_0:aItens
-    For __fuse_j_0_0 := 1 To Len(__fuse_bag_0_0)
-      __fuse_v_0_0 := __fuse_bag_0_0[__fuse_j_0_0]
-      __fuse_seen_0_0 := __fuse_v_0_0:cGrupo
-      If !__fuse_open_0_0
-        __fuse_open_0_0 := .T.
-        __fuse_key_0_0 := __fuse_seen_0_0
-      ElseIf !(__fuse_seen_0_0 == __fuse_key_0_0)
-        AAdd(__fuse_out_0_0, __fuse_chunk_0_0)
-        __fuse_chunk_0_0 := {}
-        __fuse_key_0_0 := __fuse_seen_0_0
+  For fi_0_0 := 1 To Len(aRows)
+    fv_0_0 := aRows[fi_0_0]
+    fbg_0_0 := fv_0_0:aItens
+    For fj_0_0 := 1 To Len(fbg_0_0)
+      fv_0_0 := fbg_0_0[fj_0_0]
+      fsn_0_0 := fv_0_0:cGrupo
+      If !fop_0_0
+        fop_0_0 := .T.
+        fky_0_0 := fsn_0_0
+      ElseIf !(fsn_0_0 == fky_0_0)
+        AAdd(fo_0_0, fch_0_0)
+        fch_0_0 := {}
+        fky_0_0 := fsn_0_0
       EndIf
-      AAdd(__fuse_chunk_0_0, __fuse_v_0_0)
+      AAdd(fch_0_0, fv_0_0)
     Next
   Next
 
-  If __fuse_open_0_0
-    AAdd(__fuse_out_0_0, __fuse_chunk_0_0)
+  If fop_0_0
+    AAdd(fo_0_0, fch_0_0)
   EndIf
 
-  __pipe_tmp_0_0 := u_xtpl_map(__fuse_out_0_0, {|%g^0%| len(%g^0%)})
-  aQ := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_map(fo_0_0, {|b_0_g| len(b_0_g)})
+  aQ := pt_0_0
 
   // two chains on one line, and one in a postfix condition
   nT := nT + len(u_xtpl_distinct(aRows)) + len(u_xtpl_reverse(aRows))

@@ -18,87 +18,87 @@ user function testRows(cAlias, nLimit)
   Local aCodes := {}
   Local aFirst := {}
 
-  Local __fuse_alias_0_0
-  Local __fuse_area_0_0
-  Local __fuse_lim_0_0
-  Local __fuse_n_0_0
-  Local __fuse_out_0_0
-  Local __fuse_rec_0_0
-  Local __fuse_v_0_0
+  Local fal_0_0
+  Local far_0_0
+  Local flm_0_0
+  Local fn_0_0
+  Local fo_0_0
+  Local frc_0_0
+  Local fv_0_0
 
   // a literal alias is written out, because SA1->A1_COD is what gets read
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("SA1")
-  __fuse_rec_0_0 := SA1->(RecNo())
+  frc_0_0 := SA1->(RecNo())
   SA1->(DbGoTop())
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
   While !SA1->(Eof())
     If SA1->A1_SALDO > 0
-      __fuse_v_0_0 := SA1->A1_VALOR
-      __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+      fv_0_0 := SA1->A1_VALOR
+      fo_0_0 := fo_0_0 + fv_0_0
     EndIf
     SA1->(DbSkip())
   EndDo
 
-  SA1->(DbGoto(__fuse_rec_0_0))
+  SA1->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  nTotal := __fuse_out_0_0
+  nTotal := fo_0_0
 
   // anything else is bound once and reached through the parenthesised form
-  __fuse_alias_0_0 := cAlias
-  __fuse_area_0_0 := Alias()
-  DbSelectArea(__fuse_alias_0_0)
-  __fuse_rec_0_0 := (__fuse_alias_0_0)->(RecNo())
-  (__fuse_alias_0_0)->(DbGoTop())
-  __fuse_out_0_0 := {}
+  fal_0_0 := cAlias
+  far_0_0 := Alias()
+  DbSelectArea(fal_0_0)
+  frc_0_0 := (fal_0_0)->(RecNo())
+  (fal_0_0)->(DbGoTop())
+  fo_0_0 := {}
 
-  While !(__fuse_alias_0_0)->(Eof())
-    __fuse_v_0_0 := (__fuse_alias_0_0)->A1_COD
-    AAdd(__fuse_out_0_0, __fuse_v_0_0)
-    (__fuse_alias_0_0)->(DbSkip())
+  While !(fal_0_0)->(Eof())
+    fv_0_0 := (fal_0_0)->A1_COD
+    AAdd(fo_0_0, fv_0_0)
+    (fal_0_0)->(DbSkip())
   EndDo
 
-  (__fuse_alias_0_0)->(DbGoto(__fuse_rec_0_0))
+  (fal_0_0)->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  aCodes := __fuse_out_0_0
+  aCodes := fo_0_0
 
   // take stops the walk rather than reading to Eof
-  __fuse_area_0_0 := Alias()
+  far_0_0 := Alias()
   DbSelectArea("SA1")
-  __fuse_rec_0_0 := SA1->(RecNo())
+  frc_0_0 := SA1->(RecNo())
   SA1->(DbGoTop())
-  __fuse_lim_0_0 := nLimit
-  __fuse_n_0_0 := 0
-  __fuse_out_0_0 := {}
+  flm_0_0 := nLimit
+  fn_0_0 := 0
+  fo_0_0 := {}
 
   While !SA1->(Eof())
     If SA1->A1_SALDO > 0
-      __fuse_v_0_0 := SA1->A1_COD
-      If __fuse_n_0_0 >= __fuse_lim_0_0
+      fv_0_0 := SA1->A1_COD
+      If fn_0_0 >= flm_0_0
         Exit
       EndIf
-      __fuse_n_0_0 := __fuse_n_0_0 + 1
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+      fn_0_0 := fn_0_0 + 1
+      AAdd(fo_0_0, fv_0_0)
     EndIf
     SA1->(DbSkip())
   EndDo
 
-  SA1->(DbGoto(__fuse_rec_0_0))
+  SA1->(DbGoto(frc_0_0))
 
-  If !Empty(__fuse_area_0_0)
-    DbSelectArea(__fuse_area_0_0)
+  If !Empty(far_0_0)
+    DbSelectArea(far_0_0)
   EndIf
 
-  aFirst := __fuse_out_0_0
+  aFirst := fo_0_0
 
   return nTotal + len(aCodes) + len(aFirst)
 

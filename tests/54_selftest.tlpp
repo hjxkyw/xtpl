@@ -6,22 +6,17 @@
 // 'let' marca onde uma variavel de bloco e declarada e qual
 // armazenamento ela recebeu. Nao gera nada.
 //
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
 //
 // Uma regra so, para todos os slots: os marcadores entram no proprio
 // nome do resultado. O '!' na frente impede que a regra case com uma
 // potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
 // o qual o ultimo marcador engole o que vem depois.
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 // 54_selftest.tlpp -- roda o que as outras fixtures apenas compilam.
 //
@@ -55,27 +50,27 @@ user function selftest()
   Local cTmp := ""
   Local lTmp := .F.
 
-  Local __blk_0_a
-  Local __blk_0_acc
-  Local __blk_0_b
-  Local __blk_0_c
-  Local __blk_0_x
-  Local __elvis_tmp_0_0
-  Local __fuse_had_0_0
-  Local __fuse_i_0_0
-  Local __fuse_n_0_0
-  Local __fuse_older_0_0
-  Local __fuse_out_0_0
-  Local __fuse_prev_0_0
-  Local __fuse_ready_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
-  Local __hash_tmp_0_0
-  Local __pipe_tmp_0_0
-  Local __stk_1_each
-  Local __stk_1_eachi
-  Local __stk_1_nCada
-  Local __stk_1_nDobro
+  Local b_0_a
+  Local b_0_acc
+  Local b_0_b
+  Local b_0_c
+  Local b_0_x
+  Local et_0_0
+  Local fhd_0_0
+  Local fi_0_0
+  Local fn_0_0
+  Local fo_0_0
+  Local fol_0_0
+  Local fpv_0_0
+  Local frd_0_0
+  Local fs_0_0
+  Local fv_0_0
+  Local ht_0_0
+  Local pt_0_0
+  Local s_1_each
+  Local s_1_eachi
+  Local s_1_nCada
+  Local s_1_nDobro
 
   hCfg := THashMap():New()
   hCfg:Set("taxa", 5)
@@ -95,11 +90,11 @@ user function selftest()
   check("amax vazio", u_xtpl_amax({}) == Nil, 0, @nOk, @nBad)
 
   // ---- runtime: transformacoes -------------------------------------------
-  aTmp := u_xtpl_map(aNums, {|%x^0%| %x^0% * 2})
+  aTmp := u_xtpl_map(aNums, {|b_0_x| b_0_x * 2})
   check("map", len(aTmp) == 8 .and. aTmp[1] == 6, len(aTmp), @nOk, @nBad)
-  aTmp := u_xtpl_filter(aNums, {|%x^0%| %x^0% > 3})
+  aTmp := u_xtpl_filter(aNums, {|b_0_x| b_0_x > 3})
   check("filter", len(aTmp) == 4, len(aTmp), @nOk, @nBad)
-  aTmp := u_xtpl_reject(aNums, {|%x^0%| %x^0% > 3})
+  aTmp := u_xtpl_reject(aNums, {|b_0_x| b_0_x > 3})
   check("reject", len(aTmp) == 4, len(aTmp), @nOk, @nBad)
   aTmp := u_xtpl_take(aNums, 3)
   check("take", len(aTmp) == 3 .and. aTmp[3] == 4, len(aTmp), @nOk, @nBad)
@@ -124,20 +119,20 @@ user function selftest()
   aTmp := u_xtpl_sort(aPal)
   check("sort", aTmp[1] == "alfa", 0, @nOk, @nBad)
   check("sort nao mexe na entrada", aPal[1] == "beta", 0, @nOk, @nBad)
-  aTmp := u_xtpl_sortby(aPal, {|%c^0%| len(%c^0%)})
+  aTmp := u_xtpl_sortby(aPal, {|b_0_c| len(b_0_c)})
   check("sortBy", len(aTmp) == 3, len(aTmp), @nOk, @nBad)
 
   // ---- dobras com bloco --------------------------------------------------
-  nTmp := u_xtpl_reduce(aNums, {|%acc^0%, %x^0%| %acc^0% + %x^0%}, 100)
+  nTmp := u_xtpl_reduce(aNums, {|b_0_acc, b_0_x| b_0_acc + b_0_x}, 100)
   check("reduce com semente", nTmp == 131, nTmp, @nOk, @nBad)
-  nTmp := u_xtpl_fold({4, 9, 2}, {|%acc^0%, %x^0%| Iif(%x^0% > %acc^0%, %x^0%, %acc^0%)})
+  nTmp := u_xtpl_fold({4, 9, 2}, {|b_0_acc, b_0_x| Iif(b_0_x > b_0_acc, b_0_x, b_0_acc)})
   check("fold", nTmp == 9, nTmp, @nOk, @nBad)
-  check("fold vazio", u_xtpl_fold({}, {|%acc^0%, %x^0%| %acc^0%}) == Nil, 0, @nOk, @nBad)
+  check("fold vazio", u_xtpl_fold({}, {|b_0_acc, b_0_x| b_0_acc}) == Nil, 0, @nOk, @nBad)
 
   // ---- zip ---------------------------------------------------------------
   aTmp := u_xtpl_zip({1, 2, 3}, {"a", "b"})
   check("zip corta no menor", len(aTmp) == 2, len(aTmp), @nOk, @nBad)
-  aTmp := u_xtpl_zip({1, 2}, {10, 20}, {|%a^0%, %b^0%| %a^0% + %b^0%})
+  aTmp := u_xtpl_zip({1, 2}, {10, 20}, {|b_0_a, b_0_b| b_0_a + b_0_b})
   check("zip com bloco", aTmp[2] == 22, aTmp[2], @nOk, @nBad)
 
   // ---- pertinencia e divisibilidade --------------------------------------
@@ -148,91 +143,103 @@ user function selftest()
   check("nao divisivel", !((10 % 3) == 0), 0, @nOk, @nBad)
 
   // ---- cadeia fundida: o resultado tem de bater com as etapas -------------
-  __fuse_src_0_0 := aNums
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_v_0_0 > 2
-      __fuse_v_0_0 := __fuse_v_0_0 * 10
-      __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+  For fi_0_0 := 1 To Len(aNums)
+    fv_0_0 := aNums[fi_0_0]
+    If fv_0_0 > 2
+      fv_0_0 := fv_0_0 * 10
+      fo_0_0 := fo_0_0 + fv_0_0
     EndIf
   Next
 
-  nTmp := __fuse_out_0_0
-  check("cadeia fundida", nTmp == 270, nTmp, @nOk, @nBad)
-  __fuse_src_0_0 := aNums
-  __fuse_n_0_0 := 0
-  __fuse_out_0_0 := {}
+  nTmp := fo_0_0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_v_0_0 > 2
-      If __fuse_n_0_0 >= 2
+  check("cadeia fundida", nTmp == 270, nTmp, @nOk, @nBad)
+  fn_0_0 := 0
+  fo_0_0 := {}
+
+  For fi_0_0 := 1 To Len(aNums)
+    fv_0_0 := aNums[fi_0_0]
+    If fv_0_0 > 2
+      If fn_0_0 >= 2
         Exit
       EndIf
-      __fuse_n_0_0 := __fuse_n_0_0 + 1
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+      fn_0_0 := fn_0_0 + 1
+      AAdd(fo_0_0, fv_0_0)
     EndIf
   Next
 
-  aTmp := __fuse_out_0_0
+  aTmp := fo_0_0
+
   check("take para o laco", len(aTmp) == 2 .and. aTmp[2] == 4, len(aTmp), @nOk, @nBad)
-  __pipe_tmp_0_0 := u_xtpl_count(aNums, {|%x^0%| %x^0% > 3})
-  nTmp := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_count(aNums, {|b_0_x| b_0_x > 3})
+  nTmp := pt_0_0
+
   check("count", nTmp == 4, nTmp, @nOk, @nBad)
-  __pipe_tmp_0_0 := u_xtpl_first(aNums, {|%x^0%| %x^0% > 4})
-  nTmp := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_first(aNums, {|b_0_x| b_0_x > 4})
+  nTmp := pt_0_0
+
   check("first", nTmp == 5, nTmp, @nOk, @nBad)
-  check("first sem acerto", (u_xtpl_first(aNums, {|%x^0%| %x^0% > 99})) == Nil, 0, @nOk, @nBad)
-  __pipe_tmp_0_0 := u_xtpl_anyof(aNums, {|%x^0%| %x^0% == 9})
-  lTmp := __pipe_tmp_0_0
+  check("first sem acerto", (u_xtpl_first(aNums, {|b_0_x| b_0_x > 99})) == Nil, 0, @nOk, @nBad)
+  pt_0_0 := u_xtpl_anyof(aNums, {|b_0_x| b_0_x == 9})
+  lTmp := pt_0_0
+
   check("anyof", lTmp, 0, @nOk, @nBad)
-  __pipe_tmp_0_0 := u_xtpl_allof(aNums, {|%x^0%| %x^0% > 0})
-  lTmp := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_allof(aNums, {|b_0_x| b_0_x > 0})
+  lTmp := pt_0_0
+
   check("allof", lTmp, 0, @nOk, @nBad)
-  __pipe_tmp_0_0 := u_xtpl_noneof(aNums, {|%x^0%| %x^0% > 99})
-  lTmp := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_noneof(aNums, {|b_0_x| b_0_x > 99})
+  lTmp := pt_0_0
+
   check("noneof", lTmp, 0, @nOk, @nBad)
-  __pipe_tmp_0_0 := u_xtpl_maxby(aNums, {|%x^0%| -%x^0%})
-  nTmp := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_maxby(aNums, {|b_0_x| -b_0_x})
+  nTmp := pt_0_0
+
   check("maxby", nTmp == 1, nTmp, @nOk, @nBad)
 
   // ---- etapas de fluxo ---------------------------------------------------
-  __pipe_tmp_0_0 := u_xtpl_scan({10, -3, 5}, {|%acc^0%, %x^0%| %acc^0% + %x^0%}, 0)
-  aTmp := __pipe_tmp_0_0
-  check("scan", len(aTmp) == 3 .and. aTmp[3] == 12, aTmp[3], @nOk, @nBad)
-  __fuse_src_0_0 := {1, 4, 9}
-  __fuse_prev_0_0 := Nil
-  __fuse_had_0_0 := .F.
-  __fuse_out_0_0 := {}
+  pt_0_0 := u_xtpl_scan({10, -3, 5}, {|b_0_acc, b_0_x| b_0_acc + b_0_x}, 0)
+  aTmp := pt_0_0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    __fuse_older_0_0 := __fuse_prev_0_0
-    __fuse_ready_0_0 := __fuse_had_0_0
-    __fuse_prev_0_0 := __fuse_v_0_0
-    __fuse_had_0_0 := .T.
-    If __fuse_ready_0_0
-      __fuse_v_0_0 := {__fuse_older_0_0, __fuse_v_0_0}
-      __fuse_v_0_0 := __fuse_v_0_0[2] - __fuse_v_0_0[1]
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+  check("scan", len(aTmp) == 3 .and. aTmp[3] == 12, aTmp[3], @nOk, @nBad)
+  fs_0_0 := {1, 4, 9}
+  fpv_0_0 := Nil
+  fhd_0_0 := .F.
+  fo_0_0 := {}
+
+  For fi_0_0 := 1 To Len(fs_0_0)
+    fv_0_0 := fs_0_0[fi_0_0]
+    fol_0_0 := fpv_0_0
+    frd_0_0 := fhd_0_0
+    fpv_0_0 := fv_0_0
+    fhd_0_0 := .T.
+    If frd_0_0
+      fv_0_0 := {fol_0_0, fv_0_0}
+      fv_0_0 := fv_0_0[2] - fv_0_0[1]
+      AAdd(fo_0_0, fv_0_0)
     EndIf
   Next
 
-  aTmp := __fuse_out_0_0
+  aTmp := fo_0_0
+
   check("pairwise", len(aTmp) == 2 .and. aTmp[2] == 5, aTmp[2], @nOk, @nBad)
-  __pipe_tmp_0_0 := u_xtpl_expand({1, 2, 3}, {|%x^0%| {%x^0%, %x^0%}})
-  aTmp := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_expand({1, 2, 3}, {|b_0_x| {b_0_x, b_0_x}})
+  aTmp := pt_0_0
+
   check("expand", len(aTmp) == 6, len(aTmp), @nOk, @nBad)
-  __pipe_tmp_0_0 := u_xtpl_chunkby(aRep, {|%x^0%| %x^0%})
-  aTmp := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_chunkby(aRep, {|b_0_x| b_0_x})
+  aTmp := pt_0_0
+
   check("chunkby", len(aTmp) == 4 .and. len(aTmp[3]) == 1, len(aTmp), @nOk, @nBad)
-  __pipe_tmp_0_0 := u_xtpl_takewhile(aNums, {|%x^0%| %x^0% < 5})
-  aTmp := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_takewhile(aNums, {|b_0_x| b_0_x < 5})
+  aTmp := pt_0_0
+
   check("takewhile", len(aTmp) == 4, len(aTmp), @nOk, @nBad)
-  __pipe_tmp_0_0 := u_xtpl_dropwhile(aNums, {|%x^0%| %x^0% < 5})
-  aTmp := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_dropwhile(aNums, {|b_0_x| b_0_x < 5})
+  aTmp := pt_0_0
+
   check("dropwhile", len(aTmp) == 4 .and. aTmp[1] == 5, len(aTmp), @nOk, @nBad)
 
   // ---- strings -----------------------------------------------------------
@@ -247,22 +254,27 @@ user function selftest()
   check("interpolacao", cTmp == "soma 3 fim", 0, @nOk, @nBad)
 
   // ---- hash --------------------------------------------------------------
-  __hash_tmp_0_0 := Nil
-  hCfg:Get("taxa", @__hash_tmp_0_0)
-  check("hash leitura", __hash_tmp_0_0 == 5, 0, @nOk, @nBad)
-  __hash_tmp_0_0 := Nil
-  hCfg:Get("nada", @__hash_tmp_0_0)
-  check("hash ausente", __hash_tmp_0_0 == Nil, 0, @nOk, @nBad)
-  __hash_tmp_0_0 := Nil
-  check("hash has", hCfg:Get("limite", @__hash_tmp_0_0), 0, @nOk, @nBad)
+  ht_0_0 := Nil
+  hCfg:Get("taxa", @ht_0_0)
+  check("hash leitura", ht_0_0 == 5, 0, @nOk, @nBad)
+
+  ht_0_0 := Nil
+  hCfg:Get("nada", @ht_0_0)
+  check("hash ausente", ht_0_0 == Nil, 0, @nOk, @nBad)
+
+  ht_0_0 := Nil
+  check("hash has", hCfg:Get("limite", @ht_0_0), 0, @nOk, @nBad)
+
   hCfg:Set("taxa", 7)
-  __hash_tmp_0_0 := Nil
-  hCfg:Get("taxa", @__hash_tmp_0_0)
-  check("hash escrita", __hash_tmp_0_0 == 7, 0, @nOk, @nBad)
+  ht_0_0 := Nil
+  hCfg:Get("taxa", @ht_0_0)
+  check("hash escrita", ht_0_0 == 7, 0, @nOk, @nBad)
+
   aTmp := u_xtpl_keys(hCfg)
   check("keys", len(aTmp) == 2, len(aTmp), @nOk, @nBad)
-  __pipe_tmp_0_0 := u_xtpl_asum(u_xtpl_values(hCfg))
-  nTmp := __pipe_tmp_0_0
+  pt_0_0 := u_xtpl_asum(u_xtpl_values(hCfg))
+  nTmp := pt_0_0
+
   check("values", nTmp == 17, nTmp, @nOk, @nBad)
 
   // ---- operadores --------------------------------------------------------
@@ -279,11 +291,13 @@ user function selftest()
   EndIf
 
   check("?= nao atribui depois", cTmp == "padrao", 0, @nOk, @nBad)
-  __elvis_tmp_0_0 := Nil
-  nTmp := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, 42)
+  et_0_0 := Nil
+  nTmp := If(et_0_0 != Nil, et_0_0, 42)
+
   check("?: pega a alternativa", nTmp == 42, nTmp, @nOk, @nBad)
-  __elvis_tmp_0_0 := 7
-  nTmp := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, 42)
+  et_0_0 := 7
+  nTmp := If(et_0_0 != Nil, et_0_0, 42)
+
   check("?: pega o valor", nTmp == 7, nTmp, @nOk, @nBad)
 
   // ---- fallback ----------------------------------------------------------
@@ -307,16 +321,16 @@ user function selftest()
 
   // ---- escopo de bloco e reciclagem de slot ------------------------------
   nTmp := 0
-  let each as __stk_1_each
-  let nCada as __stk_1_nCada
-  let eachi as __stk_1_eachi
-  !each^1! := {1, 2, 3}
+  let each as s_1_each
+  let nCada as s_1_nCada
+  let eachi as s_1_eachi
+  s_1_each := {1, 2, 3}
 
-  For !eachi^1! := 1 To Len(!each^1!)
-    let nDobro as __stk_1_nDobro
-    !nCada^1! := !each^1![!eachi^1!]
-    !nDobro^1! := !nCada^1! * 2
-    nTmp := nTmp + !nDobro^1!
+  For s_1_eachi := 1 To Len(s_1_each)
+    let nDobro as s_1_nDobro
+    s_1_nCada := s_1_each[s_1_eachi]
+    s_1_nDobro := s_1_nCada * 2
+    nTmp := nTmp + s_1_nDobro
   next
 
   check("local de bloco em laco", nTmp == 12, nTmp, @nOk, @nBad)

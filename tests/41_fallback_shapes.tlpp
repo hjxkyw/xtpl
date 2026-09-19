@@ -1,28 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
-
 // 41_fallback_shapes.tlpp -- what a guard can and cannot hold.
 //
 // 'fallback' folds everything the line generates into one code block, as
@@ -40,41 +18,39 @@ user function testFallbackShapes(aNums, hCfg)
   Local nHash := 0
   Local aList := {}
 
-  Local __blk_0_x
-  Local __fuse_i_0_0
-  Local __fuse_out_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
-  Local __guard_tmp_0_0
-  Local __hash_tmp_0_0
-  Local __pipe_tmp_0_0
-  Local __pipe_tmp_0_1
-  Local __pipe_tmp_0_2
+  Local b_0_x
+  Local fi_0_0
+  Local fo_0_0
+  Local fv_0_0
+  Local gt_0_0
+  Local ht_0_0
+  Local pt_0_0
+  Local pt_0_1
+  Local pt_0_2
 
   // a bare call
   nSafe := u_xtpl_safe_pipe({|| riskyCall(1)}, {|| 0})
 
   // a chain: unfused under the guard, so every step is an expression -- and
   // xtpl says so, because losing a pass is invisible in the source
-  nSafe := u_xtpl_safe_pipe({|| __pipe_tmp_0_0 := u_xtpl_filter(aNums, {|%x^0%| %x^0% > 100}), __pipe_tmp_0_1 := u_xtpl_map(__pipe_tmp_0_0, {|%x^0%| %x^0% * 2}), __pipe_tmp_0_2 := u_xtpl_asum(__pipe_tmp_0_1), __pipe_tmp_0_2}, {|| 0})
+  nSafe := u_xtpl_safe_pipe({|| pt_0_0 := u_xtpl_filter(aNums, {|b_0_x| b_0_x > 100}), pt_0_1 := u_xtpl_map(pt_0_0, {|b_0_x| b_0_x * 2}), pt_0_2 := u_xtpl_asum(pt_0_1), pt_0_2}, {|| 0})
 
   // the guard on the part that can fail, and the chain left to fuse
-  __guard_tmp_0_0 := u_xtpl_safe_pipe({|| riskyCall(2)}, {|| {}})
-  __fuse_src_0_0 := __guard_tmp_0_0
-  __fuse_out_0_0 := {}
+  gt_0_0 := u_xtpl_safe_pipe({|| riskyCall(2)}, {|| {}})
+  fo_0_0 := {}
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_v_0_0 > 1
-      __fuse_v_0_0 := __fuse_v_0_0 * 2
-      AAdd(__fuse_out_0_0, __fuse_v_0_0)
+  For fi_0_0 := 1 To Len(gt_0_0)
+    fv_0_0 := gt_0_0[fi_0_0]
+    If fv_0_0 > 1
+      fv_0_0 := fv_0_0 * 2
+      AAdd(fo_0_0, fv_0_0)
     EndIf
   Next
 
-  aList := __fuse_out_0_0
+  aList := fo_0_0
 
   // a hash read lifts statements, and they are expressions too
-  nHash := u_xtpl_safe_pipe({|| __hash_tmp_0_0 := Nil, hCfg:Get("taxa", @__hash_tmp_0_0), __hash_tmp_0_0}, {|| 0})
+  nHash := u_xtpl_safe_pipe({|| ht_0_0 := Nil, hCfg:Get("taxa", @ht_0_0), ht_0_0}, {|| 0})
 
   return nSafe + nHash + len(aList)
 

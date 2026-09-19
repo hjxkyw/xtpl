@@ -1,0 +1,79 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// probe_hash2.tlpp -- List(), e o que uma chave ausente devolve.
+//
+// O probe anterior perguntou 'Len(oH:List())' e viu ERRO, do que eu conclui
+// que List nao existe. Errado: se List devolve algo que nao e array, ou se
+// leva parametros, o Len erra de qualquer jeito e a pergunta nao separa as
+// duas coisas. Aqui cada chamada e feita sozinha e o tipo do resultado e
+// impresso antes de qualquer coisa ser feita com ele.
+//
+// Tambem falta saber o que 'Get(chave, @x)' faz quando a chave nao existe --
+// o xtpl conta com o temporario ficar intocado, para uma leitura ausente
+// voltar como Nil. O probe anterior so testou Get com um parametro, que erra
+// sempre, entao isso continua sem resposta.
+// --------------------------------------------------------------------------------
+
+Static Function tenta(cNome, bBloco)
+  Local xResposta
+  Local bAntigo := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    xResposta := Eval(bBloco)
+    conout("  " + PadR(cNome, 30) + " [" + ValType(xResposta) + "] " + ;
+           cValToChar(xResposta))
+  RECOVER
+    conout("  " + PadR(cNome, 30) + " ERRO")
+  END SEQUENCE
+  ErrorBlock(bAntigo)
+Return nil
+
+User Function probeHash2()
+
+  Local oH := THashMap():New()
+  Local aUm := {}
+  Local aDois := {}
+  Local xOut := "INTOCADO"
+  Local lAchou
+
+  oH:Set("taxa", 5)
+  oH:Set("nome", "abc")
+
+  conout("--- List: o que e, e o que leva ---")
+  tenta("List()",                {|| oH:List() })
+  tenta("ValType so",            {|| ValType(oH:List()) })
+  tenta("List(@a)",              {|| oH:List(@aUm) })
+  tenta("  aUm depois",          {|| aUm })
+  tenta("List(@a, @b)",          {|| oH:List(@aUm, @aDois) })
+  tenta("  aUm depois",          {|| aUm })
+  tenta("  aDois depois",        {|| aDois })
+
+  conout("--- se List devolve array, qual a forma ---")
+  tenta("Len(List())",           {|| Len(oH:List()) })
+  tenta("ValType(List()[1])",    {|| ValType(oH:List()[1]) })
+  tenta("List()[1]",             {|| oH:List()[1] })
+
+  conout("--- chave ausente com dois parametros ---")
+  xOut := "INTOCADO"
+  tenta("Get(ausente, @x)",      {|| oH:Get("nada", @xOut) })
+  tenta("  xOut depois",         {|| xOut })
+  xOut := "INTOCADO"
+  tenta("Get(taxa, @x)",         {|| oH:Get("taxa", @xOut) })
+  tenta("  xOut depois",         {|| xOut })
+
+  conout("--- outros nomes para enumerar ---")
+  tenta("GetNames()",            {|| oH:GetNames() })
+  tenta("Keys()",                {|| oH:Keys() })
+  tenta("GetKeys()",             {|| oH:GetKeys() })
+  tenta("GetAll()",              {|| oH:GetAll() })
+  tenta("ToArray()",             {|| oH:ToArray() })
+
+  conout("--- e remover ---")
+  tenta("Del(nome)",             {|| oH:Del("nome") })
+  tenta("Remove(nome)",          {|| oH:Remove("nome") })
+  tenta("Count()",               {|| oH:Count() })
+
+Return nil
+
+// --------------------------------------------------------------------------------
+// the end

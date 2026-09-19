@@ -1,28 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
-
 // 10_operators.tlpp -- in, %%, the folds, and external
 // --------------------------------------------------------------------------------
 
@@ -34,32 +12,30 @@ user function testOperators(nValor, cCodigo, aCodigos, aNums)
   Local lAchou := .F.
   Local cMsg := ""
 
-  Local __blk_0_acc
-  Local __blk_0_n
-  Local __fuse_i_0_0
-  Local __fuse_out_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
+  Local b_0_acc
+  Local b_0_n
+  Local fi_0_0
+  Local fo_0_0
+  Local fv_0_0
 
   // folds: named functions, not operators, so they chain too
   nTotal := u_xtpl_asum(aNums)
   nTotal := u_xtpl_aprod(aNums)
   nTotal := u_xtpl_amax(aNums)
   nTotal := u_xtpl_amin(aNums)
-  __fuse_src_0_0 := aNums
-  __fuse_out_0_0 := 0
+  fo_0_0 := 0
 
-  For __fuse_i_0_0 := 1 To Len(__fuse_src_0_0)
-    __fuse_v_0_0 := __fuse_src_0_0[__fuse_i_0_0]
-    If __fuse_v_0_0 > 10
-      __fuse_out_0_0 := __fuse_out_0_0 + __fuse_v_0_0
+  For fi_0_0 := 1 To Len(aNums)
+    fv_0_0 := aNums[fi_0_0]
+    If fv_0_0 > 10
+      fo_0_0 := fo_0_0 + fv_0_0
     EndIf
   Next
 
-  nTotal := __fuse_out_0_0
+  nTotal := fo_0_0
 
   // fold() for anything the four do not cover
-  nTotal := u_xtpl_fold(aNums, {|%acc^0%, %n^0%| Max(%acc^0%, %n^0% * 2)})
+  nTotal := u_xtpl_fold(aNums, {|b_0_acc, b_0_n| Max(b_0_acc, b_0_n * 2)})
 
   // membership: '$' searches a string only, so an array needs aScan
   lAchou := u_xtpl_in(cCodigo, aCodigos)

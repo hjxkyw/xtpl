@@ -1,0 +1,25 @@
+// scalar_chain.xtpl -- um valor unico na cabeca de uma cadeia.
+//
+// Uma cadeia percorre uma colecao. Um numero ou uma string ali gera
+// 'Len(1)' e '1[1]', e nada mais pega isso: o AdvPL e de tipagem dinamica,
+// entao o compilador aceita e a falha aparece rodando, reclamando de outra
+// coisa.
+//
+//    1 |> map([x] 2 * x) |> asum
+//
+// Se era mesmo um elemento so, '{1}'; se era uma sequencia, '1..99'.
+//
+// So pega o que da para ver no fonte. 'local nX := 5' seguido de
+// 'nX |> map(...)' continua passando, porque uma variavel com um escalar e
+// uma com um array sao iguais para o transpilador.
+// --------------------------------------------------------------------------------
+
+user function scalarChain()
+  local nTotal := 0
+
+  nTotal := 1 |> map([x] 2 * x) |> asum
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

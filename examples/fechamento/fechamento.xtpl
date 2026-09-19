@@ -1,0 +1,126 @@
+// fechamento.xtpl -- montar um resumo de fechamento, em secoes.
+//
+// Um caso comum: uma funcao longa que monta varias coisas, uma secao de cada
+// vez. Cada secao precisa de um array temporario, de um contador, de um texto
+// -- e nenhuma delas precisa do que a anterior usou.
+//
+// ============================================================================
+// O QUE MUDA
+// ============================================================================
+//
+// Em AdvPL todo 'Local' vale da declaracao ate o fim da funcao. Uma funcao de
+// seis secoes acaba com um bloco de vinte declaracoes no topo, cada uma viva
+// do inicio ao fim, e a pergunta "quem mexe nisto?" so tem uma resposta: o
+// arquivo inteiro.
+//
+// Em xtpl um 'local' dentro de um bloco vive so no bloco. Fora dele o nome
+// nao existe -- o transpilador recusa. E como nao existe, o ARMAZENAMENTO
+// pode ser reaproveitado pela proxima secao.
+//
+// Os dois sao um recurso so, nao dois. Se cada 'local' dentro de um 'if'
+// custasse um slot permanente, uma funcao longa acabaria com quarenta
+// declaracoes e as pessoas aprenderiam a icar tudo a mao -- abandonando
+// justamente a disciplina que o recurso existe para impor.
+//
+// ============================================================================
+// QUANDO UM SLOT NAO PODE SER DIVIDIDO
+// ============================================================================
+//
+// Passar uma variavel para uma funcao NAO impede o compartilhamento, faca a
+// funcao o que fizer:
+//
+//    aadd(aGuardados, aSecao)     <-- aSecao continua dividindo slot
+//
+// O AdvPL entrega o OBJETO. Quem recebeu ficou com ele; reatribuir o nome
+// depois nao alcanca o que foi entregue.
+//
+// Um code block e outra coisa -- ele captura a VARIAVEL:
+//
+//    aadd(aAcoes, {|| processa(aSecao)})   <-- aSecao ganha slot proprio
+//
+// O bloco roda depois, e quando rodar vai ler o nome. Se o nome tiver sido
+// reaproveitado pela secao seguinte, ele le a secao seguinte. Por isso uma
+// variavel capturada recebe armazenamento so dela.
+//
+// Vale para numeros e strings igual a arrays. Nao e sobre tipos.
+//
+// ============================================================================
+// O QUE APARECE NA SAIDA
+// ============================================================================
+//
+//    Local s_1_0  // aVendas, aCustos, cLinha
+//
+// Um slot, e o comentario diz quem passou por ele. No corpo cada linha o
+// escreve com o nome de quem o ocupa ali -- '!aVendas^1^0!' e '!aCustos^1^0!'
+// sao o mesmo armazenamento, e da para ler qual e qual.
+//
+// A variavel capturada aparece separada, com o proprio nome: 'b_3_nMeta'.
+//
+// ============================================================================
+// O CODIGO GERADO NAO E MENOR
+// ============================================================================
+//
+// Onze declaracoes contra nove da versao a mao -- as cadeias fundidas trazem
+// os temporarios delas ('fi', 'fo', 'fv'), e sao dois pares porque sao duas
+// cadeias.
+//
+// O ganho deste recurso nao esta na saida. Esta no que o transpilador
+// RECUSA: ler 'aVendas' na secao 3 compila e roda na versao a mao, e da o
+// numero errado. Em xtpl o nome nao existe fora do bloco, e a linha e
+// recusada dizendo onde ele foi visto pela ultima vez.
+//
+// Um recurso cujo ganho e um erro que nao acontece nao aparece na contagem de
+// linhas. E mesmo assim e o que se quer.
+//
+// Compare com fechamento_mao.tlpp.
+// ============================================================================
+
+external CRLF                      // vem de totvs.ch
+
+user function fechamento(cFilial, aAcoes)
+  local nTotal := 0
+  local cResumo := ""
+
+  // ---- secao 1: vendas ---------------------------------------------------
+  if !empty(cFilial)
+    local aVendas := buscaVendas(cFilial)
+    local nSoma := aVendas |> map([oV] oV:nValor) |> asum
+
+    nTotal := nTotal + nSoma
+    cResumo := cResumo + "vendas: " + cValToChar(nSoma) + CRLF
+  endif
+
+  // ---- secao 2: custos. Mesmo slot da secao 1 ----------------------------
+  if !empty(cFilial)
+    local aCustos := buscaCustos(cFilial)
+    local nSoma := aCustos |> map([oC] oC:nValor) |> asum
+
+    nTotal := nTotal - nSoma
+    cResumo := cResumo + "custos: " + cValToChar(nSoma) + CRLF
+  endif
+
+  // ---- secao 3: entregue a uma funcao, e ainda divide o slot -------------
+  if nTotal > 0
+    local aLinha := {cFilial, nTotal}
+
+    // aadd entrega o array. Quem recebeu ficou com ele, e reaproveitar o
+    // nome depois nao alcanca o que foi entregue.
+    aadd(aAcoes, aLinha)
+  endif
+
+  // ---- secao 4: capturada por um bloco, e ai NAO divide -------------------
+  if nTotal > 0
+    local nMeta := calculaMeta(cFilial)
+
+    // O bloco le nMeta quando rodar, la na frente. Por isso nMeta ganha
+    // armazenamento proprio: se dividisse, leria o que a proxima secao
+    // tivesse posto ali.
+    aadd(aAcoes, {|| avisaMeta(cFilial, nMeta)})
+  endif
+
+  xconout("fechamento ", cFilial, ": ", nTotal)
+
+  return cResumo
+
+// --------------------------------------------------------------------------------
+// the end

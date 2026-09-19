@@ -1,0 +1,86 @@
+// etiqueta.xtpl -- montar uma etiqueta de entrega a partir de um pedido.
+//
+// Um caso comum: os dados vem de um objeto montado em outro lugar -- um JSON
+// de integracao, um retorno de servico, um cache. Nem todo pedido tem
+// endereco, nem todo endereco tem complemento, e nem todo cliente tem nome
+// fantasia.
+//
+// Nada disso e erro. Sao campos opcionais, e a etiqueta tem de sair mesmo
+// assim.
+//
+// ============================================================================
+// O QUE '?.' FAZ
+// ============================================================================
+//
+//    cRua := oPedido?.oEntrega?.cRua
+//
+// Se 'oPedido' for Nil, o resultado e Nil e 'oEntrega' nem e tocado. Se
+// 'oEntrega' for Nil, o mesmo. So se os dois existirem e que 'cRua' e lido.
+//
+// Vira um If encadeado:
+//
+//    If(oPedido != Nil .And. oPedido:oEntrega != Nil, oPedido:oEntrega:cRua, Nil)
+//
+// A cadeia cresce da esquerda para a direita: cada elo testa tudo que veio
+// antes dele. Tres elos testam dois niveis, quatro testam tres.
+//
+// ============================================================================
+// O QUE '?:' FAZ, E POR QUE OS DOIS ANDAM JUNTOS
+// ============================================================================
+//
+//    cRua := (oPedido?.oEntrega?.cRua) ?: "sem endereco"
+//
+// '?.' devolve Nil quando o caminho nao existe. '?:' e o que troca esse Nil
+// por outra coisa.
+//
+// Sao dois operadores porque sao duas perguntas:
+//
+//    ?.   "esta ai?"        -- protege o CAMINHO
+//    ?:   "veio vazio?"     -- trata o VALOR
+//
+// Um campo pode existir e estar vazio: um 'cComplemento' que e "" nao e Nil,
+// entao '?.' o entrega feliz. E por isso que '?:' testa '!= Nil' e nao
+// 'Empty()' -- sao coisas diferentes, e o exemplo abaixo usa 'empty()' onde
+// e isso que se quer.
+//
+// ============================================================================
+// O QUE ISSO NAO E
+// ============================================================================
+//
+// Nao e para calar erro. '?.' diz "este caminho pode legitimamente nao
+// existir". Se um pedido SEMPRE tem entrega e um dia nao tem, isso e um bug
+// e a quebra e a forma de descobrir -- pontilhar tudo de '?.' so faz o bug
+// sair como uma etiqueta em branco.
+//
+// Compare com etiqueta_mao.tlpp.
+// ============================================================================
+
+user function etiqueta(oPedido)
+  local cLinha1 := ""
+  local cLinha2 := ""
+  local cLinha3 := ""
+  local cCompl := ""
+
+  // O nome fantasia e opcional; a razao social nao. Se nao houver fantasia,
+  // vale a razao social.
+  cLinha1 := (oPedido?.oCliente?.cFantasia) ?: (oPedido?.oCliente?.cRazao) ?: "SEM NOME"
+
+  // Tres niveis, e nenhum deles garantido.
+  cLinha2 := (oPedido?.oEntrega?.cRua) ?: "endereco nao informado"
+
+  // Existir e estar preenchido sao coisas diferentes: o complemento pode vir
+  // como "" e '?.' entrega isso sem reclamar, porque "" nao e Nil.
+  cCompl := (oPedido?.oEntrega?.cComplemento) ?: ""
+  if !empty(cCompl)
+    cLinha2 := cLinha2 + ", " + alltrim(cCompl)
+  endif
+
+  cLinha3 := (oPedido?.oEntrega?.cCidade) ?: "" 
+  cLinha3 := alltrim(cLinha3) + " " + ((oPedido?.oEntrega?.cUf) ?: "")
+
+  xconout("etiqueta: ", cLinha1, " / ", cLinha2, " / ", cLinha3)
+
+  return {cLinha1, cLinha2, cLinha3}
+
+// --------------------------------------------------------------------------------
+// the end

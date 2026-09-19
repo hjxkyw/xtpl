@@ -1,0 +1,113 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// parametros_mao.tlpp -- a mesma funcao de parametros.xtpl, escrita a mao.
+//
+// Nao ha nada de dificil aqui. E so longo, e o motivo de ser longo e uma
+// coisa so: 'Default' atribui a uma variavel, entao tudo tem de virar
+// variavel antes de poder ser usado.
+//
+// ============================================================================
+// O QUE E FACIL ERRAR AQUI
+// ============================================================================
+//
+// 1. A CADEIA DE ORIGENS
+//
+//    Quatro origens em ordem viram quatro Ifs aninhados, ou uma sequencia de
+//    testes com a variavel sendo reatribuida. Os dois jeitos funcionam e os
+//    dois escondem a ordem: para saber quem ganha de quem, e preciso ler o
+//    aninhamento inteiro.
+//
+//    Acrescentar uma quinta origem no meio significa mexer no aninhamento.
+//
+// 2. 'Default' NAO CABE NUM ARGUMENTO
+//
+//       GravaTitulo(cCli, nValor, nPrazo)
+//
+//    Se 'nPrazo' pode ser Nil, e preciso resolve-lo ANTES -- numa variavel,
+//    numa linha propria. Nao da para escrever a decisao onde o valor e
+//    usado, entao a decisao se afasta do uso, e as duas podem divergir.
+//
+// 3. O TESTE ERRADO
+//
+//       If nDesconto == Nil          <-- certo
+//       If Empty(nDesconto)          <-- parece igual, e nao e
+//
+//    'Empty(0)' e .T. em AdvPL. Trocar um teste pelo outro faz um desconto
+//    de zero por cento -- escolhido por alguem, de proposito -- virar o
+//    padrao de dez.
+//
+//    Este e o erro que mais aparece: os dois testes sao intercambiaveis na
+//    maioria dos casos, ate o dia em que o valor legitimo e zero, ou "" ou
+//    .F.
+//
+// ============================================================================
+
+User Function ParametrosMao(cCliente, nPrazoParam, nDescParam)
+
+  Local hCfg      := Nil
+  Local hGeral    := Nil
+  Local nPrazo    := 0
+  Local nDesconto := 0
+  Local cObs      := ""
+  Local cPerfil   := ""
+  Local xTmp      := Nil
+
+  hCfg   := U_CarregaConfig(cCliente)
+  hGeral := U_CarregaConfig("GERAL")
+
+  // ---- o prazo: quatro origens ---------------------------------------------
+  nPrazo := nPrazoParam
+  If nPrazo == Nil
+    xTmp := Nil
+    hCfg:Get("prazo", @xTmp)
+    nPrazo := xTmp
+  EndIf
+  If nPrazo == Nil
+    xTmp := Nil
+    hGeral:Get("prazo", @xTmp)
+    nPrazo := xTmp
+  EndIf
+  If nPrazo == Nil
+    nPrazo := 30
+  EndIf
+
+  // ---- o desconto, onde zero e uma resposta legitima ------------------------
+  nDesconto := nDescParam
+  If nDesconto == Nil
+    xTmp := Nil
+    hCfg:Get("desconto", @xTmp)
+    nDesconto := xTmp
+  EndIf
+  If nDesconto == Nil
+    nDesconto := 0
+  EndIf
+
+  // ---- a observacao, onde vazio conta como ausente --------------------------
+  xTmp := Nil
+  hCfg:Get("observacao", @xTmp)
+  cObs := xTmp
+  If cObs == Nil
+    cObs := ""
+  EndIf
+  If Empty(cObs)
+    cObs := "sem observacoes"
+  EndIf
+
+  U_GravaTitulo(cCliente, nPrazo, nDesconto, cObs)
+
+  ConOut("prazo " + cValToChar(nPrazo) + " desconto " + cValToChar(nDesconto) + ;
+         " obs: " + cObs)
+
+  // ---- e o retorno, que tambem precisa de uma variavel ----------------------
+  xTmp := Nil
+  hCfg:Get("perfil", @xTmp)
+  cPerfil := xTmp
+  If cPerfil == Nil
+    cPerfil := "padrao"
+  EndIf
+
+Return cPerfil
+
+// --------------------------------------------------------------------------------
+// the end

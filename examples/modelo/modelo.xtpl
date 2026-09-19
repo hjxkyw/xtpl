@@ -1,0 +1,109 @@
+// modelo.xtpl -- gravar um cliente e seus contatos por um FWModel.
+//
+// Um caso comum: pegar um modelo, pegar os submodelos dele, e chamar dez
+// metodos no mesmo objeto. Rotinas de MVC sao quase so isso.
+//
+// ============================================================================
+// O QUE 'with object' FAZ
+// ============================================================================
+//
+//    with object oModel:GetModel("SA1MASTER")
+//      :SetValue("A1_COD", cCod)
+//      :SetValue("A1_NOME", cNome)
+//    end with
+//
+// O sujeito e avaliado UMA vez e ligado. Dentro do bloco, um ':' no comeco de
+// uma posicao onde o AdvPL nao poderia te-lo posto significa "o sujeito":
+//
+//    s_1_obj := oModel:GetModel("SA1MASTER")
+//    s_1_obj:SetValue("A1_COD", cCod)
+//    s_1_obj:SetValue("A1_NOME", cNome)
+//
+// Note o 'end with', sem 'do' no cabecalho. 'using alias SA1 order 1 do'
+// precisa do 'do' porque tem modificadores e alguma coisa tem de dizer onde o
+// cabecalho acaba. 'with object' recebe uma expressao que vai ate o fim da
+// linha, entao nao ha o que delimitar.
+//
+// ============================================================================
+// O QUE FICA INTOCADO
+// ============================================================================
+//
+// Um ':' depois de um nome, de ')' ou de ']' e acesso a membro comum:
+//
+//    cRazao := oOutro:cRazao          outro objeto, intocado
+//    nTam := aLinhas[1]:nValor        depois de ']', intocado
+//    ::cCampo                         self, intocado
+//    cNome := :GetValue("A1_NOME")    depois de ':=', ESTE e o sujeito
+//
+// O que e substituido e um dois-pontos numa posicao onde o AdvPL nao poderia
+// te-lo escrito. Nao ha ambiguidade a resolver -- so ha uma leitura possivel.
+//
+// ============================================================================
+// O SUJEITO AVALIADO UMA VEZ
+// ============================================================================
+//
+// Este e o ponto, e nao a brevidade. A versao natural a mao e:
+//
+//    oModel:GetModel("SA1MASTER"):SetValue("A1_COD", cCod)
+//    oModel:GetModel("SA1MASTER"):SetValue("A1_NOME", cNome)
+//
+// Dez linhas, dez GetModel. Funciona, da a resposta certa, e faz dez vezes um
+// trabalho que valia uma. E o mesmo tipo de erro do 'Exit' esquecido num
+// laco: nao erra nada, so custa.
+//
+// A alternativa a mao -- uma variavel de funcao inteira para segurar o
+// submodelo -- resolve o custo e traz o problema que o escopo de bloco
+// existe para evitar: um nome vivo do inicio ao fim para valer dez linhas.
+//
+// ============================================================================
+// ANINHAMENTO
+// ============================================================================
+//
+// Os blocos aninham. O sujeito mais interno vence enquanto durar, e o de
+// fora volta a valer no 'end with' dele. O exemplo abaixo usa isso: o modelo
+// mestre por fora, o de contatos por dentro.
+//
+// Compare com modelo_mao.tlpp.
+// ============================================================================
+
+user function modelo(oModel, cCod, cNome, aContatos)
+  local nGravados := 0
+  local cChave := ""
+
+  with object oModel:GetModel("SA1MASTER")
+
+    :SetValue("A1_COD", cCod)
+    :SetValue("A1_NOME", cNome)
+    :SetValue("A1_STATUS", "1")
+
+    // Ler do mesmo sujeito, do outro lado de uma atribuicao.
+    cChave := :GetValue("A1_FILIAL") + :GetValue("A1_COD")
+
+    // O bloco de contatos: outro modelo, por dentro.
+    with object oModel:GetModel("SA1CONTATO")
+
+      for oContato, nPos in aContatos
+
+        loop if empty(oContato:cEmail)
+
+        :GoLine(nPos)
+        :SetValue("A1C_NOME", oContato:cNome)
+        :SetValue("A1C_EMAIL", oContato:cEmail)
+
+        nGravados := nGravados + 1
+
+      next
+
+    end with
+
+    // De volta ao sujeito de fora: o 'end with' acima devolveu.
+    :SetValue("A1_CONTATO", cValToChar(nGravados))
+
+  end with
+
+  xconout("modelo ", cChave, ": ", nGravados, " contatos")
+
+  return nGravados
+
+// --------------------------------------------------------------------------------
+// the end

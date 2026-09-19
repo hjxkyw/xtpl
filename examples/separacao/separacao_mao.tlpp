@@ -1,0 +1,116 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// separacao_mao.tlpp -- a mesma funcao de separacao.xtpl, escrita a mao.
+//
+// Nada aqui e dificil. O que muda e a proporcao: quantas linhas dizem o que a
+// rotina faz, e quantas dizem como o laco anda.
+//
+// ============================================================================
+// O QUE E FACIL ERRAR AQUI
+// ============================================================================
+//
+// 1. A CHAMADA REPETIDA NO 'while'
+//
+//       oPendente := U_ProximaPendencia()        <-- uma antes
+//       While oPendente != Nil
+//         ...
+//         oPendente := U_ProximaPendencia()      <-- outra no fim
+//       EndDo
+//
+//    Duas chamadas da mesma coisa, e as duas tem de mudar juntas. Acrescente
+//    um argumento a 'ProximaPendencia' e a segunda fica para tras -- o laco
+//    roda uma vez com o argumento certo e para sempre com o errado.
+//
+//    E se a segunda chamada ficar dentro de um 'If', o laco nao termina.
+//
+//    A alternativa e 'While .T.' com um 'Exit' no meio, que resolve a
+//    duplicacao e troca por outra coisa: um laco cuja condicao de parada nao
+//    esta na linha do 'While'.
+//
+// 2. O SUJEITO DO 'Do Case'
+//
+//       Do Case
+//         Case U_FaixaDePeso(aItens[nX]:nPeso) == "LEVE"
+//         Case U_FaixaDePeso(aItens[nX]:nPeso) == "MEDIO"
+//
+//    Tres chamadas da mesma funcao para o mesmo item. Ou se declara
+//    'cFaixa' la em cima, viva na funcao inteira para valer tres linhas.
+//    Nenhum dos dois e bom, e o primeiro e o que se escreve com pressa.
+//
+// 3. 'Loop' E 'Exit' PERDIDOS EM BLOCOS DE TRES LINHAS
+//
+//       If Empty(aItens[nX]:cCodigo)
+//         Loop
+//       EndIf
+//
+//    Correto, e ocupa tres linhas para dizer uma coisa. Numa rotina com seis
+//    desses, os blocos de tres linhas e os blocos que fazem trabalho de
+//    verdade tem o mesmo tamanho na tela, e o olho nao distingue.
+//
+// 4. O INDICE
+//
+//    'nX' e o indice de tudo. 'aItens[nX]' aparece nove vezes abaixo, e cada
+//    uma e uma chance de escrever 'nY' por engano num laco aninhado -- que
+//    compila, roda, e le o item errado.
+//
+// ============================================================================
+
+User Function SeparacaoMao(aItens, nLimite)
+
+  Local aExpressa := {}
+  Local aNormal   := {}
+  Local nErros    := 0
+  Local cRelato   := ""
+  Local cFaixa    := ""
+  Local oPendente := Nil
+  Local nX        := 0
+
+  For nX := 1 To Len(aItens)
+
+    If Empty(aItens[nX]:cCodigo)
+      Loop
+    EndIf
+
+    If aItens[nX]:nPeso <= 0
+      nErros  += 1
+      cRelato += "item " + cValToChar(nX) + " sem peso; "
+      Loop
+    EndIf
+
+    If nErros > 3
+      Exit
+    EndIf
+
+    cFaixa := U_FaixaDePeso(aItens[nX]:nPeso)
+    Do Case
+      Case cFaixa == "LEVE"
+        AAdd(aExpressa, aItens[nX]:cCodigo)
+      Case cFaixa == "MEDIO"
+        AAdd(aNormal, aItens[nX]:cCodigo)
+      OtherWise
+        nErros  += 1
+        cRelato += "peso fora de faixa em " + cValToChar(nX) + "; "
+    EndCase
+
+  Next
+
+  // ---- a fila: a chamada aparece duas vezes ---------------------------------
+  oPendente := U_ProximaPendencia()
+  While oPendente != Nil
+    AAdd(aNormal, oPendente:cCodigo)
+    oPendente := U_ProximaPendencia()
+  EndDo
+
+  For nX := 1 To Len(aExpressa)
+    U_MarcaExpressa(aExpressa[nX])
+  Next
+
+  ConOut("expressa: " + cValToChar(Len(aExpressa)) + ;
+         "  normal: " + cValToChar(Len(aNormal)) + ;
+         "  erros: " + cValToChar(nErros))
+
+Return nErros
+
+// --------------------------------------------------------------------------------
+// the end

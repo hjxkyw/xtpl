@@ -1,0 +1,120 @@
+// separacao.xtpl -- separar os itens de uma remessa por transportadora.
+//
+// Um caso comum: percorrer uma lista, classificar cada item, contar, e parar
+// cedo quando alguma coisa nao bate. Quase tudo que uma rotina de Protheus
+// faz e alguma variacao disto.
+//
+// O arquivo usa todas as formas de controle do xtpl de uma vez, porque o
+// ponto aqui nao e nenhuma delas isolada -- e o que elas tiram do caminho
+// quando aparecem juntas.
+//
+// ============================================================================
+// AS TRES FORMAS DE 'for'
+// ============================================================================
+//
+//    for local nX := 1 to 10        contado, com a variavel do proprio laco
+//    for oItem in aItens            elemento
+//    for oItem, nPos in aItens      elemento e posicao
+//    for 3 times                    repetir, sem variavel nenhuma
+//
+// Elas se distinguem pelo FORMATO, nao por uma palavra a mais. Nao ha
+// 'for each': o que vem depois de 'for' ja diz qual e.
+//
+// A variavel do laco pertence ao laco. Fora dele o nome nao existe, e o
+// armazenamento e reaproveitado pelo proximo.
+//
+// ============================================================================
+// 'do case with'
+// ============================================================================
+//
+//    do case with local cTipo := classifica(oItem)
+//      case cTipo == "A"
+//      ...
+//
+// O sujeito e avaliado UMA vez e fica ligado a um nome que so existe dentro
+// do 'do case'. Em AdvPL puro ou se repete a chamada em cada 'case', ou se
+// declara uma variavel de funcao inteira para segurar um valor que vale tres
+// linhas.
+//
+// ============================================================================
+// AS FORMAS POSFIXADAS
+// ============================================================================
+//
+//    return nTotal if nTotal > nLimite      o teste depois do comando
+//    exit if nErros > 3                     sair do laco
+//    loop if empty(oItem:cCodigo)           pular para a proxima volta
+//
+// Sao um 'if' de uma linha so, escrito na ordem em que se pensa: o que fazer
+// primeiro, a condicao depois. Um 'if/endif' de tres linhas para um comando
+// so e ruido, e ruido esconde o que importa.
+//
+// Nao e economia de digitacao -- e que um bloco de tres linhas parece um
+// bloco, e o olho procura mais coisa dentro dele.
+//
+// ============================================================================
+// 'while local'
+// ============================================================================
+//
+//    while local xItem := proximo(oFila), xItem != nil
+//
+// Ler-e-testar numa linha. Em AdvPL isso vira ou uma chamada repetida (uma
+// antes do laco, outra no fim do corpo, e as duas tem de mudar juntas), ou
+// um 'While .T.' com um 'Exit' no meio -- o laco-e-meio.
+//
+// O xtpl gera um 'While' comum, porque ':=' e uma expressao em AdvPL e
+// devolve o valor atribuido.
+//
+// Compare com separacao_mao.tlpp.
+// ============================================================================
+
+user function separacao(aItens, nLimite)
+  local aExpressa := {}
+  local aNormal := {}
+  local nErros := 0
+  local cRelato := ""
+
+  for oItem, nPos in aItens
+
+    // Item sem codigo nao e erro, e so nao ter o que separar. Uma linha.
+    loop if empty(oItem:cCodigo)
+
+    // Um item sem peso nao da para classificar. Conta e segue.
+    if oItem:nPeso <= 0
+      nErros := nErros + 1
+      cRelato := cRelato + "item " + cValToChar(nPos) + " sem peso; "
+      loop
+    endif
+
+    // Erros demais e sinal de que a remessa esta errada, nao os itens.
+    exit if nErros > 3
+
+    // O sujeito e avaliado uma vez e so existe aqui dentro.
+    do case with local cFaixa := faixaDePeso(oItem:nPeso)
+      case cFaixa == "LEVE"
+        aadd(aExpressa, oItem:cCodigo)
+      case cFaixa == "MEDIO"
+        aadd(aNormal, oItem:cCodigo)
+      otherwise
+        nErros := nErros + 1
+        cRelato := cRelato + "peso fora de faixa em " + cValToChar(nPos) + "; "
+    endcase
+
+  next
+
+  // A fila de reprocessamento, lida ate acabar: le e testa na mesma linha.
+  while local oPendente := proximaPendencia(), oPendente != nil
+    aadd(aNormal, oPendente:cCodigo)
+  enddo
+
+  // Contado, com a variavel do proprio laco.
+  for local nX := 1 to len(aExpressa)
+    marcaExpressa(aExpressa[nX])
+  next
+
+  xconout("expressa: ", len(aExpressa), "  normal: ", len(aNormal), ;
+          "  erros: ", nErros)
+
+  return nErros
+
+// --------------------------------------------------------------------------------
+// the end

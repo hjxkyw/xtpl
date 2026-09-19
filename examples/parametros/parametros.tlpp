@@ -1,0 +1,134 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// parametros.tlpp -- decidir um valor entre varias origens, em ordem.
+//
+// Um caso comum: um valor pode vir do parametro da funcao, ou da configuracao
+// do cliente, ou da configuracao geral, ou de um padrao do codigo. Vale a
+// primeira que existir.
+//
+// ============================================================================
+// O QUE '?:' FAZ
+// ============================================================================
+//
+//    nPrazo := nParam ?: 30
+//
+// Devolve o lado esquerdo se ele nao for Nil, senao o direito. Vira:
+//
+//    If(nParam != Nil, nParam, 30)
+//
+// Encadeia, e para no primeiro que existir:
+//
+//    nPrazo := nParam ?: hCfg{"prazo"} ?: nGeral ?: 30
+//
+// ============================================================================
+// POR QUE NAO 'Default'
+// ============================================================================
+//
+// O AdvPL ja tem isso para uma variavel:
+//
+//    Default nPrazo := 30
+//
+// E o xtpl tem '?=', que gera exatamente a mesma coisa -- e grafia, e o
+// registro de decisoes diz isso com todas as letras.
+//
+// A diferenca e que '?:' e uma EXPRESSAO. 'Default' e '?=' atribuem a uma
+// variavel, e so podem aparecer onde cabe um comando. '?:' vale onde cabe um
+// valor:
+//
+//    gravaTitulo(cCli, nValor, nPrazo ?: 30)          dentro de um argumento
+//    return cNome ?: "sem nome"                       num return
+//    cTexto := "prazo: " + cValToChar(nPrazo ?: 30)   no meio de uma conta
+//
+// Nenhuma dessas tres da para escrever com 'Default'. Precisaria de uma
+// variavel de apoio e de uma linha antes -- que e o que a versao a mao faz.
+//
+// ============================================================================
+// Nil NAO E VAZIO
+// ============================================================================
+//
+// '?:' testa '!= Nil', nada mais. Um zero, um .F. ou uma string vazia passam
+// por ele intactos:
+//
+//    nDesconto := 0 ?: 10       -->  0, nao 10
+//
+// Isso normalmente e o que se quer -- um desconto de zero foi escolhido por
+// alguem e nao deve virar dez. Quando o que se quer e "vazio tambem conta",
+// o teste e 'empty()', e ai e um 'if' comum. Os dois casos aparecem abaixo.
+//
+// Compare com parametros_mao.tlpp.
+// ============================================================================
+
+user function parametros(cCliente, nPrazoParam, nDescParam)
+
+  Local hCfg
+  Local hGeral
+  Local nPrazo := 0
+  Local nDesconto := 0
+  Local cObs := ""
+
+  Local et_0_0
+  Local ht_0_0
+  Local ht_0_1
+
+  hCfg := carregaConfig(cCliente)
+  hGeral := carregaConfig("GERAL")
+
+  // Quatro origens, a primeira que existir. Uma linha.
+  ht_0_0 := Nil
+  hCfg:Get("prazo", @ht_0_0)
+  ht_0_1 := Nil
+  hGeral:Get("prazo", @ht_0_1)
+  et_0_0 := nPrazoParam
+
+  If et_0_0 == Nil
+    et_0_0 := ht_0_0
+    If et_0_0 == Nil
+      et_0_0 := ht_0_1
+      If et_0_0 == Nil
+        et_0_0 := 30
+      EndIf
+    EndIf
+  EndIf
+
+  nPrazo := et_0_0
+
+  // Aqui zero e uma resposta legitima: um desconto de 0% foi escolhido.
+  // '?:' deixa passar, que e o certo.
+  ht_0_0 := Nil
+  hCfg:Get("desconto", @ht_0_0)
+  et_0_0 := nDescParam
+
+  If et_0_0 == Nil
+    et_0_0 := ht_0_0
+    If et_0_0 == Nil
+      et_0_0 := 0
+    EndIf
+  EndIf
+
+  nDesconto := et_0_0
+
+  // E aqui NAO: uma observacao em branco nao e uma observacao. Vazio conta
+  // como ausente, entao o teste e outro e um 'if' comum resolve.
+  ht_0_0 := Nil
+  hCfg:Get("observacao", @ht_0_0)
+  et_0_0 := ht_0_0
+  cObs := If(et_0_0 != Nil, et_0_0, "")
+
+  if empty(cObs)
+    cObs := "sem observacoes"
+  endif
+
+  // Como expressao, dentro de um argumento -- sem variavel de apoio.
+  gravaTitulo(cCliente, nPrazo, nDesconto, cObs)
+
+  conout("prazo " + cValToChar(nPrazo) + " desconto " + cValToChar(nDesconto) + " obs: " + cValToChar(cObs))
+
+  // E num return.
+  ht_0_0 := Nil
+  hCfg:Get("perfil", @ht_0_0)
+  et_0_0 := ht_0_0
+  return If(et_0_0 != Nil, et_0_0, "padrao")
+
+// --------------------------------------------------------------------------------
+// the end

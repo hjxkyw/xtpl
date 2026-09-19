@@ -1,0 +1,89 @@
+// parametros.xtpl -- decidir um valor entre varias origens, em ordem.
+//
+// Um caso comum: um valor pode vir do parametro da funcao, ou da configuracao
+// do cliente, ou da configuracao geral, ou de um padrao do codigo. Vale a
+// primeira que existir.
+//
+// ============================================================================
+// O QUE '?:' FAZ
+// ============================================================================
+//
+//    nPrazo := nParam ?: 30
+//
+// Devolve o lado esquerdo se ele nao for Nil, senao o direito. Vira:
+//
+//    If(nParam != Nil, nParam, 30)
+//
+// Encadeia, e para no primeiro que existir:
+//
+//    nPrazo := nParam ?: hCfg{"prazo"} ?: nGeral ?: 30
+//
+// ============================================================================
+// POR QUE NAO 'Default'
+// ============================================================================
+//
+// O AdvPL ja tem isso para uma variavel:
+//
+//    Default nPrazo := 30
+//
+// E o xtpl tem '?=', que gera exatamente a mesma coisa -- e grafia, e o
+// registro de decisoes diz isso com todas as letras.
+//
+// A diferenca e que '?:' e uma EXPRESSAO. 'Default' e '?=' atribuem a uma
+// variavel, e so podem aparecer onde cabe um comando. '?:' vale onde cabe um
+// valor:
+//
+//    gravaTitulo(cCli, nValor, nPrazo ?: 30)          dentro de um argumento
+//    return cNome ?: "sem nome"                       num return
+//    cTexto := "prazo: " + cValToChar(nPrazo ?: 30)   no meio de uma conta
+//
+// Nenhuma dessas tres da para escrever com 'Default'. Precisaria de uma
+// variavel de apoio e de uma linha antes -- que e o que a versao a mao faz.
+//
+// ============================================================================
+// Nil NAO E VAZIO
+// ============================================================================
+//
+// '?:' testa '!= Nil', nada mais. Um zero, um .F. ou uma string vazia passam
+// por ele intactos:
+//
+//    nDesconto := 0 ?: 10       -->  0, nao 10
+//
+// Isso normalmente e o que se quer -- um desconto de zero foi escolhido por
+// alguem e nao deve virar dez. Quando o que se quer e "vazio tambem conta",
+// o teste e 'empty()', e ai e um 'if' comum. Os dois casos aparecem abaixo.
+//
+// Compare com parametros_mao.tlpp.
+// ============================================================================
+
+user function parametros(cCliente, nPrazoParam, nDescParam)
+  local hCfg := carregaConfig(cCliente)
+  local hGeral := carregaConfig("GERAL")
+  local nPrazo := 0
+  local nDesconto := 0
+  local cObs := ""
+
+  // Quatro origens, a primeira que existir. Uma linha.
+  nPrazo := nPrazoParam ?: hCfg{"prazo"} ?: hGeral{"prazo"} ?: 30
+
+  // Aqui zero e uma resposta legitima: um desconto de 0% foi escolhido.
+  // '?:' deixa passar, que e o certo.
+  nDesconto := nDescParam ?: hCfg{"desconto"} ?: 0
+
+  // E aqui NAO: uma observacao em branco nao e uma observacao. Vazio conta
+  // como ausente, entao o teste e outro e um 'if' comum resolve.
+  cObs := hCfg{"observacao"} ?: ""
+  if empty(cObs)
+    cObs := "sem observacoes"
+  endif
+
+  // Como expressao, dentro de um argumento -- sem variavel de apoio.
+  gravaTitulo(cCliente, nPrazo, nDesconto, cObs)
+
+  xconout("prazo ", nPrazo, " desconto ", nDesconto, " obs: ", cObs)
+
+  // E num return.
+  return hCfg{"perfil"} ?: "padrao"
+
+// --------------------------------------------------------------------------------
+// the end

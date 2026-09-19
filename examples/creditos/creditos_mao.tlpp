@@ -1,0 +1,92 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// creditos_mao.tlpp -- a mesma funcao de creditos.xtpl, escrita a mao.
+//
+// Nao e um espantalho: e o que alguem escreveria, e esta correta. O ponto e
+// contar quantas vezes a mesma coisa aparece.
+//
+// ============================================================================
+// CINCO SAIDAS, QUATRO LIMPEZAS
+//
+//    1. cliente vazio          -> so o log
+//    2. passou do limite       -> log + area + ordem + registro
+//    3. fim do laco            -> log + area + ordem + registro
+//    4. (se houvesse erro)     -> nada, e ai esta o problema
+//
+// A limpeza de tres linhas aparece DUAS vezes abaixo, e teria de aparecer em
+// toda saida nova. Acrescente um 'return' daqui a seis meses, num galho que
+// pareca obviamente simples, e as tres linhas nao vao junto.
+//
+// O que acontece entao nao aparece aqui. Quem chamou continua o proprio laco
+// numa area que nao e a dele, numa ordem que nao escolheu, num registro que
+// esta funcao deixou. O erro aparece la, e parece outra coisa.
+//
+// E por isso que 'using alias' e 'defer' existem: nao por serem mais curtos,
+// mas porque nao da para esquecer um caminho quando nao se escreve caminho
+// nenhum.
+// ============================================================================
+
+User Function CreditosMao(cCliente, nLimite)
+
+  Local nAberto  := 0
+  Local nTitulos := 0
+  Local oLog     := Nil
+  Local cAreaAnt := ""
+  Local nOrdAnt  := 0
+  Local nRecAnt  := 0
+
+  oLog := U_AbreLog("creditos.log")
+
+  // ---- saida 1 -------------------------------------------------------------
+  If Empty(cCliente)
+    oLog:Write("cliente vazio, nada a fazer")
+    oLog:Close()
+    Return 0
+  EndIf
+
+  // ---- guarda o estado -----------------------------------------------------
+  cAreaAnt := Alias()
+  DbSelectArea("SE1")
+  nRecAnt  := SE1->(RecNo())
+  nOrdAnt  := SE1->(IndexOrd())
+  SE1->(DbSetOrder(1))
+
+  SE1->(DbSeek(xFilial("SE1") + cCliente))
+
+  While SE1->E1_CLIENTE == cCliente .And. !SE1->(Eof())
+
+    If SE1->E1_SALDO > 0
+      nAberto  += SE1->E1_SALDO
+      nTitulos += 1
+    EndIf
+
+    // ---- saida 2: a limpeza inteira, de novo -------------------------------
+    If nAberto > nLimite
+      oLog:Write("cliente " + cCliente + " passou do limite")
+      oLog:Close()
+      SE1->(DbSetOrder(nOrdAnt))
+      SE1->(DbGoto(nRecAnt))
+      If !Empty(cAreaAnt)
+        DbSelectArea(cAreaAnt)
+      EndIf
+      Return nAberto
+    EndIf
+
+    SE1->(DbSkip())
+  EndDo
+
+  // ---- saida 3: a limpeza inteira, pela terceira vez ------------------------
+  oLog:Write("cliente " + cCliente + ": " + cValToChar(nTitulos) + ;
+             " titulos, " + cValToChar(nAberto) + " em aberto")
+  oLog:Close()
+  SE1->(DbSetOrder(nOrdAnt))
+  SE1->(DbGoto(nRecAnt))
+  If !Empty(cAreaAnt)
+    DbSelectArea(cAreaAnt)
+  EndIf
+
+Return nAberto
+
+// --------------------------------------------------------------------------------
+// the end

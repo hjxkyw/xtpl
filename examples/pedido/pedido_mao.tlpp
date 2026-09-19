@@ -1,0 +1,97 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// pedido_mao.tlpp -- a mesma funcao de pedido.xtpl, escrita a mao.
+//
+// Aqui o ganho NAO e menos linhas. E quase o mesmo tamanho. O que muda e o
+// que fica dito no codigo e o que fica no costume de quem escreve.
+//
+// ============================================================================
+// O QUE E FACIL ERRAR AQUI
+// ============================================================================
+//
+// 1. A SAIDA DO LACO
+//
+//    While !SC6->(Eof())
+//      If SC6->C6_NUM != cNumero
+//        Exit                      <-- esta linha
+//
+//    Sem ela, o laco le a SC6 inteira e soma zero em todos os outros
+//    pedidos. A resposta continua CERTA. So a leitura e que passou de dez
+//    registros para dois milhoes, e ninguem percebe ate a tabela crescer.
+//
+//    Trocar o 'Exit' por um 'Loop' tem o mesmo efeito, e parece mais seguro
+//    para quem le.
+//
+// 2. A ORDEM
+//
+//    O 'Exit' acima so esta certo se os itens do pedido estiverem juntos --
+//    ou seja, se a ordem 1 for a que agrupa por numero. Se alguem chamar esta
+//    funcao com outra ordem ativa, ela para no primeiro item que nao e deste
+//    pedido e devolve um total PARCIAL.
+//
+//    Sem erro, sem aviso, e a conta fecha errada.
+//
+//    Por isso o DbSetOrder(1) esta aqui em cima, e por isso ele tem de estar
+//    dentro do bloco que restaura a ordem anterior.
+//
+// 3. AS DUAS PASSADAS
+//
+//    A segunda contagem repete as mesmas seis linhas de percurso. Em xtpl ela
+//    e outra cadeia com o mesmo comeco; aqui e copiar e colar, e as duas
+//    versoes divergem na primeira vez que a regra mudar.
+//
+// ============================================================================
+
+User Function PedidoMao(cNumero)
+
+  Local nTotal   := 0
+  Local nItens   := 0
+  Local cChave   := xFilial("SC6") + cNumero
+  Local cAreaAnt := ""
+  Local nOrdAnt  := 0
+  Local nRecAnt  := 0
+
+  cAreaAnt := Alias()
+  DbSelectArea("SC6")
+  nRecAnt  := SC6->(RecNo())
+  nOrdAnt  := SC6->(IndexOrd())
+  SC6->(DbSetOrder(1))
+
+  // ---- primeira passada: o valor -------------------------------------------
+  SC6->(DbSeek(cChave))
+  While !SC6->(Eof())
+    If SC6->C6_NUM != cNumero
+      Exit
+    EndIf
+    If Empty(SC6->C6_BLQ)
+      nTotal += SC6->C6_VALOR
+    EndIf
+    SC6->(DbSkip())
+  EndDo
+
+  // ---- segunda passada: a contagem, as mesmas seis linhas -------------------
+  SC6->(DbSeek(cChave))
+  While !SC6->(Eof())
+    If SC6->C6_NUM != cNumero
+      Exit
+    EndIf
+    If Empty(SC6->C6_BLQ)
+      nItens += 1
+    EndIf
+    SC6->(DbSkip())
+  EndDo
+
+  SC6->(DbSetOrder(nOrdAnt))
+  SC6->(DbGoto(nRecAnt))
+  If !Empty(cAreaAnt)
+    DbSelectArea(cAreaAnt)
+  EndIf
+
+  ConOut("pedido " + cNumero + ": " + cValToChar(nItens) + " itens, " + ;
+         cValToChar(nTotal) + " em valor")
+
+Return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

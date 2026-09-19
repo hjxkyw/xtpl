@@ -1,0 +1,108 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// fechamento_mao.tlpp -- a mesma funcao de fechamento.xtpl, escrita a mao.
+//
+// Nove declaracoes no topo, todas vivas do inicio ao fim. Nao ha nada de
+// errado com este codigo. O problema e o que ele permite.
+//
+// ============================================================================
+// O QUE E FACIL ERRAR AQUI
+// ============================================================================
+//
+// 1. O TEMPORARIO QUE SOBROU
+//
+//    'aVendas' continua vivo na secao 4. Ler ali e um erro em qualquer lugar
+//    do arquivo abaixo da declaracao, e nada avisa:
+//
+//       nSoma := Len(aVendas)      <-- na secao 3, por engano
+//
+//    Da o tamanho das vendas em vez dos custos. Compila, roda, e o numero
+//    esta errado.
+//
+//    Em xtpl 'aVendas' nao existe fora do bloco onde foi declarado. A mesma
+//    linha e recusada, dizendo onde o nome foi visto pela ultima vez.
+//
+// 2. O REAPROVEITAMENTO A MAO
+//
+//    A reacao natural a nove declaracoes e reusar uma:
+//
+//       aTmp := BuscaVendas(...)
+//       ...
+//       aTmp := BuscaCustos(...)   <-- a mesma variavel, outro conteudo
+//
+//    Funciona ate alguem, entre as duas, guardar aTmp num code block ou
+//    passar por referencia. Ai o reuso vira um bug, e um bug que so aparece
+//    quando o bloco roda -- longe daqui.
+//
+//    Em xtpl o compartilhamento e decidido POR DECLARACAO, olhando o que
+//    acontece com cada uma. Uma variavel capturada por um bloco ganha
+//    armazenamento proprio automaticamente; as outras dividem.
+//
+// 3. 'nSoma' DUAS VEZES
+//
+//    Duas secoes querem um 'nSoma'. A mao ou se declara uma so e se reusa --
+//    e ai vale o item 2 --, ou se inventa 'nSoma1' e 'nSoma2'. Nenhum dos
+//    dois e bom. Em xtpl as duas secoes declaram 'nSoma', e sao variaveis
+//    diferentes que por acaso dividem armazenamento.
+//
+// ============================================================================
+
+User Function FechamentoMao(cFilial, aAcoes)
+
+  Local nTotal  := 0
+  Local cResumo := ""
+  Local aVendas := {}
+  Local aCustos := {}
+  Local aLinha  := {}
+  Local nSoma1  := 0
+  Local nSoma2  := 0
+  Local nMeta   := 0
+  Local nX      := 0
+
+  // ---- secao 1: vendas -------------------------------------------------------
+  If !Empty(cFilial)
+    aVendas := U_BuscaVendas(cFilial)
+    nSoma1  := 0
+    For nX := 1 To Len(aVendas)
+      nSoma1 += aVendas[nX]:nValor
+    Next
+    nTotal  += nSoma1
+    cResumo += "vendas: " + cValToChar(nSoma1) + CRLF
+  EndIf
+
+  // ---- secao 2: custos -------------------------------------------------------
+  If !Empty(cFilial)
+    aCustos := U_BuscaCustos(cFilial)
+    nSoma2  := 0
+    For nX := 1 To Len(aCustos)
+      nSoma2 += aCustos[nX]:nValor
+    Next
+    nTotal  -= nSoma2
+    cResumo += "custos: " + cValToChar(nSoma2) + CRLF
+  EndIf
+
+  // ---- secao 3 ---------------------------------------------------------------
+  If nTotal > 0
+    aLinha := {cFilial, nTotal}
+    AAdd(aAcoes, aLinha)
+  EndIf
+
+  // ---- secao 4 ---------------------------------------------------------------
+  // nMeta e capturada pelo bloco. Aqui isso e seguro porque nMeta nao e
+  // reusada depois -- mas nada no codigo diz isso, e nada impede que passe a
+  // ser na proxima alteracao.
+  If nTotal > 0
+    nMeta := U_CalculaMeta(cFilial)
+    AAdd(aAcoes, {|| U_AvisaMeta(cFilial, nMeta)})
+  EndIf
+
+  // Daqui, aVendas, aCustos, nSoma1, nSoma2 e nMeta continuam todas visiveis
+  // e todas com o ultimo valor que receberam.
+
+  ConOut("fechamento " + cFilial + ": " + cValToChar(nTotal))
+
+Return cResumo
+
+// --------------------------------------------------------------------------------
+// the end

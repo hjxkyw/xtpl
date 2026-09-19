@@ -1,0 +1,89 @@
+// integra.xtpl -- ler um JSON de um servico, com um caminho de erro por passo.
+//
+// Um caso comum: chamar um servico, ler a resposta, e continuar mesmo quando
+// alguma coisa no meio falha. Cada passo pode quebrar de um jeito diferente,
+// e cada um tem uma resposta diferente para isso.
+//
+// ============================================================================
+// O QUE 'fallback' FAZ
+// ============================================================================
+//
+//    xValor := algoQuePodeQuebrar() fallback outraCoisa
+//
+// Roda o lado esquerdo. Se ele levantar um erro de runtime, o resultado e o
+// lado direito. O direito so e avaliado se o esquerdo falhar -- e por isso
+// que os dois viram code blocks na saida.
+//
+// Em AdvPL isso e um BEGIN SEQUENCE com um ErrorBlock trocado e reposto:
+//
+//    bOld := ErrorBlock({|e| Break(e)})
+//    BEGIN SEQUENCE
+//      xValor := algoQuePodeQuebrar()
+//    RECOVER
+//      xValor := outraCoisa
+//    END SEQUENCE
+//    ErrorBlock(bOld)                 <-- esta linha
+//
+// Sete linhas por passo protegido. E o 'ErrorBlock(bOld)' no fim: sem ele, o
+// tratador fica trocado para o resto da thread, e o proximo erro em qualquer
+// lugar do sistema cai num Break que ninguem esperava.
+//
+// ============================================================================
+// O QUE 'fallback' NAO FAZ
+// ============================================================================
+//
+// Nao pega tudo. Pega o que o AdvPL trata como erro de runtime e o RECOVER
+// alcanca. Uma funcao que devolve Nil em silencio, ou .F., ou uma string
+// vazia, continua devolvendo isso -- o fallback nem sabe que houve problema.
+//
+// Por isso os passos abaixo testam o resultado ALEM de protege-lo. 'fallback'
+// e para o que levanta erro; '?:' e para o que volta vazio. Sao coisas
+// diferentes e o programa precisa das duas.
+//
+// Nao e para esconder erro. Um fallback que devolve zero e diz que deu certo
+// e pior do que a quebra, porque a quebra aparece. Cada um aqui deixa um
+// rastro.
+//
+// Compare com integra_mao.tlpp.
+// ============================================================================
+
+user function integra(cUrl, cChave)
+  local cResposta := ""
+  local jDados := nil
+  local aItens := {}
+  local nQuantos := 0
+  local cErro := ""
+
+  // 1. A chamada de rede. Quebra de varios jeitos -- timeout, DNS, servico
+  //    fora do ar -- e todos chegam aqui como erro de runtime.
+  cResposta := chamaServico(cUrl, cChave) fallback ""
+
+  if empty(cResposta)
+    cErro := "servico nao respondeu"
+    logErro(cErro)
+    return {}
+  endif
+
+  // 2. O parse. Uma resposta que nao e JSON quebra aqui, e uma que e JSON
+  //    valido mas vazio nao quebra -- volta Nil. Os dois casos precisam de
+  //    tratamento, e sao tratamentos diferentes.
+  jDados := parseJson(cResposta) fallback nil
+
+  if jDados == nil
+    cErro := "resposta nao e json: " + left(cResposta, 60)
+    logErro(cErro)
+    return {}
+  endif
+
+  // 3. Um campo que pode nao existir. Aqui nao se quer erro nenhum: a
+  //    ausencia e uma resposta legitima, e '?:' da o valor de quando vier
+  //    vazio.
+  aItens := (jDados["itens"] fallback nil) ?: {}
+  nQuantos := len(aItens)
+
+  xconout("integra: ", nQuantos, " itens de ", cUrl)
+
+  return aItens
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,116 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// etiqueta_mao.tlpp -- a mesma funcao de etiqueta.xtpl, escrita a mao.
+//
+// Cinco caminhos opcionais. Cada um precisa testar cada elo antes de ler o
+// proximo, e o teste do elo de fora se repete em todos.
+//
+// ============================================================================
+// O QUE E FACIL ERRAR AQUI
+// ============================================================================
+//
+// 1. TESTAR O ULTIMO ELO E NAO OS DO MEIO
+//
+//       If oPedido:oEntrega != Nil               <-- e se oPedido for Nil?
+//         cRua := oPedido:oEntrega:cRua
+//
+//    O teste parece completo e nao e. Quebra com 'type mismatch on :' na
+//    primeira vez que chegar um pedido sem cliente -- em producao, num
+//    registro entre dez mil.
+//
+//    Quanto mais fundo o caminho, mais facil esquecer um elo do meio.
+//
+// 2. A ORDEM DOS TESTES
+//
+//       If oPedido:oEntrega != Nil .And. oPedido != Nil
+//
+//    Escrito assim le 'oPedido:oEntrega' ANTES de testar 'oPedido'. O
+//    '.And.' do AdvPL avalia da esquerda para a direita e para no primeiro
+//    falso -- entao a ordem e o que protege, e inverte-la tira a protecao
+//    sem mudar a aparencia.
+//
+// 3. Nil E "" NAO SAO A MESMA COISA
+//
+//       cCompl := oPedido:oEntrega:cComplemento
+//       If cCompl == Nil
+//         cCompl := ""
+//       EndIf
+//       If !Empty(cCompl)          <-- os dois testes, e sao diferentes
+//
+//    Um campo pode existir e estar vazio. Trocar um teste pelo outro faz a
+//    etiqueta sair com uma virgula solta no fim do endereco.
+//
+// 4. AS VARIAVEIS DE APOIO
+//
+//    Cada caminho opcional vira duas ou tres linhas com um temporario. Sao
+//    cinco caminhos. Ou se declara cinco temporarios, ou se reusa um -- e ai
+//    o valor de um caminho vaza para o seguinte se alguem acrescentar um
+//    'If' no meio.
+//
+// ============================================================================
+
+User Function EtiquetaMao(oPedido)
+
+  Local cLinha1 := ""
+  Local cLinha2 := ""
+  Local cLinha3 := ""
+  Local cCompl  := ""
+  Local cCidade := ""
+  Local cUf     := ""
+
+  // ---- linha 1: fantasia, senao razao social, senao um texto ---------------
+  If oPedido != Nil .And. oPedido:oCliente != Nil
+    cLinha1 := oPedido:oCliente:cFantasia
+  EndIf
+  If cLinha1 == Nil .Or. Empty(cLinha1)
+    If oPedido != Nil .And. oPedido:oCliente != Nil
+      cLinha1 := oPedido:oCliente:cRazao
+    EndIf
+  EndIf
+  If cLinha1 == Nil .Or. Empty(cLinha1)
+    cLinha1 := "SEM NOME"
+  EndIf
+
+  // ---- linha 2: a rua ------------------------------------------------------
+  If oPedido != Nil .And. oPedido:oEntrega != Nil
+    cLinha2 := oPedido:oEntrega:cRua
+  EndIf
+  If cLinha2 == Nil
+    cLinha2 := "endereco nao informado"
+  EndIf
+
+  // ---- o complemento, que pode existir e estar vazio ------------------------
+  If oPedido != Nil .And. oPedido:oEntrega != Nil
+    cCompl := oPedido:oEntrega:cComplemento
+  EndIf
+  If cCompl == Nil
+    cCompl := ""
+  EndIf
+  If !Empty(cCompl)
+    cLinha2 += ", " + AllTrim(cCompl)
+  EndIf
+
+  // ---- linha 3: cidade e uf ------------------------------------------------
+  If oPedido != Nil .And. oPedido:oEntrega != Nil
+    cCidade := oPedido:oEntrega:cCidade
+  EndIf
+  If cCidade == Nil
+    cCidade := ""
+  EndIf
+
+  If oPedido != Nil .And. oPedido:oEntrega != Nil
+    cUf := oPedido:oEntrega:cUf
+  EndIf
+  If cUf == Nil
+    cUf := ""
+  EndIf
+
+  cLinha3 := AllTrim(cCidade) + " " + cUf
+
+  ConOut("etiqueta: " + cLinha1 + " / " + cLinha2 + " / " + cLinha3)
+
+Return {cLinha1, cLinha2, cLinha3}
+
+// --------------------------------------------------------------------------------
+// the end

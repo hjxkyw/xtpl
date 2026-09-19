@@ -1,0 +1,81 @@
+// pedido.xtpl -- somar os itens de um pedido, parando quando ele acaba.
+//
+// Um caso comum: SC6 esta indexada por filial + numero do pedido, e os itens
+// de um pedido ficam juntos. Somar o valor deles e uma leitura curta -- desde
+// que se pare no primeiro item que ja e de outro pedido.
+//
+// ============================================================================
+// O QUE 'rows()' FAZ
+// ============================================================================
+//
+//    rows("SC6")              percorre a tabela inteira, do topo
+//    rows("SC6", cChave)      faz DbSeek(cChave) e percorre dali
+//
+// Cada volta entrega o REGISTRO CORRENTE, nao uma copia dele: 'r:C6_VALOR' le
+// o campo onde o cursor esta agora. Nao ha array nenhum -- nem no meio, nem no
+// fim, a menos que a cadeia termine num que construa um.
+//
+// No fim, o registro corrente e a area selecionada voltam ao que eram.
+//
+// ============================================================================
+// POR QUE 'takewhile' E NAO 'filter'
+// ============================================================================
+//
+// Os dois parecem a mesma coisa e sao muito diferentes:
+//
+//    filter      testa TODOS os registros e guarda os que passam
+//    takewhile   para no PRIMEIRO que nao passa
+//
+// Com a tabela na ordem certa, o primeiro item de outro pedido e a prova de
+// que nao ha mais nada deste. 'filter' leria a SC6 inteira para descobrir
+// isso -- um pedido de dez itens numa tabela de dois milhoes.
+//
+// E por isso que 'using alias SC6 order 1' vem junto: o 'takewhile' so esta
+// certo se a ordem garantir que os itens do pedido estao juntos. A ordem nao
+// e detalhe de performance aqui, e o que torna a leitura correta.
+//
+// ============================================================================
+// O QUE A CADEIA VIRA
+// ============================================================================
+//
+// Nenhuma etapa constroi array. As quatro viram um laco so:
+//
+//    DbSeek        entra no pedido
+//    While         enquanto nao e Eof
+//      takewhile     if mudou o pedido -> Exit
+//      filter        if nao esta cancelado
+//      map             pega o valor
+//      asum              soma
+//    DbSkip
+//
+// Compare com pedido_mao.tlpp.
+// ============================================================================
+
+user function pedido(cNumero)
+  local nTotal := 0
+  local nItens := 0
+  local cChave := xFilial("SC6") + cNumero
+
+  using alias SC6 order 1 do
+
+    // Uma passada: para no primeiro item de outro pedido, ignora os
+    // cancelados, e soma o valor do resto.
+    nTotal := rows("SC6", cChave)                            ;
+              |> takewhile([oItem] oItem:C6_NUM == cNumero)  ;
+              |> filter([oItem] empty(oItem:C6_BLQ))         ;
+              |> map([oItem] oItem:C6_VALOR)                 ;
+              |> asum
+
+    // A segunda passada re-le os mesmos dez registros, nao a tabela.
+    nItens := rows("SC6", cChave)                            ;
+              |> takewhile([oItem] oItem:C6_NUM == cNumero)  ;
+              |> count([oItem] empty(oItem:C6_BLQ))
+
+  end using
+
+  xconout("pedido ", cNumero, ": ", nItens, " itens, ", nTotal, " em valor")
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,0 +1,154 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
+
+// creditos.tlpp -- somar o saldo em aberto de um cliente, com um relatorio.
+//
+// Um caso comum: abrir uma area de trabalho, percorrer os titulos de um
+// cliente, somar o que esta em aberto, e gravar uma linha de log. Cinco
+// saidas diferentes da funcao, e todas tem de deixar o ambiente como
+// acharam.
+//
+// ============================================================================
+// O PROBLEMA
+// ============================================================================
+//
+// Uma funcao que mexe numa area de trabalho toma emprestado um estado global:
+//
+//    - a area SELECIONADA muda quando ela chama DbSelectArea
+//    - a ORDEM do indice muda quando ela chama DbSetOrder
+//    - o REGISTRO corrente muda a cada DbSkip
+//
+// Quem chamou nao sabe de nada disso. Se a funcao voltar sem restaurar, o
+// laco de quem chamou continua de onde ESTA funcao parou, numa area que nao
+// e a dele, numa ordem que ele nao escolheu. O estrago nao aparece aqui --
+// aparece la, e parece outra coisa.
+//
+// Restaurar num caminho so e facil. O problema sao os OUTROS caminhos: o
+// return antecipado de quando nao ha nada a fazer, o return de dentro do
+// laco, e a saida por erro. Sao esses que se esquece.
+//
+// ============================================================================
+// O QUE 'using alias' E 'defer' FAZEM
+// ============================================================================
+//
+//    using alias SE1 order 1 do
+//      ...
+//    end using
+//
+// Guarda a area selecionada, a ordem e o registro ANTES do bloco, e repoe os
+// tres na saida -- em TODA saida, inclusive um 'return' de dentro do bloco.
+//
+//    defer arquivo:Close()
+//
+// Registra uma coisa a fazer na saida da FUNCAO. Vale o mesmo: todo caminho
+// de saida executa, na ordem inversa em que foram registrados, como uma pilha.
+//
+// Nenhum dos dois e novidade conceitual -- e o que qualquer um faria a mao.
+// O ganho e que nao da para esquecer um caminho, porque nao se escreve
+// caminho nenhum.
+//
+// ============================================================================
+// EM QUE ORDEM
+// ============================================================================
+//
+// Numa saida, os 'defer' rodam PRIMEIRO, depois as areas de trabalho, do
+// bloco mais interno para fora.
+//
+// Nao e a ordem de uma pilha, e e de proposito: um corpo de 'defer' pode
+// ainda querer LER a area -- gravar no log o registro em que parou, por
+// exemplo. Se a area voltasse antes, ele leria a area de quem chamou.
+//
+// ============================================================================
+//
+// Compare com creditos_mao.tlpp, a mesma funcao escrita a mao, correta, e com
+// a mesma limpeza de tres linhas escrita tres vezes.
+// ============================================================================
+
+user function creditos(cCliente, nLimite)
+
+  Local nAberto := 0
+  Local nTitulos := 0
+  Local oLog
+
+  Local s_1_usearea
+  Local s_1_useord
+  Local s_1_userec
+  Local s_2_lMesmo
+
+  oLog := abreLog("creditos.log")
+
+  // O log fecha em toda saida daqui para baixo, inclusive nos dois returns
+  // antecipados logo abaixo e no return de dentro do laco.
+
+  if empty(cCliente)
+    oLog:Write("cliente vazio, nada a fazer")
+    oLog:Close()
+    return 0
+
+  endif
+
+  let usearea as s_1_usearea
+  let userec as s_1_userec
+  s_1_usearea := Alias()
+  DbSelectArea("SE1")
+  s_1_userec := SE1->(RecNo())
+  let useord as s_1_useord
+  s_1_useord := SE1->(IndexOrd())
+  SE1->(DbSetOrder(1))
+    SE1->(DbSeek(xFilial("SE1") + cCliente))
+
+    let lMesmo as s_2_lMesmo
+    While (s_2_lMesmo := SE1->E1_CLIENTE == cCliente) .and. !SE1->(Eof())
+
+      if SE1->E1_SALDO > 0
+        nAberto := nAberto + SE1->E1_SALDO
+        nTitulos := nTitulos + 1
+      endif
+
+      // Saida de dentro do laco, de dentro do using: a area, a ordem e o
+      // registro voltam ao que eram, e o log fecha.
+      if nAberto > nLimite
+        oLog:Write("cliente " + cCliente + " passou do limite")
+        oLog:Close()
+        SE1->(DbSetOrder(s_1_useord))
+        SE1->(DbGoto(s_1_userec))
+        If !Empty(s_1_usearea)
+          DbSelectArea(s_1_usearea)
+        EndIf
+        return nAberto
+
+      endif
+
+      SE1->(DbSkip())
+    enddo
+  SE1->(DbSetOrder(s_1_useord))
+  SE1->(DbGoto(s_1_userec))
+
+  If !Empty(s_1_usearea)
+    DbSelectArea(s_1_usearea)
+  EndIf
+
+  oLog:Write("cliente " + cCliente + ": " + cValToChar(nTitulos) + " titulos, " + cValToChar(nAberto) + " em aberto")
+
+  oLog:Close()
+  return nAberto
+
+// --------------------------------------------------------------------------------
+// the end

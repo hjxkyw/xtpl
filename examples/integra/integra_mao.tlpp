@@ -1,0 +1,98 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// integra_mao.tlpp -- a mesma funcao de integra.xtpl, escrita a mao.
+//
+// Tres passos protegidos, sete linhas cada. O corpo -- o que a funcao
+// realmente faz -- some no meio da maquinaria.
+//
+// ============================================================================
+// O QUE E FACIL ERRAR AQUI
+// ============================================================================
+//
+// 1. O 'ErrorBlock(bOld)' DO FIM
+//
+//    O ErrorBlock e da THREAD, nao do bloco. Trocar e nao repor deixa o
+//    tratador de Break valendo para tudo que rodar depois -- em qualquer
+//    funcao, em qualquer lugar do sistema.
+//
+//    O estrago nao aparece aqui. Aparece no proximo erro de outra pessoa,
+//    que cai num RECOVER que ninguem escreveu.
+//
+//    Sao tres reposicoes abaixo. Esquecer uma e o suficiente.
+//
+// 2. UM 'RETURN' DE DENTRO DO BEGIN SEQUENCE
+//
+//    Sair de dentro do bloco pula o ErrorBlock(bOld) do fim. Aqui nao ha
+//    nenhum, de proposito -- mas e a primeira coisa que alguem acrescenta
+//    quando o codigo cresce, e parece inofensivo.
+//
+// 3. O 'bOld' COMPARTILHADO
+//
+//    Os tres passos abaixo reusam a mesma variavel. Se um deles esquecer de
+//    repor antes do proximo trocar, o valor original se perde e nao ha mais
+//    como voltar. Em xtpl cada protecao tem o seu, porque cada uma e uma
+//    chamada de funcao com locais proprios.
+//
+// ============================================================================
+
+User Function IntegraMao(cUrl, cChave)
+
+  Local cResposta := ""
+  Local jDados    := Nil
+  Local aItens    := {}
+  Local nQuantos  := 0
+  Local cErro     := ""
+  Local bOld      := Nil
+
+  // ---- 1. a chamada de rede -------------------------------------------------
+  bOld := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    cResposta := U_ChamaServico(cUrl, cChave)
+  RECOVER
+    cResposta := ""
+  END SEQUENCE
+  ErrorBlock(bOld)
+
+  If Empty(cResposta)
+    cErro := "servico nao respondeu"
+    U_LogErro(cErro)
+    Return {}
+  EndIf
+
+  // ---- 2. o parse -----------------------------------------------------------
+  bOld := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    jDados := U_ParseJson(cResposta)
+  RECOVER
+    jDados := Nil
+  END SEQUENCE
+  ErrorBlock(bOld)
+
+  If jDados == Nil
+    cErro := "resposta nao e json: " + Left(cResposta, 60)
+    U_LogErro(cErro)
+    Return {}
+  EndIf
+
+  // ---- 3. o campo que pode nao existir --------------------------------------
+  bOld := ErrorBlock({|e| Break(e)})
+  BEGIN SEQUENCE
+    aItens := jDados["itens"]
+  RECOVER
+    aItens := Nil
+  END SEQUENCE
+  ErrorBlock(bOld)
+
+  If aItens == Nil
+    aItens := {}
+  EndIf
+
+  nQuantos := Len(aItens)
+
+  ConOut("integra: " + cValToChar(nQuantos) + " itens de " + cUrl)
+
+Return aItens
+
+// --------------------------------------------------------------------------------
+// the end

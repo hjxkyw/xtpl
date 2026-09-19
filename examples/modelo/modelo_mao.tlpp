@@ -1,0 +1,101 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// modelo_mao.tlpp -- a mesma funcao de modelo.xtpl, escrita a mao.
+//
+// Esta escrita da forma boa: os submodelos vao para variaveis, e cada
+// GetModel roda uma vez. E o que alguem experiente escreve.
+//
+// O que ela mostra e o preco dessa forma boa, e como e facil escrever a
+// outra.
+//
+// ============================================================================
+// A VERSAO QUE SE ESCREVE COM PRESSA
+// ============================================================================
+//
+//    oModel:GetModel("SA1MASTER"):SetValue("A1_COD", cCod)
+//    oModel:GetModel("SA1MASTER"):SetValue("A1_NOME", cNome)
+//    oModel:GetModel("SA1MASTER"):SetValue("A1_STATUS", "1")
+//
+// Compila, roda, grava certo. E chama GetModel tres vezes para fazer o
+// trabalho de uma. Numa rotina de vinte linhas sao vinte chamadas, e dentro
+// de um laco de mil contatos sao vinte mil.
+//
+// Ninguem percebe: a resposta esta certa. So a rotina e que demora, e quando
+// alguem for procurar por que, vai procurar no lugar errado.
+//
+// E a mesma familia do 'Exit' esquecido num laco ordenado -- um erro que nao
+// erra nada.
+//
+// ============================================================================
+// O QUE A VERSAO BOA CUSTA
+// ============================================================================
+//
+// 1. DUAS VARIAVEIS DE FUNCAO INTEIRA
+//
+//    'oMaster' e 'oContato' existem da primeira linha ate a ultima, para
+//    valerem dez linhas cada. Depois do laco as duas continuam la, com o
+//    ultimo valor, visiveis para tudo que for acrescentado abaixo.
+//
+//    E exatamente o que o escopo de bloco existe para evitar. Aqui nao ha
+//    escolha: o AdvPL nao tem onde mais declarar.
+//
+// 2. O NOME REPETIDO EM TODA LINHA
+//
+//    'oMaster:' abre dez linhas seguidas. A informacao util de cada linha e
+//    o que vem depois dos dois-pontos, e ela comeca na coluna doze.
+//
+// 3. O SUJEITO ERRADO
+//
+//    Com dois objetos de nomes parecidos em escopo ao mesmo tempo, escrever
+//    'oMaster:SetValue' onde era 'oContato:SetValue' compila e roda. Grava o
+//    campo no modelo errado, e o erro aparece na validacao do modelo -- ou
+//    nao aparece.
+//
+//    Em xtpl o sujeito nao tem nome dentro do bloco: e ':'. Nao da para
+//    escrever o outro por engano, porque nao ha outro para escrever.
+//
+// ============================================================================
+
+User Function ModeloMao(oModel, cCod, cNome, aContatos)
+
+  Local nGravados := 0
+  Local cChave    := ""
+  Local oMaster   := Nil
+  Local oContato  := Nil
+  Local nX        := 0
+
+  oMaster := oModel:GetModel("SA1MASTER")
+
+  oMaster:SetValue("A1_COD", cCod)
+  oMaster:SetValue("A1_NOME", cNome)
+  oMaster:SetValue("A1_STATUS", "1")
+
+  cChave := oMaster:GetValue("A1_FILIAL") + oMaster:GetValue("A1_COD")
+
+  oContato := oModel:GetModel("SA1CONTATO")
+
+  For nX := 1 To Len(aContatos)
+
+    If Empty(aContatos[nX]:cEmail)
+      Loop
+    EndIf
+
+    oContato:GoLine(nX)
+    oContato:SetValue("A1C_NOME", aContatos[nX]:cNome)
+    oContato:SetValue("A1C_EMAIL", aContatos[nX]:cEmail)
+
+    nGravados += 1
+
+  Next
+
+  oMaster:SetValue("A1_CONTATO", cValToChar(nGravados))
+
+  // Daqui, oMaster e oContato continuam visiveis e com o ultimo valor.
+
+  ConOut("modelo " + cChave + ": " + cValToChar(nGravados) + " contatos")
+
+Return nGravados
+
+// --------------------------------------------------------------------------------
+// the end

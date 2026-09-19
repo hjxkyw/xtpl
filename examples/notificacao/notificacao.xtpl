@@ -1,0 +1,129 @@
+// notificacao.xtpl -- montar o texto de um aviso de cobranca.
+//
+// Um caso comum: juntar dados num texto legivel, e separar um texto que veio
+// de fora. Nenhuma novidade conceitual -- so e trabalho que aparece em toda
+// rotina e que se escreve mal com pressa.
+//
+// ============================================================================
+// INTERPOLACAO
+// ============================================================================
+//
+//    cTexto := "cliente ${cNome} deve ${nValor}"
+//
+// Vira uma concatenacao comum:
+//
+//    cTexto := "cliente " + cValToChar(cNome) + " deve " + cValToChar(nValor)
+//
+// A troca acontece ANTES de qualquer outra coisa olhar a linha, entao o que
+// esta dentro do '${}' e expressao normal -- uma leitura de hash, um indice,
+// uma chamada:
+//
+//    "taxa ${hCfg{'taxa'}} ao mes"
+//    "primeiro ${aItens[1]:cCodigo}"
+//
+// Uma string sem '${' nao e tocada.
+//
+// ============================================================================
+// O QUE ISSO EVITA
+// ============================================================================
+//
+// A mao, a mesma frase e:
+//
+//    cTexto := "cliente " + cNome + " deve " + cValToChar(nValor) + ;
+//              " ate " + DToC(dVenc)
+//
+// Tres tipos, tres tratamentos, e os '+' e as aspas no meio do caminho. O
+// erro mais comum nao e nenhum deles: e o ESPACO. 'deve"+cValToChar' sem o
+// espaco antes das aspas gruda duas palavras, e isso so aparece lendo a
+// saida, nunca o codigo.
+//
+// Na interpolacao os espacos estao onde se ve que estao, porque a frase esta
+// escrita como frase.
+//
+// ============================================================================
+// OS VERBOS DE STRING
+// ============================================================================
+//
+//    split(cTexto, ",")      separa num array
+//    join(aPartes, "; ")     junta um array
+//    starts(c, "SA")         comeca com
+//    ends(c, "01")           termina com
+//    contains(c, "X")        contem
+//
+// 'starts', 'ends' e 'contains' existem porque o AdvPL faz as tres com o
+// mesmo '$', e '$' tem uma direcao que ninguem lembra:
+//
+//    "SA" $ cTexto           "SA" esta DENTRO de cTexto
+//
+// A agulha vem primeiro. Ler na ordem errada da o teste ao contrario, e o
+// teste ao contrario e .T. em alguns casos -- entao nem sempre quebra.
+//
+// E nenhum dos tres e o que a funcao diz: 'At("SA", c) == 1' e 'comeca com',
+// escrito de um jeito que so quem escreveu sabe.
+//
+// ============================================================================
+// AS FUNCOES DO ADVPL NA CADEIA
+// ============================================================================
+//
+//    cOut := cNome |> alltrim |> upper
+//
+// Vira 'upper(alltrim(cNome))'. Nao ha runtime nenhum envolvido -- sao as
+// funcoes do proprio AdvPL, na ordem em que se le, em vez de de dentro para
+// fora.
+//
+// O transpilador avisa que esta cadeia "nao funde e constroi um array". Aqui
+// isso e falso: nao ha colecao nenhuma, so uma string passando por duas
+// funcoes. O aviso nao sabe distinguir uma cadeia sobre um valor de uma
+// cadeia sobre uma colecao, porque isso dependeria de saber o tipo da cabeca.
+//
+// Foi tentado calar o aviso quando nenhuma etapa e um verbo conhecido, e
+// revertido: isso calava tambem 'aOrders |> meuAuxiliar(3) |> ordenaLinhas',
+// que percorre uma colecao de verdade e constroi arrays mesmo. Um aviso
+// verdadeiro perdido e pior que um falso brando.
+//
+// Compare com notificacao_mao.tlpp.
+// ============================================================================
+
+external CRLF                      // vem de totvs.ch
+
+user function notificacao(cCliente, nValor, dVenc, cEmails)
+  local cNome := ""
+  local cTexto := ""
+  local aDestino := {}
+  local cAssunto := ""
+  local nDias := dVenc - date()
+
+  using alias SA1 order 1 do
+    SA1->(DbSeek(xFilial("SA1") + cCliente))
+    cNome := SA1->A1_NOME |> alltrim |> upper
+  end using
+
+  // A lista de e-mails vem separada por ponto e virgula, com espacos soltos
+  // e alguns em branco.
+  aDestino := split(cEmails, ";")                     ;
+              |> map([cEmail] alltrim(cEmail))        ;
+              |> filter([cEmail] contains(cEmail, "@"))
+
+  return {} if len(aDestino) == 0
+
+  cAssunto := "Cobranca ${cCliente} - ${nDias} dias"
+
+  // A frase inteira, escrita como frase.
+  cTexto := "Prezado ${cNome}," + CRLF + CRLF +                        ;
+            "Consta em aberto o valor de ${nValor} com vencimento " +  ;
+            "em ${dVenc}." + CRLF
+
+  if nDias < 0
+    cTexto := cTexto + "O titulo esta vencido ha ${-nDias} dias." + CRLF
+  endif
+
+  cTexto := cTexto + CRLF + "Enviado para: ${join(aDestino, ', ')}"
+
+  enviaEmail(aDestino, cAssunto, cTexto)
+
+  xconout("notificacao ", cCliente, ": ", len(aDestino), " destinatarios")
+
+  return aDestino
+
+// --------------------------------------------------------------------------------
+// the end

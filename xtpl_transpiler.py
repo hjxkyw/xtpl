@@ -2553,8 +2553,15 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     return line
 
   def emit_raw(text):
-    """Rename declared variables, leave every other word alone."""
+    """Rename declared variables, leave every other word alone.
+
+    Interpolation runs here too. A raw line already has its declared names
+    renamed, so a '${...}' left literal is the odd one out -- and it fails
+    silently: the message goes out with the braces in it, and the variable is
+    then reported as declared and never used.
+    """
     nonlocal lenient_names
+    text = interpolate(text)
     lenient_names = True
     try:
       rendered = re.sub(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', resolve_identifier, text)
@@ -2775,7 +2782,10 @@ def transpile(source_code, dictionary=None, dict_strict=False,
           depth -= 1
         elif depth == 0:
           bare.append(char)
-      loose = re.search(r'\.(?:and|or)\.|[<>]=?|==|!=|<>', "".join(bare),
+      # '->' is an alias, not a comparison: strip it before looking, or
+      # 'SA1->A1_NOME |> alltrim' is accused of a loose left side.
+      probe_text = "".join(bare).replace("->", " ")
+      loose = re.search(r'\.(?:and|or)\.|[<>]=?|==|!=|<>', probe_text,
                         re.IGNORECASE)
       if loose:
         print(f"warning: line {line_idx + 1}: the whole left side of '|>' is "
@@ -2792,6 +2802,13 @@ def transpile(source_code, dictionary=None, dict_strict=False,
 
     fused, fused_result, remaining, blocked_by = fuse_chain(
       prefix, parts, curr_scope, line_idx, for_value, guarded)
+    # This warns on 'cNome |> alltrim |> upper' too, where there is no
+    # collection and no array to build. Suppressing that by asking whether any
+    # stage is a runtime verb was tried and reverted: it also silenced
+    # 'aOrders |> myOwnHelper(3) |> sortRows', which walks a real collection
+    # through two functions xtpl cannot see into and does build arrays. A lost
+    # true warning is worse than a mild false one, and telling the two apart
+    # needs to know whether the head is a collection, which xtpl does not.
     if blocked_by is not None and len(parts) > 2:
       name, known = blocked_by
       why = ("it needs the whole collection" if known else

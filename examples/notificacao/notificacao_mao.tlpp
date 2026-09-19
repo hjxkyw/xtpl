@@ -1,0 +1,118 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// notificacao_mao.tlpp -- a mesma funcao de notificacao.xtpl, escrita a mao.
+//
+// ============================================================================
+// O QUE E FACIL ERRAR AQUI
+// ============================================================================
+//
+// 1. O ESPACO
+//
+//       cTexto := "Consta em aberto o valor de" + cValToChar(nValor)
+//
+//    Sai "de1500,00". O espaco falta ANTES das aspas de fechamento, onde o
+//    olho nao para, e o codigo parece certo. So aparece lendo a saida.
+//
+//    Numa frase quebrada em cinco pedacos sao dez pontas de aspas, e cada
+//    uma e uma chance.
+//
+// 2. O TIPO
+//
+//       "valor de " + nValor                   <-- quebra: nao concatena
+//       "valor de " + cValToChar(nValor)       <-- certo
+//       "vence em " + dVenc                    <-- quebra
+//       "vence em " + DToC(dVenc)              <-- certo
+//
+//    Tres tipos, tres tratamentos, e quem escreve tem de lembrar qual e qual
+//    em cada pedaco. Na interpolacao o '${}' trata os tres igual.
+//
+// 3. A DIRECAO DO '$'
+//
+//       If "@" $ cEmail                <-- "@" esta DENTRO de cEmail
+//       If cEmail $ "@"                <-- o contrario, e nem sempre quebra
+//
+//    A agulha vem primeiro. Invertido, o teste da .F. quase sempre -- e .T.
+//    quando cEmail for vazio, porque "" esta dentro de qualquer coisa.
+//
+// 4. 'comeca com' ESCRITO COM 'At'
+//
+//       If At("SA", cNome) == 1
+//
+//    Correto, e nao se le como 'comeca com'. Quem revisa tem de parar e
+//    traduzir, e a versao errada -- 'At("SA", cNome) > 0' -- parece a mesma
+//    coisa e quer dizer 'contem'.
+//
+// ============================================================================
+
+User Function NotificacaoMao(cCliente, nValor, dVenc, cEmails)
+
+  Local cNome     := ""
+  Local cTexto    := ""
+  Local aDestino  := {}
+  Local aPartes   := {}
+  Local cAssunto  := ""
+  Local nDias     := 0
+  Local cAreaAnt  := ""
+  Local nOrdAnt   := 0
+  Local nRecAnt   := 0
+  Local nX        := 0
+
+  nDias := dVenc - Date()
+
+  cAreaAnt := Alias()
+  DbSelectArea("SA1")
+  nRecAnt  := SA1->(RecNo())
+  nOrdAnt  := SA1->(IndexOrd())
+  SA1->(DbSetOrder(1))
+
+  SA1->(DbSeek(xFilial("SA1") + cCliente))
+  cNome := Upper(AllTrim(SA1->A1_NOME))
+
+  SA1->(DbSetOrder(nOrdAnt))
+  SA1->(DbGoto(nRecAnt))
+  If !Empty(cAreaAnt)
+    DbSelectArea(cAreaAnt)
+  EndIf
+
+  // ---- separar, aparar, filtrar --------------------------------------------
+  aPartes := StrTokArr(cEmails, ";")
+  For nX := 1 To Len(aPartes)
+    If "@" $ AllTrim(aPartes[nX])
+      AAdd(aDestino, AllTrim(aPartes[nX]))
+    EndIf
+  Next
+
+  If Len(aDestino) == 0
+    Return {}
+  EndIf
+
+  cAssunto := "Cobranca " + cCliente + " - " + cValToChar(nDias) + " dias"
+
+  // ---- a frase, em pedacos --------------------------------------------------
+  cTexto := "Prezado " + cNome + "," + CRLF + CRLF + ;
+            "Consta em aberto o valor de " + cValToChar(nValor) + ;
+            " com vencimento em " + DToC(dVenc) + "." + CRLF
+
+  If nDias < 0
+    cTexto += "O titulo esta vencido ha " + cValToChar(-nDias) + " dias." + CRLF
+  EndIf
+
+  // ---- juntar de volta ------------------------------------------------------
+  cTexto += CRLF + "Enviado para: "
+  For nX := 1 To Len(aDestino)
+    cTexto += aDestino[nX]
+    If nX < Len(aDestino)
+      cTexto += ", "
+    EndIf
+  Next
+
+  U_EnviaEmail(aDestino, cAssunto, cTexto)
+
+  ConOut("notificacao " + cCliente + ": " + cValToChar(Len(aDestino)) + ;
+         " destinatarios")
+
+Return aDestino
+
+// --------------------------------------------------------------------------------
+// the end

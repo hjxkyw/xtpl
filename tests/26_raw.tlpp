@@ -55,6 +55,11 @@ user function testRaw(oDlg)
     ANOTE b_1_cAux
   endif
 
+  // interpolation runs inside raw too: a raw line already has its declared
+  // names renamed, so a '${...}' left literal would be the odd one out -- and
+  // it fails quietly, with the braces going out in the message
+  ANOTE ("total " + cValToChar(nTotal) + " agora")
+
   // normal xtpl carries on around it
   nTotal := nTotal + 1
   cSql := "SELECT * FROM SA1"

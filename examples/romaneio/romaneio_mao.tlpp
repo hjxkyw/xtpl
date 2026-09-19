@@ -1,0 +1,116 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// romaneio_mao.tlpp -- a mesma funcao de romaneio.xtpl, escrita a mao.
+//
+// Esta escrita com cache, como deve ser. O ponto nao e que a mao nao da --
+// da. E onde a atencao vai.
+//
+// ============================================================================
+// O QUE E FACIL ERRAR AQUI
+// ============================================================================
+//
+// 1. O TEMPORARIO NAO LIMPO
+//
+//       hPeso:Get(cProduto, @xTmp)
+//       nPeso := xTmp
+//
+//    'Get' deixa a variavel INTOCADA quando a chave nao existe. Sem o
+//    'xTmp := Nil' antes, uma chave ausente le o valor da leitura ANTERIOR.
+//
+//    O erro e intermitente: enquanto as chaves existirem, tudo certo. A
+//    primeira que faltar pega o peso do produto de antes, e o romaneio sai
+//    com um numero plausivel e errado.
+//
+//    Sao cinco leituras abaixo. Cinco limpezas para nao esquecer.
+//
+// 2. TESTAR O VALOR EM VEZ DA CHAVE
+//
+//       If nPeso == Nil                  <-- "nao esta no cache"?
+//         ... le da SB1
+//
+//    Parece equivalente a perguntar se a chave existe, e nao e. Um produto
+//    cujo peso e ZERO entra no cache com valor 0, e 0 nao e Nil -- mas se
+//    alguem escrever 'If Empty(nPeso)', esse produto e relido da SB1 em toda
+//    volta. O cache existe e nao serve para ele.
+//
+//    'HasKey' nao existe no THashMap. A unica forma de perguntar pela chave
+//    e pelo retorno logico do 'Get' -- que e o que o 'in' do xtpl usa.
+//
+// 3. AS DUAS CHAMADAS DE 'Get'
+//
+//       hPeso:Get(cProduto, @xTmp)       <-- devolve .T./.F. E o valor
+//
+//    Da para usar o retorno E o valor da mesma chamada. Escrito a mao,
+//    costuma-se chamar duas vezes: uma para saber se existe, outra para
+//    pegar. Funciona, e e o dobro do trabalho em cada volta do laco.
+//
+// ============================================================================
+
+User Function RomaneioMao(aItens)
+
+  Local hPeso      := THashMap():New()
+  Local hDescricao := THashMap():New()
+  Local nPesoTotal := 0
+  Local nLidos     := 0
+  Local aLinhas    := {}
+  Local cAreaAnt   := ""
+  Local nOrdAnt    := 0
+  Local nRecAnt    := 0
+  Local nPeso      := 0
+  Local cDesc      := ""
+  Local xTmp       := Nil
+  Local nX         := 0
+
+  For nX := 1 To Len(aItens)
+
+    If Empty(aItens[nX]:cProduto)
+      Loop
+    EndIf
+
+    // ---- o cache: a chave, nao o valor --------------------------------------
+    xTmp := Nil
+    If !hPeso:Get(aItens[nX]:cProduto, @xTmp)
+
+      cAreaAnt := Alias()
+      DbSelectArea("SB1")
+      nRecAnt  := SB1->(RecNo())
+      nOrdAnt  := SB1->(IndexOrd())
+      SB1->(DbSetOrder(1))
+
+      SB1->(DbSeek(xFilial("SB1") + aItens[nX]:cProduto))
+      hPeso:Set(aItens[nX]:cProduto, SB1->B1_PESO)
+      hDescricao:Set(aItens[nX]:cProduto, AllTrim(SB1->B1_DESC))
+
+      SB1->(DbSetOrder(nOrdAnt))
+      SB1->(DbGoto(nRecAnt))
+      If !Empty(cAreaAnt)
+        DbSelectArea(cAreaAnt)
+      EndIf
+
+      nLidos += 1
+    EndIf
+
+    // ---- e agora as leituras, cada uma com a sua limpeza ---------------------
+    xTmp := Nil
+    hPeso:Get(aItens[nX]:cProduto, @xTmp)
+    nPeso := xTmp
+
+    xTmp := Nil
+    hDescricao:Get(aItens[nX]:cProduto, @xTmp)
+    cDesc := xTmp
+
+    nPesoTotal += nPeso * aItens[nX]:nQuant
+
+    AAdd(aLinhas, {aItens[nX]:cProduto, cDesc, aItens[nX]:nQuant})
+
+  Next
+
+  ConOut("romaneio: " + cValToChar(Len(aItens)) + " itens, " + ;
+         cValToChar(nLidos) + " produtos lidos, " + ;
+         cValToChar(nPesoTotal) + " kg")
+
+Return aLinhas
+
+// --------------------------------------------------------------------------------
+// the end

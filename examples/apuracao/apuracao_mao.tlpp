@@ -1,0 +1,118 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// apuracao_mao.tlpp -- a mesma funcao de apuracao.xtpl, escrita a mao.
+//
+// Cinco saidas. A limpeza de cada uma e diferente da anterior, porque cada
+// saida esta num ponto diferente da abertura: na primeira nao ha nada a
+// desfazer, na ultima ha tres coisas.
+//
+// ============================================================================
+// O QUE E FACIL ERRAR AQUI
+// ============================================================================
+//
+// 1. A LIMPEZA PARCIAL
+//
+//    Cada saida desfaz o que ja tinha sido feito ATE ALI -- nem mais nem
+//    menos. Desfazer de menos vaza; desfazer de mais quebra, porque fecha
+//    uma area que nunca abriu.
+//
+//    Sao cinco pontos e cinco limpezas diferentes. Nao da para copiar e
+//    colar uma para a outra, o que e justamente o que se faz com pressa.
+//
+// 2. A ORDEM
+//
+//    DbCloseArea antes de TCDelFile, TCDelFile antes de TCUnlink. Inverter
+//    duas faz tentar apagar uma tabela com area aberta, ou usar uma conexao
+//    ja fechada.
+//
+//    A ordem certa e a inversa da abertura, sempre. Escrita a mao, ela e
+//    lembrada em cinco lugares. Com 'defer', sai da pilha sozinha.
+//
+// 3. A SAIDA QUE SE ACRESCENTA DEPOIS
+//
+//    Este e o erro de verdade. O codigo acima esta certo hoje. Daqui a seis
+//    meses alguem poe uma validacao no meio do laco com um 'Return', num
+//    galho que parece obviamente simples, e nao leva as tres linhas junto.
+//
+//    A tabela ZAPUR fica no banco. Ninguem percebe -- a funcao devolveu o
+//    numero certo. Na proxima execucao o DbCreate falha porque a tabela ja
+//    existe, e o erro aparece numa linha que nao tem nada a ver.
+//
+// 4. A JANELA DE PROGRESSO
+//
+//    Acrescente um MsgRun no comeco e um oJanela:Destroy() tem de entrar nas
+//    CINCO saidas. Quem acrescenta ve as duas ou tres que estao na tela, e a
+//    que fica de fora costuma ser a de erro -- a que menos roda e a que mais
+//    importa.
+//
+// ============================================================================
+
+User Function ApuracaoMao(cFilial, dCorte)
+
+  Local nErro      := 0
+  Local nTotal     := 0
+  Local aEstrutura := {}
+  Local cAreaAnt   := ""
+  Local nRecAnt    := 0
+
+  aEstrutura := U_MontaEstrutura()
+
+  // ---- saida 1: nada aberto ainda -------------------------------------------
+  nErro := TCLink()
+  If nErro < 0
+    Return -1
+  EndIf
+
+  // ---- saida 2: so a conexao ------------------------------------------------
+  If !DbCreate("ZAPUR", aEstrutura, "TOPCONN")
+    TCUnlink()
+    Return -2
+  EndIf
+
+  // ---- saida 3: conexao e tabela --------------------------------------------
+  DbUseArea(.T., "TOPCONN", "ZAPUR", "ZAPUR", .F., .F.)
+  If Select("ZAPUR") == 0
+    TCDelFile("ZAPUR")
+    TCUnlink()
+    Return -3
+  EndIf
+
+  // ---- saida 4: as tres coisas ----------------------------------------------
+  nTotal := U_PopulaApuracao(cFilial, dCorte)
+
+  If nTotal == 0
+    ZAPUR->(DbCloseArea())
+    TCDelFile("ZAPUR")
+    TCUnlink()
+    Return 0
+  EndIf
+
+  // ---- a leitura -------------------------------------------------------------
+  cAreaAnt := Alias()
+  DbSelectArea("ZAPUR")
+  nRecAnt  := ZAPUR->(RecNo())
+
+  nTotal := 0
+  ZAPUR->(DbGoTop())
+  While !ZAPUR->(Eof())
+    nTotal += ZAPUR->ZAP_VALOR
+    ZAPUR->(DbSkip())
+  EndDo
+
+  ZAPUR->(DbGoto(nRecAnt))
+  If !Empty(cAreaAnt)
+    DbSelectArea(cAreaAnt)
+  EndIf
+
+  ConOut("apuracao " + cFilial + ": " + cValToChar(nTotal))
+
+  // ---- saida 5: as tres, pela terceira vez -----------------------------------
+  ZAPUR->(DbCloseArea())
+  TCDelFile("ZAPUR")
+  TCUnlink()
+
+Return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

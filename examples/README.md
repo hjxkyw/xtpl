@@ -6,6 +6,10 @@ para ver no que uma coisa vira sem precisar rodar nada.
 | | |
 |---|---|
 | `pedido/` | `rows()` com `takewhile`: somar os itens de um pedido parando quando ele acaba, em vez de ler a tabela inteira |
+| `consulta/` | `raw`: uma tela de comandos entregue ao pré-processador, e xtpl comum em volta dela. O único exemplo em que a versão à mão quase não perde |
+| `notificacao/` | interpolação e os verbos de string: montar um texto e separar um que veio de fora |
+| `romaneio/` | hashes: um cache de consultas que vai ao cadastro uma vez por produto, e a diferença entre a chave existir e o valor ter conteúdo |
+| `apuracao/` | `defer`: conexão, tabela temporária e área abertas em sequência e desfeitas na ordem inversa, em cinco saídas diferentes |
 | `modelo/` | `with object` sobre FWModel: o sujeito avaliado uma vez, blocos aninhados, e o `:` que não dá para escrever errado |
 | `separacao/` | as estruturas de controle juntas: as três formas de `for`, `do case with`, `while local`, e as formas posfixadas `return/exit/loop if` |
 | `parametros/` | `?:`: um valor que pode vir do parâmetro, da configuração do cliente, da geral ou de um padrão — e por que `Default` não serve |
@@ -71,6 +75,30 @@ que faz trabalho de verdade, e o olho não distingue.
 parecidos em escopo, escrever `oMaster:SetValue` onde era `oContato:SetValue`
 compila e grava no modelo errado. Dentro de um `with object` o sujeito é `:` —
 não dá para escrever o outro por engano, porque não há outro para escrever.
+
+`apuracao` responde com a saída que se acrescenta depois. O código à mão está
+certo hoje: cinco saídas, cinco limpezas diferentes, cada uma desfazendo
+exatamente o que já tinha sido feito até ali. Daqui a seis meses alguém põe um
+`Return` num galho que parece simples e não leva as três linhas junto — a
+tabela fica no banco, a função devolve o número certo, e o erro aparece na
+execução seguinte, num `DbCreate` que não tem nada a ver.
+
+`romaneio` responde com o temporário não limpo. `Get` deixa a variável
+**intocada** quando a chave não existe, então uma leitura ausente traz o valor
+da leitura anterior. O erro é intermitente: certo enquanto as chaves
+existirem, e a primeira que faltar pega o peso do produto de antes. O xtpl
+emite a limpeza antes de cada leitura, e são cinco no exemplo.
+
+`notificacao` responde com o espaço. `"deve" + cValToChar(nValor)` sem o
+espaço antes das aspas gruda duas palavras, e isso só aparece lendo a saída,
+nunca o código. Na interpolação os espaços estão onde se vê que estão, porque
+a frase está escrita como frase.
+
+`consulta` responde admitindo um limite. As linhas `@ ... SAY ... GET` são
+idênticas nas duas versões, e não há nada que o xtpl possa fazer por elas.
+Numa rotina de tela, a tela costuma ser metade do arquivo — converter o resto
+ganha menos do que ganharia numa rotina sem tela. Uma pasta de exemplos em que
+tudo ganha muito é uma pasta que não ajuda a decidir nada.
 
 Nem todo recurso responde tão bem. `?=` faz o mesmo que o `Default` que o
 AdvPL já tem, e `docs/design.md` diz isso com todas as letras: é grafia. Vale

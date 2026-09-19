@@ -1,0 +1,125 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// consulta_mao.tlpp -- a mesma funcao de consulta.xtpl, escrita a mao.
+//
+// Este e o unico exemplo da pasta em que a versao a mao quase nao perde, e
+// isso e de proposito.
+//
+// ============================================================================
+// A TELA NAO MUDA
+// ============================================================================
+//
+// As linhas '@ ... SAY ... GET' sao identicas nas duas versoes. Nao ha nada
+// que o xtpl possa fazer por elas: ja estao escritas, funcionam, e nao ficam
+// melhores de nenhum jeito. 'raw' existe para admitir isso.
+//
+// Uma linguagem que exigisse converter a tela para poder usar o resto seria
+// uma linguagem que ninguem adota, porque a tela e o que tem mais linhas e
+// menos vontade de mexer.
+//
+// ============================================================================
+// O QUE MUDA E O QUE ESTA EM VOLTA
+// ============================================================================
+//
+// A consulta, abaixo, e um laco dentro de outro com a area guardada e
+// reposta a mao. E o mesmo tipo de codigo dos outros exemplos desta pasta, e
+// perde pelos mesmos motivos -- o 'Exit' que e preciso lembrar, a limpeza
+// repetida, o indice em toda linha.
+//
+// Mas a proporcao aqui e diferente: numa rotina de tela, a tela costuma ser
+// metade do arquivo. Converter o resto ganha menos do que ganharia numa
+// rotina sem tela.
+//
+// Vale a pena dizer isso em vez de escolher um exemplo onde o ganho fosse
+// maior. Uma pasta de exemplos em que tudo ganha muito e uma pasta que nao
+// ajuda a decidir nada.
+//
+// ============================================================================
+// A UNICA COISA QUE O 'raw' TROCA
+// ============================================================================
+//
+// A interpolacao roda dentro dele:
+//
+//       raw MsgInfo("Filial ${oLinha[1]}: ${oLinha[2]}", "Resumo ${nPos}")
+//
+//    vira
+//
+//       MsgInfo("Filial " + cValToChar(...) + ": " + ..., "Resumo " + ...)
+//
+// Fora isso, a linha vai inteira para o pre-processador.
+//
+// ============================================================================
+
+User Function ConsultaMao(cFilialDe, cFilialAte)
+
+  Local cNome    := Space(40)
+  Local nTotal   := 0
+  Local nDias    := 30
+  Local lOk      := .F.
+  Local aResumo  := {}
+  Local aFiliais := {}
+  Local oDlg     := Nil
+  Local cAreaAnt := ""
+  Local nOrdAnt  := 0
+  Local nRecAnt  := 0
+  Local cFilial  := ""
+  Local nX       := 0
+
+  // ---- a tela: identica -----------------------------------------------------
+  @ 200, 010 TO 400, 600 DIALOG oDlg TITLE "Consulta de saldos"
+  @ 012, 010 SAY "Cliente" GET cNome PICTURE "@!"
+  @ 014, 010 SAY "Dias"    GET nDias PICTURE "@E 999"
+  @ 060, 200 BMPBUTTON TYPE 1 ACTION lOk := .T.
+  @ 060, 240 BMPBUTTON TYPE 2 ACTION lOk := .F.
+
+  ACTIVATE DIALOG oDlg CENTERED
+
+  If !lOk
+    Return {}
+  EndIf
+
+  // ---- e a consulta ---------------------------------------------------------
+  cAreaAnt := Alias()
+  DbSelectArea("SE1")
+  nRecAnt  := SE1->(RecNo())
+  nOrdAnt  := SE1->(IndexOrd())
+  SE1->(DbSetOrder(1))
+
+  aFiliais := U_FiliaisEntre(cFilialDe, cFilialAte)
+
+  For nX := 1 To Len(aFiliais)
+
+    cFilial := aFiliais[nX]
+    nTotal  := 0
+
+    SE1->(DbSeek(cFilial))
+    While !SE1->(Eof())
+      If SE1->E1_FILIAL != cFilial
+        Exit
+      EndIf
+      If SE1->E1_SALDO > 0 .And. Date() - SE1->E1_VENCTO <= nDias
+        nTotal += SE1->E1_SALDO
+      EndIf
+      SE1->(DbSkip())
+    EndDo
+
+    AAdd(aResumo, {cFilial, nTotal})
+
+  Next
+
+  SE1->(DbSetOrder(nOrdAnt))
+  SE1->(DbGoto(nRecAnt))
+  If !Empty(cAreaAnt)
+    DbSelectArea(cAreaAnt)
+  EndIf
+
+  For nX := 1 To Len(aResumo)
+    MsgInfo("Filial " + aResumo[nX][1] + ": " + cValToChar(aResumo[nX][2]), ;
+            "Resumo " + cValToChar(nX))
+  Next
+
+Return aResumo
+
+// --------------------------------------------------------------------------------
+// the end

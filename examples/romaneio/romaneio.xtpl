@@ -1,0 +1,107 @@
+// romaneio.xtpl -- montar um romaneio, sem reler o cadastro de produtos.
+//
+// Um caso comum: uma lista de itens, cada um com um produto, e para cada um
+// e preciso a descricao e o peso que estao na SB1. Mil itens de cem produtos
+// diferentes sao mil DbSeek quando cem bastariam.
+//
+// ============================================================================
+// A SINTAXE
+// ============================================================================
+//
+//    hPesos := {"PA01" => 2.5, "PA02" => 1.8}    literal
+//    hVazio := {=>}                              vazio
+//
+//    nPeso := hPesos{"PA01"}                     ler
+//    hPesos{"PA03"} := 4.0                       escrever
+//    if "PA01" in hPesos                         a chave existe?
+//
+// Chaves `{` para hash, colchetes `[` para array. Um `{` logo depois de um
+// nome e um indice de hash, e o AdvPL nunca tem isso ali -- entao os dois
+// convivem sem o transpilador precisar saber o tipo de nada.
+//
+// Um grupo de chaves cujos pares sao todos `k => v` e um hash; qualquer
+// outra coisa e um array. `{=>}` e o hash vazio, que precisa de grafia
+// propria porque `{}` ja quer dizer array vazio.
+//
+// ============================================================================
+// O QUE ISSO VIRA
+// ============================================================================
+//
+// Um THashMap. A leitura e o unico ponto com sutileza:
+//
+//    ht_0_0 := Nil
+//    hPesos:Get("PA01", @ht_0_0)
+//    nPeso := ht_0_0
+//
+// 'Get' devolve logico e entrega o valor por referencia. Numa chave que NAO
+// existe ele deixa a variavel INTOCADA -- por isso o temporario e limpo
+// antes. Sem essa linha, uma chave ausente leria o valor da leitura
+// anterior, e o erro seria intermitente: certo enquanto as chaves
+// existissem, errado na primeira que faltasse.
+//
+// Duas leituras no mesmo comando usam dois temporarios, pelo mesmo motivo.
+//
+// ============================================================================
+// 'in' E O QUE ELE RESPONDE
+// ============================================================================
+//
+//    if cProduto in hPesos
+//
+// Pergunta se a CHAVE existe, e monta sobre o retorno logico do 'Get'.
+//
+// Existir e ter valor sao perguntas diferentes: uma chave pode existir com
+// Nil, e uma leitura pode devolver Nil por ausencia. 'in' distingue as duas;
+// testar o valor lido, nao.
+//
+// Aqui isso e o cache inteiro: 'in' e o que diz se ja foi lido, e sem ele
+// nao daria para cachear um produto cujo peso e zero.
+//
+// ============================================================================
+// O QUE UM HASH NAO GARANTE
+// ============================================================================
+//
+// A ordem. 'keys', 'values' e 'pairs' devolvem o que o THashMap devolver, e
+// nao e a ordem de insercao -- verificado: tres chaves postas como
+// taxa, nome, dias voltaram taxa, dias, nome.
+//
+// Se a ordem importa, ordene depois, ou guarde as chaves num array em
+// separado. O relatorio no fim deste arquivo faz isso.
+//
+// Compare com romaneio_mao.tlpp.
+// ============================================================================
+
+user function romaneio(aItens)
+  local hPeso := {=>}
+  local hDescricao := {=>}
+  local nPesoTotal := 0
+  local nLidos := 0
+  local aLinhas := {}
+
+  for oItem in aItens
+
+    loop if empty(oItem:cProduto)
+
+    // O cache: so vai ao cadastro na primeira vez que ve o produto.
+    if !(oItem:cProduto in hPeso)
+      using alias SB1 order 1 do
+        SB1->(DbSeek(xFilial("SB1") + oItem:cProduto))
+        hPeso{oItem:cProduto} := SB1->B1_PESO
+        hDescricao{oItem:cProduto} := alltrim(SB1->B1_DESC)
+      end using
+      nLidos := nLidos + 1
+    endif
+
+    nPesoTotal := nPesoTotal + (hPeso{oItem:cProduto} * oItem:nQuant)
+
+    aadd(aLinhas, {oItem:cProduto, hDescricao{oItem:cProduto}, oItem:nQuant})
+
+  next
+
+  xconout("romaneio: ", len(aItens), " itens, ", nLidos, " produtos lidos, ", ;
+          nPesoTotal, " kg")
+
+  // O hash nao guarda ordem, entao a ordem sai do array de linhas, que a tem.
+  return aLinhas
+
+// --------------------------------------------------------------------------------
+// the end

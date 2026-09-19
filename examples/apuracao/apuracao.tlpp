@@ -1,0 +1,195 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// Armazenamento dividido por mais de uma variavel de bloco.
+//
+// 'let' marca onde uma variavel de bloco e declarada e qual
+// armazenamento ela recebeu. Nao gera nada.
+//
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
+//
+// Uma regra so, para todos os slots: os marcadores entram no proprio
+// nome do resultado. O '!' na frente impede que a regra case com uma
+// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
+// o qual o ultimo marcador engole o que vem depois.
+#translate let <name1> as <name2> =>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
+
+// apuracao.tlpp -- apurar um fechamento numa tabela temporaria.
+//
+// Um caso comum: abrir conexao, criar uma tabela de trabalho, popular,
+// consultar, e desfazer tudo na volta. Cada coisa aberta tem de ser fechada,
+// e na ordem inversa da abertura.
+//
+// ============================================================================
+// O QUE 'defer' FAZ
+// ============================================================================
+//
+//    defer TCUnlink()
+//
+// Registra um comando para rodar na saida da FUNCAO -- em TODA saida, incluindo
+// os 'return' antecipados e os de dentro de lacos.
+//
+// Varios 'defer' rodam em ordem INVERSA a do registro, como uma pilha. Isso
+// nao e detalhe: e o que faz o fecha-na-ordem-certa sair de graca. Registre
+// na ordem em que abriu, e o desfazimento sai na ordem certa sozinho.
+//
+//    TCLink()          ->  defer TCUnlink()          roda por ultimo
+//    DbCreate()        ->  defer TCDelFile()         roda antes
+//    DbUseArea()       ->  defer DbCloseArea()       roda primeiro
+//
+// ============================================================================
+// POR QUE NAO SO 'using alias'
+// ============================================================================
+//
+// 'using alias' trata de UMA coisa: a area de trabalho, a ordem e o registro.
+// Ele guarda e repoe.
+//
+// 'defer' trata do resto -- o que nao tem estado a repor, so tem uma acao de
+// desfazimento:
+//
+//    conexao aberta      -> desconectar
+//    tabela criada       -> apagar
+//    semaforo tomado     -> liberar
+//    arquivo aberto      -> fechar
+//    janela de progresso -> destruir
+//
+// Sao coisas diferentes e as duas aparecem na mesma funcao. Aqui, 'defer'
+// cuida da conexao e da tabela; a leitura da tabela, quando chega, usa
+// 'using alias'.
+//
+// ============================================================================
+// A DIFERENCA QUE IMPORTA
+// ============================================================================
+//
+// A mao, cada saida repete a limpeza inteira. Tres saidas, tres copias.
+//
+// Isso nao e so digitacao. Sao tres lugares que tem de concordar, e eles
+// divergem na primeira alteracao: alguem acrescenta um 'MsgRun' no comeco,
+// poe o 'oJanela:Destroy()' nas duas saidas que viu, e nao na terceira --
+// que era a de erro, a que menos roda e a que mais importa.
+//
+// Com 'defer', acrescentar uma coisa a desfazer e uma linha, ao lado da
+// linha que a criou. Nao ha saida nenhuma para lembrar.
+//
+// ============================================================================
+// UM 'defer' SO VALE DAQUI PARA BAIXO
+// ============================================================================
+//
+// Ele cobre as saidas que vierem DEPOIS do registro, nao as de antes. Na
+// funcao abaixo, o primeiro 'return -1' nao chama TCUnlink -- e nem deveria,
+// porque e a saida de quando o TCLink falhou e nao ha conexao para desfazer.
+//
+// Por isso cada 'defer' fica colado na linha que criou a coisa. Registrar
+// tudo no comeco da funcao seria mais arrumado de ler e erraria: desfaria
+// coisas que ainda nao existiam.
+//
+// ============================================================================
+// O QUE NAO FAZER COM ELE
+// ============================================================================
+//
+// 'defer' e para desfazer, nao para a logica do programa. Um 'defer' que
+// grava, que decide, ou que muda o valor de retorno esconde trabalho numa
+// saida onde ninguem vai procurar.
+//
+// A regra simples: se a linha existe porque OUTRA linha aconteceu, e defer.
+// Se ela existe por si, e codigo comum e vai no fim da funcao.
+//
+// Compare com apuracao_mao.tlpp.
+// ============================================================================
+
+user function apuracao(cFilial, dCorte)
+
+  Local nErro := 0
+  Local nTotal := 0
+  Local aEstrutura
+
+  Local far_1_0
+  Local fo_1_0
+  Local frc_1_0
+  Local fv_1_0
+  Local s_1_usearea
+  Local s_1_userec
+
+  aEstrutura := montaEstrutura()
+
+  // 1. A conexao. Sem ela nada mais funciona.
+  nErro := TCLink()
+
+  if nErro < 0
+    return -1
+  endif
+
+  // Registrado logo depois de abrir, ao lado da linha que abriu. Roda por
+  // ultimo, porque foi o primeiro a entrar.
+
+  // 2. A tabela de trabalho.
+  if !DbCreate("ZAPUR", aEstrutura, "TOPCONN")
+    TCUnlink()
+    return -2  // TCUnlink() roda aqui
+
+  endif
+
+  // 3. A area aberta sobre ela.
+  DbUseArea(.T., "TOPCONN", "ZAPUR", "ZAPUR", .F., .F.)
+
+  if select("ZAPUR") == 0
+    TCDelFile("ZAPUR")
+    TCUnlink()
+    return -3  // TCDelFile + TCUnlink rodam aqui
+
+  endif
+
+  // ---- daqui, tres coisas registradas e nenhuma saida para lembrar ---------
+
+  nTotal := populaApuracao(cFilial, dCorte)
+
+  if nTotal == 0
+    ZAPUR->(DbCloseArea())
+    TCDelFile("ZAPUR")
+    TCUnlink()
+    return 0  // as tres rodam, na ordem inversa
+
+  endif
+
+  // A leitura da tabela: aqui a area E o assunto, entao e 'using alias'.
+  let usearea as s_1_usearea
+  let userec as s_1_userec
+  s_1_usearea := Alias()
+  DbSelectArea("ZAPUR")
+  s_1_userec := ZAPUR->(RecNo())
+    ZAPUR->(DbGoTop())
+    far_1_0 := Alias()
+    DbSelectArea("ZAPUR")
+    frc_1_0 := ZAPUR->(RecNo())
+    ZAPUR->(DbGoTop())
+    fo_1_0 := 0
+    While !ZAPUR->(Eof())
+      fv_1_0 := ZAPUR->ZAP_VALOR
+      fo_1_0 := fo_1_0 + fv_1_0
+      ZAPUR->(DbSkip())
+    EndDo
+    ZAPUR->(DbGoto(frc_1_0))
+    If !Empty(far_1_0)
+      DbSelectArea(far_1_0)
+    EndIf
+    nTotal := fo_1_0
+
+  ZAPUR->(DbGoto(s_1_userec))
+
+  If !Empty(s_1_usearea)
+    DbSelectArea(s_1_usearea)
+  EndIf
+
+  conout("apuracao " + cValToChar(cFilial) + ": " + cValToChar(nTotal))
+
+  ZAPUR->(DbCloseArea())
+  TCDelFile("ZAPUR")
+  TCUnlink()
+  return nTotal  // e as tres rodam aqui tambem
+
+// --------------------------------------------------------------------------------
+// the end

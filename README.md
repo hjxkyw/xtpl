@@ -65,7 +65,23 @@ Python 3.10 ou superior, sem dependências obrigatórias.
 
 Opcionalmente, [`rakulang`](https://github.com/ash/rakupp) habilita o caminho
 por gramática Raku para quatro construções. Sem ele usa-se o fallback por
-regex, e os dois são obrigados a produzir saída idêntica.
+regex, e os dois são obrigados a produzir saída idêntica — `run_tests.py` diz
+qual caminho usou, porque a contagem sozinha não distingue.
+
+Ele **não está no PyPI**: as wheels são anexos de release no GitHub, e a
+wheel já traz a `librakupp.so` dentro. Para Linux x86-64:
+
+```sh
+curl -sfL -O https://github.com/ash/rakupp/releases/download/v4.0.1/rakulang-0.1.0-py3-none-linux_x86_64.whl
+pip install rakulang-0.1.0-py3-none-linux_x86_64.whl
+```
+
+O nome do arquivo importa: o pip recusa a wheel se ela for renomeada. Para
+outra plataforma, a lista de anexos está em
+`https://github.com/ash/rakupp/releases` — há `linux_aarch64` e
+`macosx_arm64`. Compilar a partir do fonte não é necessário.
+
+`fuzz_paths.py` precisa dos dois caminhos e se recusa a rodar sem o rakulang.
 
 **Antes de compilar qualquer coisa**, compile `xtpl_runtime.tlpp` num RPO
 customizado: ele define as funções `u_xtpl_*` e a classe `XtplQueue`, e nada

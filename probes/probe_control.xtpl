@@ -2,7 +2,7 @@
 //
 // A regra de aliasing precisa de um terminador:
 //
-//    #translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+//    #translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 //
 // Sem o '!' final o ultimo marcador engole o que vem depois, e o estrago
 // aparece justamente num cabecalho 'For', onde ha texto do lado direito.

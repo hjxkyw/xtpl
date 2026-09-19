@@ -6,28 +6,23 @@
 // 'let' marca onde uma variavel de bloco e declarada e qual
 // armazenamento ela recebeu. Nao gera nada.
 //
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
+// Onde um slot e dividido por mais de uma variavel ele nao tem nome
+// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
+// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
+// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
 //
 // Uma regra so, para todos os slots: os marcadores entram no proprio
 // nome do resultado. O '!' na frente impede que a regra case com uma
 // potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
 // o qual o ultimo marcador engole o que vem depois.
 #translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
+#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 
 // probe_control.tlpp -- estruturas de controle sobre slots compartilhados.
 //
 // A regra de aliasing precisa de um terminador:
 //
-//    #translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
+//    #translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
 //
 // Sem o '!' final o ultimo marcador engole o que vem depois, e o estrago
 // aparece justamente num cabecalho 'For', onde ha texto do lado direito.
@@ -55,19 +50,18 @@ user function probeControl()
   Local aBlocos := {}
   Local lOk := .T.
 
-  Local __stk_1_0       // nSoma, nConta, nSub, cJunto, nVezes, nTotal
-  Local __stk_2_0       // nI, __each, __times
-  Local __stk_2_1       // cLetra, nX
-  Local __stk_2_2       // nOnde, __eachi
-  Local __blk_1_nFator
-  Local __stk_3_nDobro
-
+  Local s_1_0       // nSoma, nConta, nSub, cJunto, nVezes, nTotal
+  Local s_2_0       // nI, __each, __times
+  Local s_2_1       // cLetra, nX
+  Local s_2_2       // nOnde, __eachi
+  Local b_1_nFator
+  Local s_3_nDobro
 
   // ---- for contado: a grafia no cabecalho, dos dois lados do To ----------
   if .T.
-    let nSoma as __stk_1_0
+    let nSoma as s_1_0
     !nSoma^1^0! := 0
-    let nI as __stk_2_0
+    let nI as s_2_0
     for !nI^2^0! := 1 to 3
       !nSoma^1^0! := !nSoma^1^0! + !nI^2^0!
     next
@@ -76,7 +70,7 @@ user function probeControl()
 
   // ---- while com a grafia na condicao e no corpo -------------------------
   if .T.
-    let nConta as __stk_1_0
+    let nConta as s_1_0
     !nConta^1^0! := 0
     while !nConta^1^0! < 3
       !nConta^1^0! := !nConta^1^0! + 1
@@ -85,8 +79,9 @@ user function probeControl()
   endif
 
   // ---- do case with: sujeito ligado uma vez ------------------------------
-  let nSub as __stk_1_0
+  let nSub as s_1_0
   !nSub^1^0! := 7
+
   Do Case
     case !nSub^1^0! == 6
       cSaida := cSaida + " case=seis"
@@ -98,10 +93,10 @@ user function probeControl()
 
   // ---- for ... in: elemento e indice, e a grafia como indice de array ----
   if .T.
-    let cJunto as __stk_1_0
-    let each as __stk_2_0
-    let cLetra as __stk_2_1
-    let nOnde as __stk_2_2
+    let cJunto as s_1_0
+    let each as s_2_0
+    let cLetra as s_2_1
+    let nOnde as s_2_2
     !cJunto^1^0! := ""
     !each^2^0! := aLetras
     For !nOnde^2^2! := 1 To Len(!each^2^0!)
@@ -113,9 +108,9 @@ user function probeControl()
 
   // ---- for <n> times -----------------------------------------------------
   if .T.
-    let nVezes as __stk_1_0
+    let nVezes as s_1_0
     !nVezes^1^0! := 0
-    let times as __stk_2_0
+    let times as s_2_0
     For !times^2^0! := 1 To 3
       !nVezes^1^0! := !nVezes^1^0! + 1
     next
@@ -124,18 +119,18 @@ user function probeControl()
 
   // ---- blocos aninhados: profundidades diferentes, slots diferentes ------
   if .T.
-    let nTotal as __stk_1_0
-    let each as __stk_2_0
-    let nX as __stk_2_1
-    let eachi as __stk_2_2
+    let nTotal as s_1_0
+    let each as s_2_0
+    let nX as s_2_1
+    let eachi as s_2_2
     !nTotal^1^0! := 0
     !each^2^0! := aNums
     For !eachi^2^2! := 1 To Len(!each^2^0!)
       !nX^2^1! := !each^2^0![!eachi^2^2!]
       if !nX^2^1! > 1
-        let nDobro as __stk_3_nDobro
-        !nDobro^3! := !nX^2^1! * 2
-        !nTotal^1^0! := !nTotal^1^0! + !nDobro^3!
+        let nDobro as s_3_nDobro
+        s_3_nDobro := !nX^2^1! * 2
+        !nTotal^1^0! := !nTotal^1^0! + s_3_nDobro
       endif
     next
     cSaida := cSaida + " nested=" + cValToChar(!nTotal^1^0!)
@@ -143,10 +138,11 @@ user function probeControl()
 
   // ---- capturada por um code block: NAO pode dividir slot ----------------
   if .T.
-    let nFator as __blk_1_nFator
-    %nFator^1% := 10
-    aadd(aBlocos, {|| %nFator^1% * 2})
+    let nFator as b_1_nFator
+    b_1_nFator := 10
+    aadd(aBlocos, {|| b_1_nFator * 2})
   endif
+
   nFora := eval(aBlocos[1])
   cSaida := cSaida + " block=" + cValToChar(nFora)
 

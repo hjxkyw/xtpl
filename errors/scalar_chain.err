@@ -1,1 +1,1 @@
-SyntaxError: Line 20: 1 is a single value, and a chain walks a collection. Write {1} for a one-element array, or 'lo..hi' for a range.
+SyntaxError: Line 22: 1 is a single value, and a chain walks a collection. Write {1} for a one-element array, or 'lo..hi' for a range.

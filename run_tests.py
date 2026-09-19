@@ -191,7 +191,17 @@ def main():
             else:
                 failed += 1
 
-    print(f"\n{passed} passed, {failed} failed")
+    # Which parsing path ran. The two produce identical output, so the count
+    # alone cannot say -- and a result reported as verified when only the
+    # fallback ran is a claim about work that was not done.
+    # The transpiler runs in a subprocess, so ask the same question the same
+    # way it would: is rakulang importable from here?
+    try:
+        import rakulang                                    # noqa: F401
+        path = "Raku grammar"
+    except Exception:
+        path = "regex fallback only -- rakulang is not importable"
+    print(f"\n{passed} passed, {failed} failed  ({path})")
     return 1 if failed else 0
 
 

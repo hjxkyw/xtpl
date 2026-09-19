@@ -1,0 +1,21 @@
+// scalar_declared.xtpl -- uma variavel que a propria declaracao diz ser
+// um valor unico, na cabeca de uma cadeia.
+//
+// 'local nX := 5' diz que nX e um numero. 'local cY as character' diz o
+// mesmo de outro jeito. Nos dois casos a cadeia geraria 'Len(nX)', que o
+// compilador aceita e que falha rodando.
+//
+// Um parametro nao diz nada, e continua passando -- nao ha o que fazer sem
+// tipos que o xtpl nao tem.
+// --------------------------------------------------------------------------------
+
+user function scalarDeclared()
+  local nFator := 5
+  local nTotal := 0
+
+  nTotal := nFator |> map([x] x * 2) |> asum
+
+  return nTotal
+
+// --------------------------------------------------------------------------------
+// the end

@@ -1,28 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Uma variavel de bloco num slot se escreve '!nome^...!'. Com dois
-// numeros o armazenamento e dividido e nao tem nome honesto --
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Com um so, o slot
-// leva o nome de quem o ocupa, que e o unico.
-//
-// '%nome^n%' e a que nao ganhou slot: fixada por uma captura, um '@',
-// uma linha 'raw' ou um 'defer', ou o parametro de um lambda.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => __stk_<num1>_<num2>
-#translate !<name>^<num>! => __stk_<num>_<name>
-#translate %<name>^<num>% => __blk_<num>_<name>
-
 // medias.tlpp -- limpar um arquivo e tirar a media de cada linha, numa passada.
 //
 // Cada linha deve ter tres campos numericos separados por virgula. As que
@@ -61,31 +39,36 @@ user function medias(cArquivo)
   Local nLidas := 0
   Local aMedias
 
-  Local __blk_0___um
-  Local __fuse_out_0_0
-  Local __fuse_src_0_0
-  Local __fuse_v_0_0
+  Local b_0_it
+  Local fo_0_0
+  Local fok_0_0
+  Local fv_0_0
 
-  __fuse_out_0_0 := {}
-  __fuse_src_0_0 := cArquivo
+  fok_0_0 := File(cArquivo)
 
-  If File(__fuse_src_0_0)
-    FT_FUse(__fuse_src_0_0)
+  If fok_0_0
+    FT_FUse(cArquivo)
     FT_FGoTop()
-    While !FT_FEof()
-      __fuse_v_0_0 := FT_FReadLn()
-      nLidas += 1
-      __fuse_v_0_0 := u_xtpl_map(u_xtpl_split(__fuse_v_0_0, ","), {|%__um^0%| alltrim(%__um^0%)})
-      If len(__fuse_v_0_0) == 3 .and. u_xtpl_allof(__fuse_v_0_0, {|%__um^0%| ehNumero(%__um^0%)})
-        __fuse_v_0_0 := u_xtpl_asum(u_xtpl_map(__fuse_v_0_0, {|%__um^0%| val(%__um^0%)})) / 3
-        AAdd(__fuse_out_0_0, __fuse_v_0_0)
-      EndIf
-      FT_FSkip()
-    EndDo
+  EndIf
+
+  fo_0_0 := {}
+
+  While fok_0_0 .And. !FT_FEof()
+    fv_0_0 := FT_FReadLn()
+    nLidas += 1
+    fv_0_0 := u_xtpl_map(u_xtpl_split(fv_0_0, ","), {|b_0_it| alltrim(b_0_it)})
+    If len(fv_0_0) == 3 .and. u_xtpl_allof(fv_0_0, {|b_0_it| ehNumero(b_0_it)})
+      fv_0_0 := u_xtpl_asum(u_xtpl_map(fv_0_0, {|b_0_it| val(b_0_it)})) / 3
+      AAdd(fo_0_0, fv_0_0)
+    EndIf
+    FT_FSkip()
+  EndDo
+
+  If fok_0_0
     FT_FUse()
   EndIf
 
-  aMedias := __fuse_out_0_0
+  aMedias := fo_0_0
 
   conout("linhas: " + cValToChar(nLidas) + "  boas: " + cValToChar(len(aMedias)) + "  descartadas: " + cValToChar(nLidas - len(aMedias)))
 

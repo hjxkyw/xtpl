@@ -409,6 +409,11 @@ def is_generated_name(word):
           or bool(_re_generated_slot.match(word)))
 
 
+# Types that cannot be walked. 'array' and 'object' are absent on purpose:
+# an object may well be iterable through a method, and an array is the point.
+_SCALAR_TYPES = {"numeric", "character", "logical", "date", "json"}
+
+
 def membership_span(nodes):
   """(before, value, collection, after) for the first 'x in y', or None.
 
@@ -3177,6 +3182,35 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     if fold is not None:
       blocked_by = None
 
+    # A chain walks a collection. A single value at the head produces
+    # 'Len(1)' and '1[1]', which nothing else catches: AdvPL is dynamically
+    # typed, so the compiler takes it and it fails at run time complaining
+    # about something else.
+    if not rows and not reading and range_ends is None and len(parts) > 1:
+      bare = head.strip()
+      scalar_why = None
+      if is_literal_expr(bare) and not bare.startswith("{"):
+        scalar_why = ""
+      else:
+        # A variable declared in this function may say what it holds: an
+        # initialiser that is a scalar literal, or a type annotation. A
+        # parameter says nothing, and guessing from a Hungarian prefix would
+        # be wrong every time somebody names an array 'nRows'.
+        kind = declared_types.get(bare, "").lower()
+        if kind in _SCALAR_TYPES:
+          scalar_why = f" -- it is declared 'as {kind}'"
+        else:
+          seeded = hoisted_inits.get(bare, "").strip()
+          if (seeded and is_literal_expr(seeded)
+              and not seeded.startswith("{")):
+            scalar_why = f" -- it was declared as {seeded}"
+      if scalar_why is not None:
+        shown = unmask_literals(bare, literal_parts)
+        raise SyntaxError(
+          f"Line {line_idx + 1}: {shown} is a single value{scalar_why}, and "
+          f"a chain walks a collection. Write {{{shown}}} for a one-element "
+          f"array, or 'lo..hi' for a range.")
+
     if alias_arg is not None and taken < 1:
       raise SyntaxError(
         f"Line {line_idx + 1}: rows() is a source to walk, not a value. It has "
@@ -3185,7 +3219,11 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     # One stage on its own is a loop either way, so fusing an array chain
     # would only make the output longer. A source has no other lowering, and
     # a file with no stages at all is still meaningful -- every line of it.
-    if taken < 2 and alias_arg is None and path_arg is None and not for_effect:
+    # A range has to fuse whatever else the chain does: there is no array
+    # behind it, so '1..999' handed to a runtime verb is not an expression
+    # AdvPL can evaluate. '1..999 |> asum' generated 'u_xtpl_asum(1..999)'.
+    if (taken < 2 and alias_arg is None and path_arg is None
+        and range_ends is None and not for_effect):
       return [], None, parts[1:], blocked_by
 
     indent = leading_indent(prefix)
@@ -3236,7 +3274,9 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       # allocates none of them.
       low, high = range_ends
       for name, part in (("fuse_lo", low), ("fuse_hi", high)):
-        if not is_literal_expr(part):
+        # A literal goes in the header, and so does a bare name: the temp is
+        # there to evaluate an expression once, and a name is evaluated.
+        if not is_literal_expr(part) and not re_bare_name.match(part.strip()):
           bound = next_temp(name, curr_scope)
           before.append(f"{indent}{bound} := {part}")
           if name == "fuse_lo":

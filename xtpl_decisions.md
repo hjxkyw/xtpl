@@ -770,6 +770,294 @@ an undeclared name before -- a poor error for a reasonable thing to write. A
 name that IS a variable in scope passes through untouched, since a block held
 in a variable is a legitimate argument and that is what it means.
 
+### A single value at the head of a chain
+
+    1 |> map([x] 2 * x) |> asum
+
+generated `Len(1)` and `1[1]`. Nothing else catches it: AdvPL is dynamically
+typed, so the compiler takes it happily and it fails at run time complaining
+about something else.
+
+Refused now, naming the two things it might have meant -- `{1}` for one
+element, `1..99` for a sequence.
+
+**It only catches what is visible in the source.** `local nX := 5` followed by
+`nX |> map(...)` still passes, because a variable holding a scalar and one
+holding an array are identical to the transpiler. Catching that needs types
+xtpl does not have, and guessing from a Hungarian prefix would be wrong every
+time somebody names an array badly.
+
+Same shape as the `%%` fault earlier: an operand had to be a name, so a
+literal fell down a path nobody had walked. This was the mirror -- everything
+assumed the head was a name or a call.
+
+### Names that say what a thing is, not what it will become
+
+The `somar` example read:
+
+    zip(aA, aB, [x, y] zip(x, y, [p, q] val(p) + val(q)))
+
+Four single letters across two nesting levels, and nothing saying which level
+was which. Rewritten:
+
+    zip(aLinhasA, aLinhasB, [aCamposA, aCamposB]
+        zip(aCamposA, aCamposB, [cCampoA, cCampoB]
+            val(cCampoA) + val(cCampoB)))
+
+    aLinhasA   every line of A, each already split -- array of arrays
+    aCamposA   the fields of ONE line             -- array of strings
+    cCampoA    ONE field                          -- string
+
+The author's suggested naming had `nNumeroA` for the innermost. It is a
+string: it came out of a text file and `val()` is what makes it a number. The
+`c` prefix is not decoration here -- it is the one thing that explains why
+`val()` is there at all. A name that says what a value will become hides the
+conversion; the exercise of naming is what catches that.
+
+**And the example now explains `zip` before using it.** It is a zipper: two
+rows of teeth, joined pair by pair, with a block deciding what each pair
+becomes. Two levels of pairing means two zips -- the outer matches line with
+line, the inner matches field with field. That took twenty lines of comment,
+which is the honest cost: a nested chain is dense, and density is not
+legibility. The comment is the price of the density, not a failure of it.
+
+### The examples' generated files were stale
+
+`tests/` is re-recorded after every change, so those were current. The
+examples were not: `euler.tlpp` and `medias.tlpp` still carried
+`__fuse_out_0_0` and `__stk_1_0` from before the renaming, and `somar` had no
+`.tlpp` at all. Regenerated, and `somar.tlpp` added.
+
+They are checked in although they are generated output, because someone
+reading the repository should be able to see what a `.xtpl` becomes without
+running anything. That only works if they are regenerated when the transpiler
+changes, which is exactly what did not happen.
+
+**The hand-written probes are deliberately left alone.** Several use
+`__stk_`/`__blk_`, which is what the generated names were called when those
+probes were written and run. Rewriting them would make them claim to have
+tested something they did not -- they are a record of what was executed, not
+examples of the current state. `probes/README.md` says so, so nobody tidies
+them later. Only `probe_control.tlpp` is generated, and that one follows.
+
+### run_tests.py now says which path it ran
+
+It printed `89 passed, 0 failed` whether the Raku grammars or the regex
+fallback had run, because the two produce identical output -- which is the
+point of the fallback and the reason the count cannot distinguish them.
+
+That is how a partially verified result got reported as verified twice in one
+day: the container lost `rakulang`, the suite kept passing, and nothing said
+half the checking was gone. The line above the count says it now.
+
+**And rakulang is not on PyPI.** The wheels are GitHub release assets and
+carry `librakupp.so` inside, so there is nothing to build:
+
+    curl -sfL -O https://github.com/ash/rakupp/releases/download/v4.0.1/rakulang-0.1.0-py3-none-linux_x86_64.whl
+    pip install rakulang-0.1.0-py3-none-linux_x86_64.whl
+
+The file name matters; pip refuses a renamed wheel. Written into both READMEs
+and into what `fuzz_paths.py` prints when it finds itself with one path,
+because looking for it on PyPI, finding nothing and trying to compile the C++
+is the wrong turn and I took it.
+
+### What a declaration says about a chain's head
+
+The literal check caught `1 |> map(...)`. A variable holding a scalar reads
+the same as one holding an array, so `nX |> map(...)` went through and failed
+at run time -- which is where I left it, saying types were needed that xtpl
+does not have.
+
+Two of the three cases do not need types, because the declaration already
+said:
+
+    local nX := 5            an initialiser that is a scalar literal
+    local cY as character    a type annotation
+
+Both refused now, and the message says which one gave it away:
+
+    Line 4: nX is a single value -- it was declared as 5, and a chain walks
+            a collection.
+
+The third is a parameter, which says nothing, and that one stays. Guessing
+from the Hungarian prefix would be wrong every time somebody names an array
+`nRows`, and a false refusal is worse than a runtime error you can read.
+
+A runtime guard -- `If ValType(x) == "A"` around every chain -- would catch
+all three and cost a check per chain for ever, to protect against a mistake
+that shows up the first time the code runs. Not taken.
+
+**`array` and `object` are deliberately not in the scalar list.** An array is
+the point, and an object may well be walkable through a method xtpl knows
+nothing about.
+
+### A range with no stages did not fuse
+
+Found while checking whether ranges accept variables. They do -- literal,
+variable and expression ends all work, and bare names go straight into the
+`For` header like any other source. But:
+
+    1..999 |> asum   ->   pt_0_0 := u_xtpl_asum(1..999)
+
+A chain with fewer than two fusable stages falls back to runtime verbs, and
+`1..999` handed to one is not an expression AdvPL can evaluate. Every other
+source survives that fallback because there is an array behind it; a range is
+the one with nothing behind it, so it has to fuse whatever else the chain
+does.
+
+### A failed FT_FUse is not inert, and closing it was clobbering other files
+
+The flat guard assumed an open that fails touches nothing. It does not:
+
+    1. do arquivo bom: linha um
+    2. depois de abrir o inexistente, FT_FEof() = .F.
+    3. a proxima linha deveria ser 'linha dois':
+    inerte: nao
+
+A failed `FT_FUse` displaces whatever file was current, and the argument-less
+`FT_FUse()` that closes the walk then closes **somebody else's**. A caller
+with a file open, and a `lines()` over a path that does not exist, loses their
+handle -- and the damage surfaces somewhere else entirely, which is the worst
+shape a fault can have.
+
+Both the open and the close are guarded now, in the fused chain and in
+`for x in lines(...)`, including its early-exit paths:
+
+    fok_0_0 := File(cArquivo)
+
+    If fok_0_0
+      FT_FUse(cArquivo)
+      FT_FGoTop()
+    EndIf
+
+    fo_0_0 := {}
+
+    While fok_0_0 .And. !FT_FEof()
+      ...
+    EndDo
+
+    If fok_0_0
+      FT_FUse()
+    EndIf
+
+The accumulator stays outside the guard: a missing file gives an empty
+collection, not Nil.
+
+**This is the shape the author proposed and I argued against twice**, on the
+grounds that it cost a nesting level and gained nothing. The "gained nothing"
+was an assumption about `FT_FUse` I had never tested, stated twice as though
+it were known. The probe took four minutes.
+
+### ':=' is an expression, and 'while local' got half its size back
+
+Probed after a question about `If (fok := File(cArq))`. Five cases, all pass:
+`:=` yields the value assigned, works in an `If` and a `While` condition,
+chains as `a := b := 5`, and works as an argument.
+
+The `If` case is not worth taking: the result still has to be initialised
+outside any guard, so it would be the current shape plus a nesting level.
+
+`while local` is where it pays. This:
+
+    While .T.
+      s_1_x := proximo(o)
+      If !(s_1_x != nil)
+        Exit
+      EndIf
+
+became this:
+
+    While (s_1_x := proximo(o)) != nil
+
+A loop-and-a-half -- what people write by hand for want of anything better --
+replaced by an ordinary loop.
+
+**Only when the variable's first appearance in the condition is reached
+unconditionally.** Behind a `.and.` or inside an `iif` it might never be
+evaluated, and the assignment is usually what advances something: a cursor, a
+file, a queue. Skipping it would loop for ever. Those keep the old shape, and
+`58_while_assign` pins both.
+
+### Two warts in the generated output
+
+**A statement that spans lines is followed by a blank.** Two chains in a row
+ran together: `n := fo_0_0` sat directly above `fok_0_0 := File(cB)`, which
+reads as one statement when it is two. The spacing pass put a blank after the
+`EndDo`, but a chain's tail comes after that, so the seam was never separated.
+
+**A read whose value nothing uses drops the assignment.** `count` with no test
+never looks at the line, but the read must still happen for `FT_FSkip` to
+advance:
+
+    -  fv_0_0 := FT_FReadLn()
+    +  FT_FReadLn()
+
+The element temp then goes unreferenced and the pass that drops unused
+generated storage removes its declaration too.
+
+Neither was wrong; both were noise, and noise in generated output is what
+makes people stop reading it.
+
+### A source that is already a name gets no temp
+
+    -  fs_0_0 := cArquivo
+    -  fok_0_0 := File(fs_0_0)
+    +  fok_0_0 := File(cArquivo)
+
+The temp exists so an expression is evaluated once. A name is already
+evaluated, and copying it only puts a second name on the reader's screen for
+the same thing. It applies to every source: a file path, an array, an alias.
+
+`lines(cDir + "a.txt")` and `concat(aA, aB) |> ...` still get one, because
+those would otherwise be re-evaluated -- for the file once per `File()` and
+`FT_FUse()`, for the array once per iteration of `Len()`.
+
+### Two of the three spellings stopped earning their place
+
+Shortening the prefixes made two of the three `#translate` rules pointless,
+which was not the intention and is the better result:
+
+    b_0_it       %it^0%        the spelling adds nothing
+    b_1_nFator   %nFator^1%    nothing
+    s_1_aTmp     !aTmp^1!      nothing
+    s_1_0        !aTmp^1^0!    THE NAME
+
+The spellings existed because `__stk_1_aTmp` was long and `__stk_1_0` said
+nothing. With `s_1_aTmp` the name is right there, so the decoration is
+punctuation around something already legible. Only a shared slot still cannot
+name itself, and that one keeps its rule.
+
+Two rules per file now, and only in files that share a slot. Most have none.
+
+This gives up the uniformity that was the point of adding the third spelling
+an hour earlier. That trade is worth it: uniformity was serving legibility,
+and the short names give legibility directly.
+
+### The generated names got shorter, and became reserved
+
+    -  __fuse_out_0_0 := {}
+    +  fo_0_0 := {}
+
+`__fuse_out_0_0` said nothing that `fo_0_0` does not, and a fused chain puts
+six of them on screen at once. `__stk_`/`__blk_` became `s_`/`b_` the same
+way, and the lambda parameter the bare-name rule invents went from `__um` to
+`it`, which reads: `{|b_0_it| alltrim(b_0_it)}`.
+
+What is kept is the trailing `_<depth>_<index>`, because that is what makes
+the shape impossible to type by accident.
+
+**And now reserved explicitly.** A leading `__` was protection enough when the
+names carried one; short names need the shapes declaring off-limits, or a
+collision would be silent -- two different variables, one slot. One predicate
+says whether a name is the transpiler's, where three separate prefix tests
+used to. `fo`, `nFs_0` and `pt_x` are still perfectly good names; only
+`<kind>_<digits>_<digits>` is refused.
+
+Two faults fell out of the rename, both silent: the origin-note pattern and
+the generated-name pattern still required `__`, so the shared-slot spelling
+stopped running entirely and `s_1_0` went out raw. Every fixture still passed,
+because the golden files had been re-recorded with the broken version.
+
 ### 121 real files through --legacy
 
 Six public repositories from GitHub, 121 `.prw` and `.tlpp` files. All 121

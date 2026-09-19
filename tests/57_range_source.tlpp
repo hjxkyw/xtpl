@@ -25,14 +25,11 @@ user function testRangeSource(nLo, nHi)
   Local nCalculado := 0
   Local aPrimeiros := {}
 
-  Local b_0_x
   Local fhi_0_0
   Local fi_0_0
-  Local flo_0_0
   Local fn_0_0
   Local fo_0_0
   Local fv_0_0
-  Local pt_0_0
 
   // literal dos dois lados: entra direto no cabecalho
   fo_0_0 := 0
@@ -47,19 +44,33 @@ user function testRangeSource(nLo, nHi)
   nEuler := fo_0_0
 
   // um map escreve no elemento, entao o contador tem de ser outro
-  pt_0_0 := u_xtpl_map(1..10, {|b_0_x| b_0_x * 2})
-  aDobros := pt_0_0
+  fo_0_0 := {}
+
+  For fi_0_0 := 1 To 10
+    fv_0_0 := fi_0_0
+    fv_0_0 := fv_0_0 * 2
+    AAdd(fo_0_0, fv_0_0)
+  Next
+
+  aDobros := fo_0_0
 
   // contagem com teste, sem construir nada
-  pt_0_0 := u_xtpl_count(1..100, {|b_0_x| (b_0_x % 7) == 0})
-  nQuantos := pt_0_0
+  fo_0_0 := 0
+
+  For fi_0_0 := 1 To 100
+    fv_0_0 := fi_0_0
+    If (fv_0_0 % 7) == 0
+      fo_0_0 := fo_0_0 + 1
+    EndIf
+  Next
+
+  nQuantos := fo_0_0
 
   // pontas calculadas: ligadas antes do laco
-  flo_0_0 := nLo
   fhi_0_0 := calcFim(nHi)
   fo_0_0 := 0
 
-  For fi_0_0 := flo_0_0 To fhi_0_0
+  For fi_0_0 := nLo To fhi_0_0
     fv_0_0 := fi_0_0
     If fv_0_0 > 0
       fo_0_0 := fo_0_0 + fv_0_0

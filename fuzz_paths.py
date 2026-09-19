@@ -215,7 +215,12 @@ def main():
 
     if xtpl.raku_grammar("XtplDecl", "XtplDeclActions") is None:
         print("rakulang is not importable, so there is only one path to "
-              "compare. Install it first.")
+              "compare. It is not on PyPI -- the wheels are GitHub release "
+              "assets and carry librakupp.so inside:\n"
+              "  curl -sfL -O https://github.com/ash/rakupp/releases/"
+              "download/v4.0.1/rakulang-0.1.0-py3-none-linux_x86_64.whl\n"
+              "  pip install rakulang-0.1.0-py3-none-linux_x86_64.whl\n"
+              "The file name matters; pip refuses a renamed wheel.")
         return 2
 
     base = args.seed if args.seed is not None else random.randrange(1 << 30)

@@ -22,6 +22,8 @@ errors/out_of_scope.xtpl
 errors/prologue.xtpl
 errors/redeclared.xtpl
 errors/reserved_word.xtpl
+errors/scalar_chain.xtpl
+errors/scalar_declared.xtpl
 errors/source_stranded.xtpl
 errors/stale_fold.xtpl
 errors/stale_keyword.xtpl

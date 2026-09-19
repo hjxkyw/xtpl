@@ -1,0 +1,1 @@
+SyntaxError: Line 16: nFator is a single value -- it was declared as 5, and a chain walks a collection. Write {nFator} for a one-element array, or 'lo..hi' for a range.

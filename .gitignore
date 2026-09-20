@@ -1,0 +1,49 @@
+# Bytecode do Python
+__pycache__/
+*.py[cod]
+
+# O diretorio de trabalho do compile_check.py: ele copia as fixtures para la
+# antes de chamar o compilador, e apaga no fim a menos que se passe --keep.
+build/
+
+# Sobras de rodar os probes. Eles criam e apagam, mas uma execucao
+# interrompida deixa o arquivo para tras.
+ZXTPL.*
+ZXPROBE.TXT
+creditos.log
+*.log
+
+# Saida do AppServer
+*.rpo
+*.dtc
+console.log
+
+# Mensagens de commit escritas em arquivo, se ficarem na arvore
+COMMIT_*.txt
+
+# Editores
+*.swp
+*.orig
+*.rej
+.vscode/
+.idea/
+
+# ----------------------------------------------------------------------------
+# O QUE NAO SE IGNORA, DE PROPOSITO
+#
+#   tests/*.tlpp        sao os arquivos-referencia. O run_tests.py compara a
+#                       saida com eles, entao sao o teste, nao o resultado.
+#
+#   tests/*.warn        os avisos esperados, pelo mesmo motivo.
+#
+#   errors/*.err        as mensagens de erro esperadas.
+#
+#   examples/*/*.tlpp   saida gerada, versionada para quem le o repositorio
+#                       ver no que um .xtpl vira sem rodar nada. So vale se
+#                       forem regerados quando o transpilador mudar.
+#
+#   probes/*.tlpp       escritos a mao, exceto probe_control.tlpp.
+# ----------------------------------------------------------------------------
+
+xtpl_decisions.md
+xtpl_design.md

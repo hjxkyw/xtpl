@@ -414,6 +414,93 @@ def is_generated_name(word):
 _SCALAR_TYPES = {"numeric", "character", "logical", "date", "json"}
 
 
+
+# What each generated name is, for the legend written above every function
+# that has any. A name the reader did not choose deserves a sentence, and one
+# sentence in one place beats a spelling repeated on every line.
+_TEMP_MEANING = {
+  "fa":  "o acumulador de um scan/fold",
+  "fal": "o alias da area percorrida",
+  "far": "a area que estava selecionada antes do percurso",
+  "fbg": "o saco de um expand",
+  "fbs": "o melhor encontrado ate agora (maxby/minby)",
+  "fch": "o pedaco atual de um chunkby",
+  "fdr": "quantos elementos um drop ja descartou",
+  "ffs": "o primeiro elemento que passou no teste",
+  "fhd": "se ja houve algum elemento",
+  "fhi": "a ponta de cima de um intervalo",
+  "fi":  "o indice do percurso",
+  "fj":  "o indice de dentro de um expand",
+  "fky": "a chave do pedaco atual de um chunkby",
+  "flm": "o limite de um take",
+  "flo": "a ponta de baixo de um intervalo",
+  "fls": "o elemento anterior (pairwise)",
+  "fn":  "quantos elementos ja passaram",
+  "fo":  "o resultado da cadeia",
+  "fok": "se o arquivo abriu",
+  "fol": "o elemento de duas posicoes atras",
+  "fop": "se ha um pedaco aberto (chunkby)",
+  "fpb": "o valor testado a cada volta",
+  "fpv": "o elemento anterior",
+  "frc": "o registro em que a area estava antes do percurso",
+  "frd": "se ja ha par para emitir (pairwise)",
+  "fs":  "a colecao ou o caminho percorrido",
+  "fsn": "a chave vista nesta volta (chunkby)",
+  "fsp": "o separador de um join",
+  "fv":  "o elemento em percurso",
+  "et":  "o valor testado por '?:'",
+  "gt":  "o valor protegido por 'fallback'",
+  "ht":  "o valor lido de um hash",
+  "pt":  "o resultado de uma etapa que nao fundiu",
+}
+
+
+# ---------------------------------------------------------------------------
+# A line, and what it does with the generated temporaries.
+#
+# Every pass after emission used to be a regex over text: find 'X->(DbGoto(
+# frc_N))', look ahead for another DbGoto, decide. That works until the shape
+# of what is emitted changes, and then it silently stops matching -- the
+# output stays correct and quietly gets worse, with nothing to notice.
+#
+# So each emitted line carries the set of generated names it READS and the set
+# it WRITES. 'Is this store dead?' becomes 'is this name read anywhere after
+# here?', which is a question about the sets rather than about the spelling.
+#
+# Only generated names are tracked. What the programmer wrote is theirs, the
+# unused-variable check already reports it, and a call can touch it in ways
+# nothing here can see.
+# ---------------------------------------------------------------------------
+
+_re_ir_name = re.compile(
+  r'\b(?:[a-z]+_\d+_\d+|[sb]_\d+_\w+)\b')
+_re_ir_store = re.compile(
+  r'^\s*([a-z]+_\d+_\d+|[sb]_\d+_\w+)\s*:=\s*(.*)$')
+
+
+class Line:
+  """One emitted line, with what it reads and writes."""
+
+  __slots__ = ("text", "reads", "writes")
+
+  def __init__(self, text):
+    self.text = text
+    body, masked = text, mask_literals(text)[0]
+    # A comment says nothing about data flow, and a name inside a string is
+    # not a reference to it.
+    code = masked.split("//")[0]
+    store = _re_ir_store.match(code)
+    if store:
+      self.writes = {store.group(1)}
+      self.reads = set(_re_ir_name.findall(store.group(2)))
+    else:
+      self.writes = set()
+      self.reads = set(_re_ir_name.findall(code))
+
+  def __str__(self):
+    return self.text
+
+
 def membership_span(nodes):
   """(before, value, collection, after) for the first 'x in y', or None.
 
@@ -1499,99 +1586,94 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       for name, line_no in block_locals.pop(dead, {}).items():
         retired_locals[name] = line_no
 
-  def spell_shared_slots():
-    """Give each occupant of a shared slot its own spelling of it.
+  def name_meaning(name):
+    """What a generated name is, for the note on its declaration.
 
-    A slot holding four different variables cannot be named after any of them,
-    so it kept a number and every line carried a comment saying which variable
-    it was that time. The preprocessor can do better: '~' is legal in a
-    pattern and illegal in an identifier, so
-
-        #translate aTmp~1~0   => s_1_0
-        #translate aOther~1~0 => s_1_0
-
-    gives two readable spellings of one piece of storage, and no rule can ever
-    collide with a name somebody wrote.
-
-    The name carries the depth and the ordinal, so 'aTmp~1~0' can only mean
-    's_1_0' in any function. Two functions emit the identical rule, which
-    is harmless -- so the rules live at the top of the file and nothing is
-    needed per block, nor an '#untranslate'.
-
-    Which occupant each line belongs to is already recorded, in the origin
-    comments. They are what this reads, and what it then removes.
+    The reader did not choose any of these, so each gets a sentence. It used
+    to be a legend block below the declarations, which listed every name a
+    second time -- the note goes on the line that declares it instead.
     """
-    shared = {}
-    for slot, names in slot_origins.items():
-      match = re.match(r'^s_(\d+)_(\d+)$', slot)
-      if match and len(names) > 1:
-        shared[slot] = (match.group(1), match.group(2))
-    if not shared:
-      return
-
-    for index in range(len(function_buffer) - 1, -1, -1):
-      found = split_origin_note(function_buffer[index])
-      if found is None:
-        continue
-      body, pairs, how = found
-      kept = []
-      for pair in pairs:
-        slot, _, origin = pair.partition(" = ")
-        if slot not in shared:
-          kept.append(pair)
-          continue
-        depth, ordinal = shared[slot]
-        # Closed with a '!' as well. Without a terminator the last marker
-        # runs on and swallows what follows, which shows up as a mangled
-        # 'For' header rather than as an error.
-        spelled = f"!{origin.lstrip('_')}^{depth}^{ordinal}!"
-        body = re.sub(rf'\b{re.escape(slot)}\b', spelled, body)
-        translate_rules.add(True)     # one rule covers every slot
-      function_buffer[index] = rejoin_origin_note(body, kept, how)
-
-    # The first line a spelling appears on is its declaration; 'let' marks it,
-    # and expands to nothing.
-
+    slot = re.match(r'^([sb])_(\d+)_(.+)$', name)
+    if slot:
+      kind, _depth, tail = slot.groups()
+      if tail.isdigit():
+        who = ", ".join(sorted(origin_names.get(o, o).lstrip("_")
+                               for o in slot_origins.get(name, [])))
+        return f"um slot, dividido por {who}" if who else "um slot dividido"
+      if kind == "b":
+        return (f"o local de bloco '{tail.lstrip('_')}', fixado: tem "
+                f"armazenamento so dele")
+      return f"o local de bloco '{tail.lstrip('_')}'"
+    temp = re.match(r'^([a-z]+)_\d+_\d+$', name)
+    if temp and temp.group(1) in _TEMP_MEANING:
+      return _TEMP_MEANING[temp.group(1)]
+    return ""
 
   def drop_unused_generated():
-    """Forget generated storage that nothing in the body refers to.
-
-    Substituting a block's parameter for the value the loop already holds
-    leaves its slot declared and never mentioned. The name was the
-    transpiler's, so there is nothing to warn about -- it just goes, along
-    with the 'let' that marked it.
-    """
+    """Forget generated storage that nothing in the body refers to."""
     body = "\n".join(function_buffer[1:])
+    alive = [n for n in generated_hoisted
+             if re.search(rf'\b{re.escape(n)}\b', body)]
+    if len(alive) != len(generated_hoisted):
+      generated_hoisted[:] = alive
+
+  def drop_shadowed_restores():
+    """A chain's record restore that the enclosing block redoes at once.
+
+    A chain saves and restores the record pointer because code after it may
+    depend on where the cursor was. When the chain is the LAST thing in a
+    'using alias' block, nothing is after it: the block's own restore runs
+    immediately and puts the pointer somewhere earlier still.
+
+    Only when the two are adjacent, with nothing between but the result
+    assignment. Anything else in between -- a call, a field read -- may want
+    the position, and a call can move the cursor without naming the alias.
+    """
+    goto = re.compile(r'^\s*(\w+)->\(DbGoto\((\w+)\)\)\s*$')
+    keep, index = [], 0
+    while index < len(function_buffer):
+      line = function_buffer[index]
+      mine = goto.match(line)
+      if mine and mine.group(2).startswith("frc_"):
+        ahead = index + 1
+        while ahead < len(function_buffer):
+          nxt = function_buffer[ahead]
+          if not nxt.strip() or re.match(r'^\s*\w+ := \w+\s*$', nxt):
+            ahead += 1
+            continue
+          break
+        later = goto.match(function_buffer[ahead]) if ahead < len(
+          function_buffer) else None
+        if later and later.group(1) == mine.group(1):
+          index += 1                  # the block redoes it straight away
+          continue
+      keep.append(line)
+      index += 1
+
+    # The save whose restore just went is now a dead store. Narrow on
+    # purpose: only a write with no read anywhere else in the function, and
+    # only for the record temps this pass just orphaned.
+    #
+    # A general dead-store elimination was tried on def-use sets and REVERTED.
+    # "Nothing reads this name further down the text" is not the same as
+    # "nothing reads it afterwards": inside a loop, the read can be above the
+    # write. It dropped 'ffs_0_0 := .F.' from a 'join', leaving the
+    # first-element flag true for ever and the separator never emitted.
+    #
+    # Def-use alone cannot answer the question. It needs the control flow --
+    # which is the real IR, and is not what annotating lines gives you.
+    body = "\n".join(keep)
     alive = []
-    for name in generated_hoisted:
-      spelled = re.match(r'^__(stk|blk)_(\d+)_(.+)$', name)
-      forms = [rf'\b{re.escape(name)}\b']
-      if spelled:
-        kind, depth, tail = spelled.groups()
-        if kind == "blk":
-          forms.append(rf'%{re.escape(tail)}\^{depth}%')
-        elif tail.isdigit():
-          forms.append(rf'![A-Za-z_]\w*\^{depth}\^{tail}!')
-        else:
-          forms.append(rf'!{re.escape(tail)}\^{depth}!')
-      if any(re.search(f, body) for f in forms):
-        alive.append(name)
-    if len(alive) == len(generated_hoisted):
-      return
-    gone = [n for n in generated_hoisted if n not in alive]
-    generated_hoisted[:] = alive
-    function_buffer[1:] = [
-      l for l in function_buffer[1:]
-      if not any(re.match(rf'\s*let \w+ as {re.escape(n)}\s*$', l)
-                 for n in gone)]
+    for line in keep:
+      store = re.match(r'^\s*(frc_\d+_\d+) := \w+->\(RecNo\(\)\)\s*$', line)
+      if store and len(re.findall(rf'\b{re.escape(store.group(1))}\b',
+                                  body)) == 1:
+        continue
+      alive.append(line)
+    function_buffer[:] = alive
 
   def space_out_blocks():
-    """A blank line either side of a control structure at the outer level.
-
-    A fused chain emits a dozen lines with a loop in the middle, and without
-    this the whole function reads as one block of text. Only the outermost
-    level: spacing a nested 'If' as well would pull the loop apart.
-    """
+    """A blank line either side of a control structure at the outer level."""
     opens = re.compile(
       r'^  (?:If|For|While|Do\s+Case|Begin\s+Sequence|Try)\b', re.IGNORECASE)
     closes = re.compile(
@@ -1600,13 +1682,9 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     spaced = []
     for index, line in enumerate(function_buffer):
       if opens.match(line) and spaced:
-        # A comment run directly above belongs to the block it documents, so
-        # the blank goes above the comment, not between them.
         at = len(spaced)
         while at > 0 and spaced[at - 1].strip().startswith("//"):
           at -= 1
-        # Only when there is real body above it. Position 1 is straight after
-        # the signature, where the declarations already separate.
         if at > 1 and spaced[at - 1].strip():
           spaced.insert(at, "")
       spaced.append(line)
@@ -1615,120 +1693,12 @@ def transpile(source_code, dictionary=None, dict_strict=False,
           function_buffer) else ""
         if following.strip():
           spaced.append("")
-    # A ';' continuation leaves its lines blank so the numbering still points
-    # at the source, which can put five blanks in a row where one statement
-    # was spread over five lines. One is enough anywhere.
     collapsed = []
     for line in spaced:
       if not line.strip() and collapsed and not collapsed[-1].strip():
         continue
       collapsed.append(line)
     function_buffer[:] = collapsed
-
-  def mark_block_declarations():
-    """'let <name> as <storage>' in front of every block-local declaration.
-
-    A block variable is one whether it landed in a recycled slot or in private
-    storage of its own -- a captured one gets 'b_1_nFator' and is no less
-    block-scoped for it. The marker says so uniformly, and expands to nothing.
-
-    Last of the three passes, so the storage it names is the final one.
-    """
-    if not declared_lines:
-      return
-
-    # Where each line's enclosing block opens. A declaration goes to the top
-    # of the block it belongs to, so the generated code shows the same shape
-    # xtpl requires of the source: declarations, then statements.
-    opens_at = {}
-    stack = []
-    for index, line in enumerate(function_buffer):
-      opens_at[index] = stack[-1] if stack else None
-      if re_block_open.match(line):
-        stack.append(index)
-      elif re_block_close.match(line):
-        if stack:
-          stack.pop()
-
-    marks = []
-    for index, storage, source in declared_lines:
-      if index >= len(function_buffer):
-        continue
-      text = (f"{leading_indent(function_buffer[index])}"
-              f"let {source.lstrip('_')} as {storage}")
-      # A variable declared BY a header -- 'for local nI := 1 to 3' -- cannot
-      # move: the header that opens its block is also what uses it. Anything
-      # else joins the prologue of the block it sits in.
-      if re_block_open.match(function_buffer[index]):
-        marks.append((index, 0, text))
-      else:
-        opener = opens_at.get(index)
-        marks.append((index if opener is None else opener + 1, index, text))
-
-    # Grouped by position and inserted whole, so declarations keep their
-    # order. Inserting one at a time at the same index reverses them.
-    grouped = {}
-    for where, order, text in sorted(marks, key=lambda m: (m[0], m[1])):
-      grouped.setdefault(where, []).append(text)
-    for where in sorted(grouped, reverse=True):
-      function_buffer[where:where] = grouped[where]
-    if marks:
-      translate_rules.add(True)
-
-  def spell_named_slots():
-    """'!nInner^2!' for a slot named after the one variable that uses it.
-
-    Without this the body mixes two idioms: '!aTmp^1^0!' where storage is
-    shared and a bare 's_2_nInner' where it is not. Both are block
-    variables and both should look like one.
-
-    The two rules cannot be confused: a shared slot carries two numbers and a
-    named one carries a single depth, so '!x^1^0!' never matches the
-    one-number pattern.
-    """
-    named = {}
-    for slot in list(slot_origins):
-      match = re.match(r'^s_(\d+)_([A-Za-z_]\w*)$', slot)
-      if match:
-        named[slot] = (match.group(1), match.group(2))
-    if not named:
-      return
-    for index, line in enumerate(function_buffer):
-      if re.match(r'\s*let \w+ as ', line):
-        continue                      # the marker names the storage itself
-      for slot, (depth, name) in named.items():
-        line = re.sub(rf'\b{re.escape(slot)}\b', f"!{name}^{depth}!", line)
-      function_buffer[index] = line
-    translate_rules.add(True)
-
-  def spell_private_storage():
-    """'%nFator^1%' for storage that never got a slot.
-
-    A variable pinned by a capture, a '@', a 'raw' line or a 'defer' gets
-    private 'b_' storage, and so does a lambda's parameter. Both are block
-    variables, and with this they read like the other two kinds.
-
-    Verified by running it: a block built with the alias still sees an
-    assignment made afterwards, which is the whole reason these have storage
-    of their own. Had the alias broken the capture, xtpl's escape analysis
-    would have stopped being true, silently.
-    """
-    private = {}
-    for index, line in enumerate(function_buffer):
-      for found in re.finditer(r'\bb_(\d+)_([A-Za-z_]\w*)\b', line):
-        private[found.group(0)] = (found.group(1), found.group(2))
-    if not private:
-      return
-    for index, line in enumerate(function_buffer):
-      if re.match(r'\s*let \w+ as ', line):
-        continue                      # the marker names the storage itself
-      for raw, (depth, name) in private.items():
-        line = re.sub(rf'\b{re.escape(raw)}\b', f"%{name}^{depth}%", line)
-      function_buffer[index] = line
-    for name in generated_hoisted:
-      if name in private:
-        translate_rules.add(True)
-    translate_rules.add(True)
 
   def name_single_slots():
     """Give a slot the name of its occupant when it only ever has one.
@@ -1796,9 +1766,8 @@ def transpile(source_code, dictionary=None, dict_strict=False,
   def flush_function(line_num):
     if not function_buffer:
       return
-    spell_shared_slots()
     name_single_slots()
-    mark_block_declarations()
+    drop_shadowed_restores()
     space_out_blocks()
     drop_unused_generated()
     if using_stack:
@@ -1861,12 +1830,8 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     if generated_hoisted:
       width = max((len(v) for v in generated_hoisted), default=0)
       for var in sorted(generated_hoisted, key=scope_sort_key):
-        shared = slot_origins.get(var) or []
-        # A recycled slot lists every source variable that ever used it;
-        # private storage already spells the name out, so it needs no note.
-        if len(shared) == 1 and var.endswith(f"_{shared[0].lstrip('_')}"):
-          shared = []                 # the name already says it
-        note = f"  // {', '.join(shared)}" if shared else ""
+        what = name_meaning(var)
+        note = f"  // {what}" if what else ""
         typed = f" as {declared_types[var]}" if var in declared_types else ""
         if var in hoisted_inits:
           out_lines.append(
@@ -2174,9 +2139,6 @@ def transpile(source_code, dictionary=None, dict_strict=False,
     local_kind[named.group("name").lower()] = (named.group("kind") or "").lower()
 
   pinned_by_func = collect_pinned()
-  # '#translate' rules for slots shared by more than one block variable,
-  # gathered across the file and emitted at the top of it.
-  translate_rules = set()
 
   temp_counters = {}
   object_stack = []
@@ -2414,7 +2376,7 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       if not sub_line.strip():
         function_buffer.append(sub_line)
         continue
-      written = annotate_origins(sub_line)
+      written = sub_line
       if map_lines:
         # Every emitted line carries the source line it came from, so a
         # runtime error in the .tlpp can be read back to what was written.
@@ -3323,14 +3285,26 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       has_value = True
     else:
       field, select = workarea_prefix(alias_arg, curr_scope, before, indent)
-      area = next_temp("fuse_area", curr_scope)
       record = next_temp("fuse_rec", curr_scope)
+      # Inside a 'using alias' for the SAME alias, the area is already
+      # selected and 'end using' puts it back, so saving and restoring it
+      # again is four lines that cannot change anything.
+      #
+      # The RECORD still has to be saved. The using restores it once, at the
+      # end of the block; code between two chains may rely on where it was,
+      # and a walk leaves it at Eof.
+      held = any(frame.get("alias")
+                 and field.isidentifier()
+                 and frame["alias"].upper() == field.upper()
+                 for frame in using_stack)
+      area = None if held else next_temp("fuse_area", curr_scope)
       # The area and the record pointer are put back afterwards. Leaving an
       # alias somewhere else is a classic Protheus bug whose damage shows up
       # in code that had nothing to do with this line.
-      before.extend([f"{indent}{area} := Alias()",
-                     f"{indent}DbSelectArea({select})",
-                     f"{indent}{record} := {field}->(RecNo())"])
+      if area is not None:
+        before.extend([f"{indent}{area} := Alias()",
+                       f"{indent}DbSelectArea({select})"])
+      before.append(f"{indent}{record} := {field}->(RecNo())")
       if seek_arg is None:
         before.append(f"{indent}{field}->(DbGoTop())")
       else:
@@ -3345,10 +3319,11 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       closer = f"{indent}EndDo"
       first = []
       step = [f"{indent}  {field}->(DbSkip())"]
-      after.extend([f"{indent}{field}->(DbGoto({record}))",
-                    f"{indent}If !Empty({area})",
-                    f"{indent}  DbSelectArea({area})",
-                    f"{indent}EndIf"])
+      after.append(f"{indent}{field}->(DbGoto({record}))")
+      if area is not None:
+        after.extend([f"{indent}If !Empty({area})",
+                      f"{indent}  DbSelectArea({area})",
+                      f"{indent}EndIf"])
       has_value = False
 
     body, closers = list(first), []
@@ -4418,7 +4393,10 @@ def transpile(source_code, dictionary=None, dict_strict=False,
       # area at Eof, and the caller did not ask for that.
       restore.append(f"{field}->(DbGoto({record}))")
       restore.extend([f"If !Empty({area})", f"  DbSelectArea({area})", "EndIf"])
-      using_stack.append({"restore": restore, "line": idx + 1})
+      # 'field' is the readable alias -- 'SX3' -- where 'select' is a masked
+      # literal token. A chain inside this block compares against this.
+      using_stack.append({"restore": restore, "line": idx + 1,
+                          "alias": field if field.isidentifier() else None})
       continue
 
     # 'next' closing a file loop is an EndDo, and closes the file after it.
@@ -4901,27 +4879,6 @@ def transpile(source_code, dictionary=None, dict_strict=False,
             if not re.search(rf'#\s*include\s+["\']{re.escape(name)}["\']',
                              have)]
   header = [f'#include "{name}"' for name in wanted]
-  if translate_rules:
-    header += [
-      "",
-      "// Armazenamento dividido por mais de uma variavel de bloco.",
-      "//",
-      "// 'let' marca onde uma variavel de bloco e declarada e qual",
-      "// armazenamento ela recebeu. Nao gera nada.",
-      "//",
-      "// Onde um slot e dividido por mais de uma variavel ele nao tem nome",
-      "// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:",
-      "// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja",
-      "// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.",
-      "//",
-      "// Uma regra so, para todos os slots: os marcadores entram no proprio",
-      "// nome do resultado. O '!' na frente impede que a regra case com uma",
-      "// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem",
-      "// o qual o ultimo marcador engole o que vem depois.",
-      "#translate let <name1> as <name2> =>",
-      "#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>",
-
-    ]
   if header:
     out_lines[:0] = header + [""]
 

@@ -1,0 +1,163 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// dicionario.tlpp -- listar os campos de uma tabela, lendo o SX3.
+//
+// ESTE EXEMPLO RODA. Os outros da pasta usam SA1, SE1, SC6 de mentira, para
+// mostrar a forma; este le o dicionario de verdade, que existe em qualquer
+// instalacao.
+//
+//    appserver.exe -compile -files=examples/dicionario/dicionario.tlpp ^
+//                  -includes=... -env=SeuAmbiente
+//    appserver.exe -env=SeuAmbiente -run=u_dicionario
+//
+// Sai algo como:
+//
+//    SA1 tem 90 campos, 1247 bytes por registro
+//      A1_FILIAL      C   2    Filial
+//      A1_COD         C   6    Codigo
+//      A1_LOJA        C   2    Loja
+//      ...
+//
+// ============================================================================
+// ABRIR A TABELA
+// ============================================================================
+//
+// Um job iniciado por '-run=' comeca SEM conexao com o banco e sem nenhuma
+// area aberta. Entao este exemplo abre o que precisa:
+//
+//    TCLink()                    conecta
+//    DbUseArea(.T., "TOPCONN", "SX3", "SX3", .F., .F.)
+//
+// Os 'defer' desfazem na ordem inversa, e valem para toda saida -- inclusive
+// os dois 'return' antecipados la embaixo.
+//
+// ============================================================================
+// POR QUE 'filter' E NAO 'takewhile'
+// ============================================================================
+//
+// O exemplo 'pedido' usa 'takewhile' para parar no primeiro registro de outro
+// pedido, e isso so vale porque a ordem garante que os registros de um pedido
+// estao juntos.
+//
+// Aqui NAO ha essa garantia. Abrindo a SX3 com DbUseArea, sem indice, a ordem
+// e a ordem fisica -- que na pratica agrupa por tabela, mas nada promete
+// isso. Um 'takewhile' pararia no primeiro campo fora do grupo e devolveria
+// uma lista PARCIAL, sem erro nenhum.
+//
+// Entao aqui e 'filter': le a SX3 inteira e fica com o que interessa. Mais
+// lento e correto, contra mais rapido e talvez errado.
+//
+// Essa escolha e o assunto: 'takewhile' nao e uma versao melhor de 'filter',
+// e uma versao que exige uma garantia. Sem a garantia, e 'filter'.
+//
+// ============================================================================
+// E O 'using alias'
+// ============================================================================
+//
+// Guarda a area selecionada e o registro corrente, e repoe na saida do bloco.
+// Aqui isso importa pouco, porque a funcao abriu a SX3 sozinha e fecha no
+// fim. Mas e o habito certo: uma funcao que mexe numa area e a devolve como
+// achou pode ser chamada de qualquer lugar.
+//
+// Dentro de um 'using alias' da MESMA tabela, a cadeia nao guarda a area de
+// novo: ela ja esta selecionada, e o 'end using' a repoe. Sobre outra tabela
+// a cadeia guarda, porque ai a area muda mesmo.
+//
+// O REGISTRO continua sendo guardado pela cadeia, sempre. O 'using' repoe uma
+// vez so, no fim do bloco, e o que estiver entre duas cadeias pode depender
+// de onde o cursor estava -- um percurso deixa a area no Eof.
+// ============================================================================
+
+user function dicionario()
+
+  Local cTabela := "SA1"
+  Local nErro := 0
+  Local aCampos := {}
+  Local nBytes := 0
+
+  Local s_1_0      // um slot, dividido por each, usearea
+  Local s_1_1      // um slot, dividido por aLinha, userec
+  Local fi_0_0     // o indice do percurso
+  Local fo_0_0     // o resultado da cadeia
+  Local fo_1_0     // o resultado da cadeia
+  Local fv_0_0     // o elemento em percurso
+  Local fv_1_0     // o elemento em percurso
+  Local s_1_eachi  // o local de bloco 'eachi'
+
+  nErro := TCLink()
+
+  if nErro < 0
+    conout("dicionario: TCLink falhou com " + cValToChar(nErro))
+    return 1
+  endif
+
+  if !TCCanOpen("SX3")
+    conout("dicionario: SX3 nao pode ser aberta")
+    TCUnlink()
+    return 2
+
+  endif
+
+  DbUseArea(.T., "TOPCONN", "SX3", "SX3", .F., .F.)
+
+  if select("SX3") == 0
+    conout("dicionario: SX3 nao abriu")
+    TCUnlink()
+    return 3
+
+  endif
+
+  s_1_0 := Alias()
+  DbSelectArea("SX3")
+  s_1_1 := SX3->(RecNo())
+
+    // Uma passada pela SX3 inteira, ficando com os campos desta tabela.
+    SX3->(DbGoTop())
+    fo_1_0 := {}
+    While !SX3->(Eof())
+      If alltrim(SX3->X3_ARQUIVO) == cTabela
+        fv_1_0 := {alltrim(SX3->X3_CAMPO), SX3->X3_TIPO, SX3->X3_TAMANHO, alltrim(SX3->X3_TITULO)}
+        AAdd(fo_1_0, fv_1_0)
+      EndIf
+      SX3->(DbSkip())
+    EndDo
+    aCampos := fo_1_0
+
+  SX3->(DbGoto(s_1_1))
+
+  If !Empty(s_1_0)
+    DbSelectArea(s_1_0)
+  EndIf
+
+  // A soma sai do array que a passada ja construiu, sem tocar no disco de
+  // novo. Uma segunda cadeia sobre rows("SX3") daria o mesmo numero e leria
+  // a tabela inteira outra vez -- e repetiria o filtro, que e a parte pior:
+  // dois lugares para mudar quando a regra mudar, e o segundo e o que fica
+  // para tras.
+  fo_0_0 := 0
+
+  For fi_0_0 := 1 To Len(aCampos)
+    fv_0_0 := aCampos[fi_0_0]
+    fv_0_0 := fv_0_0[3]
+    fo_0_0 := fo_0_0 + fv_0_0
+  Next
+
+  nBytes := fo_0_0
+
+  conout((cValToChar(cTabela) + " tem " + cValToChar(len(aCampos)) + " campos, " + cValToChar(nBytes) + " bytes por registro"))
+
+  s_1_0 := aCampos
+
+  For s_1_eachi := 1 To Len(s_1_0)
+    s_1_1 := s_1_0[s_1_eachi]
+    conout("  " + padr(s_1_1[1], 15) + " " + s_1_1[2] + " " + padl(alltrim(str(s_1_1[3])), 4) + "   " + s_1_1[4])
+
+  next
+
+  SX3->(DbCloseArea())
+  TCUnlink()
+  return 0
+
+// --------------------------------------------------------------------------------
+// the end

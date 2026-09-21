@@ -44,6 +44,3 @@ COMMIT_*.txt
 #
 #   probes/*.tlpp       escritos a mao, exceto probe_control.tlpp.
 # ----------------------------------------------------------------------------
-
-xtpl_decisions.md
-xtpl_design.md

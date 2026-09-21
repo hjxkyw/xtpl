@@ -16,11 +16,11 @@ user function testHash(nBase, cChave)
   Local nTotal := 0
   Local xValor
 
-  Local ht_0_0
-  Local ht_0_1
-  Local ht_1_0
-  Local ht_2_0
-  Local ht_2_1
+  Local ht_0_0  // o valor lido de um hash
+  Local ht_0_1  // o valor lido de um hash
+  Local ht_1_0  // o valor lido de um hash
+  Local ht_2_0  // o valor lido de um hash
+  Local ht_2_1  // o valor lido de um hash
 
   hCfg := THashMap():New()
   hCfg:Set("taxa", 0.05)

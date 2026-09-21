@@ -17,11 +17,11 @@ user function testContinuation(cUrl, cBody, aNums, hCfg)
   Local nA := 1
   Local nB := 2
 
-  Local b_0_x
-  Local ht_0_0
-  Local ht_0_1
-  Local pt_0_0
-  Local pt_0_1
+  Local b_0_x   // o local de bloco 'x', fixado: tem armazenamento so dele
+  Local ht_0_0  // o valor lido de um hash
+  Local ht_0_1  // o valor lido de um hash
+  Local pt_0_0  // o resultado de uma etapa que nao fundiu
+  Local pt_0_1  // o resultado de uma etapa que nao fundiu
 
   cReply := u_xtpl_safe_pipe({|| HttpPost(cUrl, "", cBody, nTimeout, {"Content-Type: application/json"})}, {|| ""})
 

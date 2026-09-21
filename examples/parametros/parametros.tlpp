@@ -67,9 +67,9 @@ user function parametros(cCliente, nPrazoParam, nDescParam)
   Local nDesconto := 0
   Local cObs := ""
 
-  Local et_0_0
-  Local ht_0_0
-  Local ht_0_1
+  Local et_0_0  // o valor testado por '?:'
+  Local ht_0_0  // o valor lido de um hash
+  Local ht_0_1  // o valor lido de um hash
 
   hCfg := carregaConfig(cCliente)
   hGeral := carregaConfig("GERAL")

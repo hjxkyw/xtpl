@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // 05_initialisers.tlpp -- xtpl constructs in declarations and headers.
 //
 // Declarations and block headers are handled by branches that return to the
@@ -40,14 +23,14 @@ user function testInitialisers(aNums, hCfg, cC, aC, oUser, nX, aRows, oModel)
   Local hM
   Local nT := 0
 
-  Local s_1_0      // __each, __times, nS, nD, __obj
-  Local s_1_1      // oIt, __ntimes
-  Local et_0_0
-  Local ht_0_0
-  Local ht_1_0
-  Local ht_2_0
-  Local pt_0_0
-  Local s_1_eachi
+  Local s_1_0      // um slot, dividido por each, nD, nS, obj, times
+  Local s_1_1      // um slot, dividido por ntimes, oIt
+  Local et_0_0     // o valor testado por '?:'
+  Local ht_0_0     // o valor lido de um hash
+  Local ht_1_0     // o valor lido de um hash
+  Local ht_2_0     // o valor lido de um hash
+  Local pt_0_0     // o resultado de uma etapa que nao fundiu
+  Local s_1_eachi  // o local de bloco 'eachi'
 
   ht_0_0 := Nil
   hCfg:Get("id", @ht_0_0)
@@ -66,46 +49,38 @@ user function testInitialisers(aNums, hCfg, cC, aC, oUser, nX, aRows, oModel)
   hM := THashMap():New()
   hM:Set("a", 1)  // a literal, with a comment after it
 
-  let each as s_1_0
-  let oIt as s_1_1
-  let eachi as s_1_eachi
-  !each^1^0! := u_xtpl_distinct(aRows)
+  s_1_0 := u_xtpl_distinct(aRows)
 
-  For s_1_eachi := 1 To Len(!each^1^0!)  // a chain in the source
-    !oIt^1^1! := !each^1^0![s_1_eachi]
-    nT := nT + !oIt^1^1!:nValue
+  For s_1_eachi := 1 To Len(s_1_0)  // a chain in the source
+    s_1_1 := s_1_0[s_1_eachi]
+    nT := nT + s_1_1:nValue
   next
 
-  let times as s_1_0
   ht_1_0 := Nil
   hCfg:Get("n", @ht_1_0)
-  let ntimes as s_1_1
-  !ntimes^1^1! := ht_1_0
+  s_1_1 := ht_1_0
 
-  For !times^1^0! := 1 To !ntimes^1^1!  // a hash read in the count
+  For s_1_0 := 1 To s_1_1  // a hash read in the count
     nT := nT + 1
   next
 
-  let nS as s_1_0
-  !nS^1^0! := u_xtpl_asum(aNums)
+  s_1_0 := u_xtpl_asum(aNums)
 
-  If !nS^1^0! > 0  // a chain in a conditional binding
-    nT := nT + !nS^1^0!
+  If s_1_0 > 0  // a chain in a conditional binding
+    nT := nT + s_1_0
   endif
 
-  let nD as s_1_0
-  !nD^1^0! := u_xtpl_amax(aNums)  // and in a do-case subject
+  s_1_0 := u_xtpl_amax(aNums)  // and in a do-case subject
 
   Do Case
-    case !nD^1^0! > 5
+    case s_1_0 > 5
       nT := 1
   endcase
 
-  let obj as s_1_0
   ht_2_0 := Nil
   hCfg:Get("id", @ht_2_0)
-  !obj^1^0! := oModel:GetModel(ht_2_0)  // and in a with-object subject
-    !obj^1^0!:SetValue("A1_COD", nT)
+  s_1_0 := oModel:GetModel(ht_2_0)  // and in a with-object subject
+    s_1_0:SetValue("A1_COD", nT)
 
   conout(cValToChar(nA + nB + nH + len(hM)) + cD + cG)
   conout(cValToChar(lE) + cValToChar(lF))

@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // romaneio.tlpp -- montar um romaneio, sem reler o cadastro de produtos.
 //
 // Um caso comum: uma lista de itens, cada um com um produto, e para cada um
@@ -98,20 +81,17 @@ user function romaneio(aItens)
   Local nLidos := 0
   Local aLinhas := {}
 
-  Local ht_1_0
-  Local s_1_each
-  Local s_1_eachi
-  Local s_1_oItem
-  Local s_3_usearea
-  Local s_3_useord
-  Local s_3_userec
+  Local ht_1_0       // o valor lido de um hash
+  Local s_1_each     // o local de bloco 'each'
+  Local s_1_eachi    // o local de bloco 'eachi'
+  Local s_1_oItem    // o local de bloco 'oItem'
+  Local s_3_usearea  // o local de bloco 'usearea'
+  Local s_3_useord   // o local de bloco 'useord'
+  Local s_3_userec   // o local de bloco 'userec'
 
   hPeso := THashMap():New()
   hDescricao := THashMap():New()
 
-  let each as s_1_each
-  let oItem as s_1_oItem
-  let eachi as s_1_eachi
   s_1_each := aItens
 
   For s_1_eachi := 1 To Len(s_1_each)
@@ -123,9 +103,6 @@ user function romaneio(aItens)
 
     // O cache: so vai ao cadastro na primeira vez que ve o produto.
     if !(u_xtpl_in(s_1_oItem:cProduto, hPeso))
-      let usearea as s_3_usearea
-      let userec as s_3_userec
-      let useord as s_3_useord
       s_3_usearea := Alias()
       DbSelectArea("SB1")
       s_3_userec := SB1->(RecNo())

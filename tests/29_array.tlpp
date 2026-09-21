@@ -16,14 +16,14 @@ user function testArray(aOrders, aNums, aCodes, aDesc)
   Local aPairs := {}
   Local nTotal := 0
 
-  Local b_0_a
-  Local b_0_acc
-  Local b_0_b
-  Local b_0_c
-  Local b_0_d
-  Local b_0_n
-  Local b_0_o
-  Local b_0_x
+  Local b_0_a    // o local de bloco 'a', fixado: tem armazenamento so dele
+  Local b_0_acc  // o local de bloco 'acc', fixado: tem armazenamento so dele
+  Local b_0_b    // o local de bloco 'b', fixado: tem armazenamento so dele
+  Local b_0_c    // o local de bloco 'c', fixado: tem armazenamento so dele
+  Local b_0_d    // o local de bloco 'd', fixado: tem armazenamento so dele
+  Local b_0_n    // o local de bloco 'n', fixado: tem armazenamento so dele
+  Local b_0_o    // o local de bloco 'o', fixado: tem armazenamento so dele
+  Local b_0_x    // o local de bloco 'x', fixado: tem armazenamento so dele
 
   // transform, keep, discard
   aVals := u_xtpl_map(aOrders, {|b_0_o| b_0_o:nValue})

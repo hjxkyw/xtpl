@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // 51_legacy.tlpp -- --legacy: reading code xtpl would otherwise refuse.
 //
 // One thing stops xtpl accepting an existing .prw: a write to an undeclared
@@ -43,13 +26,12 @@ User Function Legado(cCodigo)
   Local nTotal := 0
   Local cNome
 
-  Local s_1_nExtra
+  Local s_1_nExtra  // o local de bloco 'nExtra'
 
    nTotal := 10
    cNome := "x"  // fora do prólogo: aviso, e o valor fica aqui
 
    If nTotal > 5
-      let nExtra as s_1_nExtra
       s_1_nExtra := 1  // bloco: xtpl acrescenta isto, o AdvPL recusa
       nTotal := nTotal + s_1_nExtra
    Endif

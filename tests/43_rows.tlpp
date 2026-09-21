@@ -18,13 +18,13 @@ user function testRows(cAlias, nLimit)
   Local aCodes := {}
   Local aFirst := {}
 
-  Local fal_0_0
-  Local far_0_0
-  Local flm_0_0
-  Local fn_0_0
-  Local fo_0_0
-  Local frc_0_0
-  Local fv_0_0
+  Local fal_0_0  // o alias da area percorrida
+  Local far_0_0  // a area que estava selecionada antes do percurso
+  Local flm_0_0  // o limite de um take
+  Local fn_0_0   // quantos elementos ja passaram
+  Local fo_0_0   // o resultado da cadeia
+  Local frc_0_0  // o registro em que a area estava antes do percurso
+  Local fv_0_0   // o elemento em percurso
 
   // a literal alias is written out, because SA1->A1_COD is what gets read
   far_0_0 := Alias()

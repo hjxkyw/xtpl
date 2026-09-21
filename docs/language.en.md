@@ -124,12 +124,9 @@ endif
 
 `#translate`, not `#xtranslate` -- the two do not behave the same here.
 
-**Only a shared slot gets a spelling.** The other names say whose they are
-already -- `s_1_aTmp`, `b_0_nFator` -- and a spelling would be punctuation
-around something already legible. Two numbers means the
-storage is shared and has no honest name; one means the slot is named after
-its only occupant. `%name^n%` is the one that got no slot: pinned by a capture, a `@`, a `raw`
-line or a `defer`, or a lambda's parameter.
+**Every generated name is explained on the line that declares it** -- what it
+is, once, instead of a spelling repeated on every line. It covers the chain
+temporaries too, which had no explanation at all.
 
 The markers substitute into the result's own name. The leading `!` stops it matching a genuine `a^2^3`; the trailing one
 closes the pattern, without which the last marker swallows what follows --

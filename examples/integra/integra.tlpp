@@ -58,8 +58,8 @@ user function integra(cUrl, cChave)
   Local nQuantos := 0
   Local cErro := ""
 
-  Local et_0_0
-  Local gt_0_0
+  Local et_0_0  // o valor testado por '?:'
+  Local gt_0_0  // o valor protegido por 'fallback'
 
   // 1. A chamada de rede. Quebra de varios jeitos -- timeout, DNS, servico
   //    fora do ar -- e todos chegam aqui como erro de runtime.

@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // probe_control.tlpp -- estruturas de controle sobre slots compartilhados.
 //
 // A regra de aliasing precisa de um terminador:
@@ -50,42 +33,38 @@ user function probeControl()
   Local aBlocos := {}
   Local lOk := .T.
 
-  Local s_1_0       // nSoma, nConta, nSub, cJunto, nVezes, nTotal
-  Local s_2_0       // nI, __each, __times
-  Local s_2_1       // cLetra, nX
-  Local s_2_2       // nOnde, __eachi
-  Local b_1_nFator
-  Local s_3_nDobro
+  Local s_1_0       // um slot, dividido por cJunto, nConta, nSoma, nSub, nTotal, nVezes
+  Local s_2_0       // um slot, dividido por each, nI, times
+  Local s_2_1       // um slot, dividido por cLetra, nX
+  Local s_2_2       // um slot, dividido por eachi, nOnde
+  Local b_1_nFator  // o local de bloco 'nFator', fixado: tem armazenamento so dele
+  Local s_3_nDobro  // o local de bloco 'nDobro'
 
   // ---- for contado: a grafia no cabecalho, dos dois lados do To ----------
   if .T.
-    let nSoma as s_1_0
-    !nSoma^1^0! := 0
-    let nI as s_2_0
-    for !nI^2^0! := 1 to 3
-      !nSoma^1^0! := !nSoma^1^0! + !nI^2^0!
+    s_1_0 := 0
+    for s_2_0 := 1 to 3
+      s_1_0 := s_1_0 + s_2_0
     next
-    cSaida := "for=" + cValToChar(!nSoma^1^0!)
+    cSaida := "for=" + cValToChar(s_1_0)
   endif
 
   // ---- while com a grafia na condicao e no corpo -------------------------
   if .T.
-    let nConta as s_1_0
-    !nConta^1^0! := 0
-    while !nConta^1^0! < 3
-      !nConta^1^0! := !nConta^1^0! + 1
+    s_1_0 := 0
+    while s_1_0 < 3
+      s_1_0 := s_1_0 + 1
     enddo
-    cSaida := cSaida + " while=" + cValToChar(!nConta^1^0!)
+    cSaida := cSaida + " while=" + cValToChar(s_1_0)
   endif
 
   // ---- do case with: sujeito ligado uma vez ------------------------------
-  let nSub as s_1_0
-  !nSub^1^0! := 7
+  s_1_0 := 7
 
   Do Case
-    case !nSub^1^0! == 6
+    case s_1_0 == 6
       cSaida := cSaida + " case=seis"
-    case !nSub^1^0! > 3
+    case s_1_0 > 3
       cSaida := cSaida + " case=maior"
     otherwise
       cSaida := cSaida + " case=pequeno"
@@ -93,52 +72,40 @@ user function probeControl()
 
   // ---- for ... in: elemento e indice, e a grafia como indice de array ----
   if .T.
-    let cJunto as s_1_0
-    let each as s_2_0
-    let cLetra as s_2_1
-    let nOnde as s_2_2
-    !cJunto^1^0! := ""
-    !each^2^0! := aLetras
-    For !nOnde^2^2! := 1 To Len(!each^2^0!)
-      !cLetra^2^1! := !each^2^0![!nOnde^2^2!]
-      !cJunto^1^0! := aLetras[!nOnde^2^2!] + !cJunto^1^0!
+    s_1_0 := ""
+    s_2_0 := aLetras
+    For s_2_2 := 1 To Len(s_2_0)
+      s_2_1 := s_2_0[s_2_2]
+      s_1_0 := aLetras[s_2_2] + s_1_0
     next
-    cSaida := cSaida + " each=" + !cJunto^1^0!
+    cSaida := cSaida + " each=" + s_1_0
   endif
 
   // ---- for <n> times -----------------------------------------------------
   if .T.
-    let nVezes as s_1_0
-    !nVezes^1^0! := 0
-    let times as s_2_0
-    For !times^2^0! := 1 To 3
-      !nVezes^1^0! := !nVezes^1^0! + 1
+    s_1_0 := 0
+    For s_2_0 := 1 To 3
+      s_1_0 := s_1_0 + 1
     next
-    cSaida := cSaida + " times=" + cValToChar(!nVezes^1^0!)
+    cSaida := cSaida + " times=" + cValToChar(s_1_0)
   endif
 
   // ---- blocos aninhados: profundidades diferentes, slots diferentes ------
   if .T.
-    let nTotal as s_1_0
-    let each as s_2_0
-    let nX as s_2_1
-    let eachi as s_2_2
-    !nTotal^1^0! := 0
-    !each^2^0! := aNums
-    For !eachi^2^2! := 1 To Len(!each^2^0!)
-      !nX^2^1! := !each^2^0![!eachi^2^2!]
-      if !nX^2^1! > 1
-        let nDobro as s_3_nDobro
-        s_3_nDobro := !nX^2^1! * 2
-        !nTotal^1^0! := !nTotal^1^0! + s_3_nDobro
+    s_1_0 := 0
+    s_2_0 := aNums
+    For s_2_2 := 1 To Len(s_2_0)
+      s_2_1 := s_2_0[s_2_2]
+      if s_2_1 > 1
+        s_3_nDobro := s_2_1 * 2
+        s_1_0 := s_1_0 + s_3_nDobro
       endif
     next
-    cSaida := cSaida + " nested=" + cValToChar(!nTotal^1^0!)
+    cSaida := cSaida + " nested=" + cValToChar(s_1_0)
   endif
 
   // ---- capturada por um code block: NAO pode dividir slot ----------------
   if .T.
-    let nFator as b_1_nFator
     b_1_nFator := 10
     aadd(aBlocos, {|| b_1_nFator * 2})
   endif

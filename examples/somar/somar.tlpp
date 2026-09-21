@@ -69,16 +69,16 @@ user function somar(cArqA, cArqB)
   Local nSujas := 0
   Local nX := 0
 
-  Local b_0_aCamposA
-  Local b_0_aCamposB
-  Local b_0_cCampoA
-  Local b_0_cCampoB
-  Local b_0_lIgual
-  Local b_0_lLimpa
-  Local fo_0_0
-  Local fok_0_0
-  Local fv_0_0
-  Local pt_0_0
+  Local b_0_aCamposA  // o local de bloco 'aCamposA', fixado: tem armazenamento so dele
+  Local b_0_aCamposB  // o local de bloco 'aCamposB', fixado: tem armazenamento so dele
+  Local b_0_cCampoA   // o local de bloco 'cCampoA', fixado: tem armazenamento so dele
+  Local b_0_cCampoB   // o local de bloco 'cCampoB', fixado: tem armazenamento so dele
+  Local b_0_lIgual    // o local de bloco 'lIgual', fixado: tem armazenamento so dele
+  Local b_0_lLimpa    // o local de bloco 'lLimpa', fixado: tem armazenamento so dele
+  Local fo_0_0        // o resultado da cadeia
+  Local fok_0_0       // se o arquivo abriu
+  Local fv_0_0        // o elemento em percurso
+  Local pt_0_0        // o resultado de uma etapa que nao fundiu
 
   fok_0_0 := File(cArqA)
 
@@ -154,7 +154,7 @@ user function somar(cArqA, cArqB)
 // cada elemento. Aqui, de cada campo de uma linha.
 static function tudoNumero(aCampos)
 
-  Local b_0_it
+  Local b_0_it  // o local de bloco 'it', fixado: tem armazenamento so dele
 
   return u_xtpl_allof(aCampos, {|b_0_it| ehNumero(b_0_it)})
 
@@ -165,10 +165,10 @@ static function ehNumero(cTexto)
 // Uma linha de numeros de volta em texto, para sair legivel.
 static function mostrar(aValores)
 
-  Local ffs_0_0
-  Local fi_0_0
-  Local fo_0_0
-  Local fv_0_0
+  Local ffs_0_0  // o primeiro elemento que passou no teste
+  Local fi_0_0   // o indice do percurso
+  Local fo_0_0   // o resultado da cadeia
+  Local fv_0_0   // o elemento em percurso
 
   ffs_0_0 := .T.
   fo_0_0 := ""

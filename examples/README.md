@@ -6,6 +6,7 @@ para ver no que uma coisa vira sem precisar rodar nada.
 | | |
 |---|---|
 | `pedido/` | `rows()` com `takewhile`: somar os itens de um pedido parando quando ele acaba, em vez de ler a tabela inteira |
+| `dicionario/` | **roda de verdade**: lista os campos de uma tabela lendo o SX3, com `using alias`, `defer` e uma cadeia sobre `rows()` |
 | `consulta/` | `raw`: uma tela de comandos entregue ao pré-processador, e xtpl comum em volta dela. O único exemplo em que a versão à mão quase não perde |
 | `notificacao/` | interpolação e os verbos de string: montar um texto e separar um que veio de fora |
 | `romaneio/` | hashes: um cache de consultas que vai ao cadastro uma vez por produto, e a diferença entre a chave existir e o valor ter conteúdo |
@@ -26,6 +27,16 @@ o repositório. Isso só vale se forem regerados quando o transpilador muda:
 
 ```sh
 for f in examples/*/*.xtpl; do python xtpl_transpiler.py "$f" "${f%.xtpl}.tlpp"; done
+```
+
+`dicionario/` é o único que se pode **executar**: os outros usam SA1, SE1,
+SC6 de mentira para mostrar a forma, e esse lê o dicionário de verdade, que
+existe em qualquer instalação. As duas versões — a xtpl e a à mão — fazem a
+mesma coisa e dão para comparar na tela:
+
+```sh
+appserver.exe -env=SeuAmbiente -run=u_dicionario
+appserver.exe -env=SeuAmbiente -run=u_dicionarioMao
 ```
 
 ## O que cada um está tentando mostrar

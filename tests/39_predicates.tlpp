@@ -19,15 +19,15 @@ user function testPredicates(aRows, aNums)
   Local lNegativo := .F.
   Local lOrdenado := .F.
 
-  Local b_0_n
-  Local b_0_r
-  Local far_0_0
-  Local fi_0_0
-  Local fo_0_0
-  Local frc_0_0
-  Local fv_0_0
-  Local pt_0_0
-  Local pt_0_1
+  Local b_0_n    // o local de bloco 'n', fixado: tem armazenamento so dele
+  Local b_0_r    // o local de bloco 'r', fixado: tem armazenamento so dele
+  Local far_0_0  // a area que estava selecionada antes do percurso
+  Local fi_0_0   // o indice do percurso
+  Local fo_0_0   // o resultado da cadeia
+  Local frc_0_0  // o registro em que a area estava antes do percurso
+  Local fv_0_0   // o elemento em percurso
+  Local pt_0_0   // o resultado de uma etapa que nao fundiu
+  Local pt_0_1   // o resultado de uma etapa que nao fundiu
 
   // one stage on its own stays a call -- the runtime version stops early too
   pt_0_0 := u_xtpl_anyof(aRows, {|b_0_r| !b_0_r:lPago})

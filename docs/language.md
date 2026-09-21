@@ -123,12 +123,9 @@ endif
 
 `#translate`, não `#xtranslate` — os dois não se comportam igual aqui.
 
-**Só um slot dividido leva grafia.** Os outros nomes já dizem de quem são —
-`s_1_aTmp`, `b_0_nFator` —, e a grafia seria pontuação em volta de algo
-legível. Com dois números o
-armazenamento é dividido e não tem nome honesto; com um só, o slot leva o nome
-de quem o ocupa, que é o único. `%nome^n%` é a que não ganhou slot: fixada por uma captura, um `@`, uma linha
-`raw` ou um `defer`, ou o parâmetro de um lambda.
+**Todo nome gerado é explicado na linha que o declara** — o que ele é, uma
+vez, em vez de uma grafia repetida em cada linha. Cobre também os temporários
+das cadeias, que antes não tinham explicação nenhuma.
 
 Os marcadores entram no próprio nome do resultado. O `!` na frente impede que a regra case com uma potenciação de
 verdade, `a^2^3`; o `!` no fim fecha o padrão, sem o qual o último marcador

@@ -22,14 +22,14 @@ user function testFusion(aRows, nLimit)
   Local nFold := 0
   Local cLong := ""
 
-  Local b_0_r
-  Local ffs_0_0
-  Local fi_0_0
-  Local flm_0_0
-  Local fn_0_0
-  Local fo_0_0
-  Local fv_0_0
-  Local pt_0_0
+  Local b_0_r    // o local de bloco 'r', fixado: tem armazenamento so dele
+  Local ffs_0_0  // o primeiro elemento que passou no teste
+  Local fi_0_0   // o indice do percurso
+  Local flm_0_0  // o limite de um take
+  Local fn_0_0   // quantos elementos ja passaram
+  Local fo_0_0   // o resultado da cadeia
+  Local fv_0_0   // o elemento em percurso
+  Local pt_0_0   // o resultado de uma etapa que nao fundiu
 
   // filter, map and take: one pass, and it stops at ten
   fn_0_0 := 0

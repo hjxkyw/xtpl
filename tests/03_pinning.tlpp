@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // 03_pinning.tlpp -- pinning is decided per declaration, not per name
 //
 // Two blocks may each declare a variable called aTmp. They are different
@@ -31,51 +14,44 @@ user function testPinning(lFlag)
   Local aKeep := {}
   Local nTotal := 0
 
-  Local s_1_0     // aTmp, aOther, i, cTmp
-  Local s_1_aTmp
+  Local s_1_0     // um slot, dividido por aOther, aTmp, cTmp, i
+  Local s_1_aTmp  // o local de bloco 'aTmp'
 
   // ESCAPES -- keepIt receives this aTmp and may hold it past the block,
   // so this declaration gets private storage.
   if nTotal > 0
-    let aTmp as s_1_0
-    !aTmp^1^0! := {}
-    aadd(!aTmp^1^0!, "handed over")
-    keepIt(aKeep, !aTmp^1^0!)
+    s_1_0 := {}
+    aadd(s_1_0, "handed over")
+    keepIt(aKeep, s_1_0)
   endif
 
   // CONTAINED -- a different variable that happens to share the name.
   // Built and read in place, so it takes a shared slot.
   if nTotal > 0
-    let aTmp as s_1_0
-    !aTmp^1^0! := {}
-    aadd(!aTmp^1^0!, "stays home")
-    conout("rows: " + cValToChar(len(!aTmp^1^0!)))
+    s_1_0 := {}
+    aadd(s_1_0, "stays home")
+    conout("rows: " + cValToChar(len(s_1_0)))
   endif
 
   // CONTAINED -- same usage under a different name, to show the two agree.
   if nTotal > 0
-    let aOther as s_1_0
-    !aOther^1^0! := {}
-    aadd(!aOther^1^0!, "stays home")
-    conout("rows: " + cValToChar(len(!aOther^1^0!)))
+    s_1_0 := {}
+    aadd(s_1_0, "stays home")
+    conout("rows: " + cValToChar(len(s_1_0)))
   endif
 
   // The name is reused a third time inside a loop, still contained.
-  let i as s_1_0
-
-  for !i^1^0! := 1 to 3
-    let aTmp as s_1_aTmp
+  for s_1_0 := 1 to 3
     s_1_aTmp := {}
-    aadd(s_1_aTmp, !i^1^0!)
+    aadd(s_1_aTmp, s_1_0)
     conout("pass " + cValToChar(len(s_1_aTmp)))
   next
 
   // A value variable named like the escaping one is unaffected either way,
   // since values are copied when passed.
   if nTotal > 0
-    let cTmp as s_1_0
-    !cTmp^1^0! := "value"
-    keepIt(aKeep, !cTmp^1^0!)
+    s_1_0 := "value"
+    keepIt(aKeep, s_1_0)
   endif
 
   return aKeep

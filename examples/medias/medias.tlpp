@@ -39,10 +39,10 @@ user function medias(cArquivo)
   Local nLidas := 0
   Local aMedias
 
-  Local b_0_it
-  Local fo_0_0
-  Local fok_0_0
-  Local fv_0_0
+  Local b_0_it   // o local de bloco 'it', fixado: tem armazenamento so dele
+  Local fo_0_0   // o resultado da cadeia
+  Local fok_0_0  // se o arquivo abriu
+  Local fv_0_0   // o elemento em percurso
 
   fok_0_0 := File(cArquivo)
 

@@ -14,13 +14,13 @@ user function testStrings(cNome, nTotal, hCfg, aLinhas)
   Local cOut := ""
   Local lHit := .F.
 
-  Local ffs_0_0
-  Local fi_0_0
-  Local fo_0_0
-  Local fv_0_0
-  Local ht_0_0
-  Local pt_0_0
-  Local pt_0_1
+  Local ffs_0_0  // o primeiro elemento que passou no teste
+  Local fi_0_0   // o indice do percurso
+  Local fo_0_0   // o resultado da cadeia
+  Local fv_0_0   // o elemento em percurso
+  Local ht_0_0   // o valor lido de um hash
+  Local pt_0_0   // o resultado de uma etapa que nao fundiu
+  Local pt_0_1   // o resultado de uma etapa que nao fundiu
 
   aPartes := u_xtpl_split(cNome, ",")
   ffs_0_0 := .T.

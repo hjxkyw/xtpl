@@ -13,8 +13,8 @@ user function testCrossPass(hCfg, aNums, lFlag, nX)
   Local nB := 0
   Local nC := 0
 
-  Local ht_0_0
-  Local pt_0_0
+  Local ht_0_0  // o valor lido de um hash
+  Local pt_0_0  // o resultado de uma etapa que nao fundiu
 
   // The hash read turns one line into three. 'fallback' has to be peeled
   // before that happens, or the assignment ends up inside the guard and a

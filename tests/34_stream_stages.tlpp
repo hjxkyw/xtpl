@@ -17,18 +17,18 @@ user function testStreamStages(aMovs, aRows, aLeituras)
   Local aDeltas := {}
   Local aProdutos := {}
 
-  Local fa_0_0
-  Local far_0_0
-  Local fbg_0_0
-  Local fhd_0_0
-  Local fi_0_0
-  Local fj_0_0
-  Local fo_0_0
-  Local fol_0_0
-  Local fpv_0_0
-  Local frc_0_0
-  Local frd_0_0
-  Local fv_0_0
+  Local fa_0_0   // o acumulador de um scan/fold
+  Local far_0_0  // a area que estava selecionada antes do percurso
+  Local fbg_0_0  // o saco de um expand
+  Local fhd_0_0  // se ja houve algum elemento
+  Local fi_0_0   // o indice do percurso
+  Local fj_0_0   // o indice de dentro de um expand
+  Local fo_0_0   // o resultado da cadeia
+  Local fol_0_0  // o elemento de duas posicoes atras
+  Local fpv_0_0  // o elemento anterior
+  Local frc_0_0  // o registro em que a area estava antes do percurso
+  Local frd_0_0  // se ja ha par para emitir (pairwise)
+  Local fv_0_0   // o elemento em percurso
 
   // the balance after each movement, not just the closing one
   fa_0_0 := 0

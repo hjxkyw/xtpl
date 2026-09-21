@@ -12,10 +12,10 @@ user function testMap(aNums, hCfg)
   Local nT := 0
   Local cOut := ""
 
-  Local fi_0_0
-  Local fo_0_0
-  Local fv_0_0
-  Local ht_0_0
+  Local fi_0_0  // o indice do percurso
+  Local fo_0_0  // o resultado da cadeia
+  Local fv_0_0  // o elemento em percurso
+  Local ht_0_0  // o valor lido de um hash
 
   fo_0_0 := 0  // xtpl:11
 

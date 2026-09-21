@@ -19,12 +19,12 @@ user function testLines(cPath)
   Local nBytes := 0
   Local aSorted := {}
 
-  Local fn_0_0
-  Local fo_0_0
-  Local fok_0_0
-  Local fs_0_0
-  Local fv_0_0
-  Local pt_0_0
+  Local fn_0_0   // quantos elementos ja passaram
+  Local fo_0_0   // o resultado da cadeia
+  Local fok_0_0  // se o arquivo abriu
+  Local fs_0_0   // a colecao ou o caminho percorrido
+  Local fv_0_0   // o elemento em percurso
+  Local pt_0_0   // o resultado de uma etapa que nao fundiu
 
   // filter, map and take: one pass, and it stops after ten lines
   fs_0_0 := "dados.txt"

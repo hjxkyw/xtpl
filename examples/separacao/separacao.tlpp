@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // separacao.tlpp -- separar os itens de uma remessa por transportadora.
 //
 // Um caso comum: percorrer uma lista, classificar cada item, contar, e parar
@@ -94,19 +77,15 @@ user function separacao(aItens, nLimite)
   Local nErros := 0
   Local cRelato := ""
 
-  Local s_1_0       // __each, oPendente, nX
-  Local s_1_nPos
-  Local s_1_oItem
-  Local s_2_cFaixa
+  Local s_1_0       // um slot, dividido por each, nX, oPendente
+  Local s_1_nPos    // o local de bloco 'nPos'
+  Local s_1_oItem   // o local de bloco 'oItem'
+  Local s_2_cFaixa  // o local de bloco 'cFaixa'
 
-  let each as s_1_0
-  let oItem as s_1_oItem
-  let nPos as s_1_nPos
-  !each^1^0! := aItens
+  s_1_0 := aItens
 
-  For s_1_nPos := 1 To Len(!each^1^0!)
-    let cFaixa as s_2_cFaixa
-    s_1_oItem := !each^1^0![s_1_nPos]
+  For s_1_nPos := 1 To Len(s_1_0)
+    s_1_oItem := s_1_0[s_1_nPos]
 
     // Item sem codigo nao e erro, e so nao ter o que separar. Uma linha.
     If empty(s_1_oItem:cCodigo)
@@ -140,17 +119,13 @@ user function separacao(aItens, nLimite)
   next
 
   // A fila de reprocessamento, lida ate acabar: le e testa na mesma linha.
-  let oPendente as s_1_0
-
-  While (!oPendente^1^0! := proximaPendencia()) != nil
-    aadd(aNormal, !oPendente^1^0!:cCodigo)
+  While (s_1_0 := proximaPendencia()) != nil
+    aadd(aNormal, s_1_0:cCodigo)
   enddo
 
   // Contado, com a variavel do proprio laco.
-  let nX as s_1_0
-
-  for !nX^1^0! := 1 to len(aExpressa)
-    marcaExpressa(aExpressa[!nX^1^0!])
+  for s_1_0 := 1 to len(aExpressa)
+    marcaExpressa(aExpressa[s_1_0])
   next
 
   conout("expressa: " + cValToChar(len(aExpressa)) + "  normal: " + cValToChar(len(aNormal)) + "  erros: " + cValToChar(nErros))

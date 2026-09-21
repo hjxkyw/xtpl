@@ -16,7 +16,7 @@ user function testElvis(oUser)
   Local cCity
   Local aItems
 
-  Local et_0_0
+  Local et_0_0  // o valor testado por '?:'
 
   // Two operands: compact form.
   et_0_0 := lookupName(1)

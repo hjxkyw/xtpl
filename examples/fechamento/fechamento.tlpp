@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // fechamento.tlpp -- montar um resumo de fechamento, em secoes.
 //
 // Um caso comum: uma funcao longa que monta varias coisas, uma secao de cada
@@ -101,24 +84,22 @@ user function fechamento(cFilial, aAcoes)
   Local nTotal := 0
   Local cResumo := ""
 
-  Local s_1_0      // aVendas, aCustos, aLinha
-  Local b_3_nMeta
-  Local fi_1_0
-  Local fi_2_0
-  Local fo_1_0
-  Local fo_2_0
-  Local fv_1_0
-  Local fv_2_0
-  Local s_1_nSoma
+  Local s_1_0      // um slot, dividido por aCustos, aLinha, aVendas
+  Local b_3_nMeta  // o local de bloco 'nMeta', fixado: tem armazenamento so dele
+  Local fi_1_0     // o indice do percurso
+  Local fi_2_0     // o indice do percurso
+  Local fo_1_0     // o resultado da cadeia
+  Local fo_2_0     // o resultado da cadeia
+  Local fv_1_0     // o elemento em percurso
+  Local fv_2_0     // o elemento em percurso
+  Local s_1_nSoma  // o local de bloco 'nSoma'
 
   // ---- secao 1: vendas ---------------------------------------------------
   if !empty(cFilial)
-    let aVendas as s_1_0
-    let nSoma as s_1_nSoma
-    !aVendas^1^0! := buscaVendas(cFilial)
+    s_1_0 := buscaVendas(cFilial)
     fo_1_0 := 0
-    For fi_1_0 := 1 To Len(!aVendas^1^0!)
-      fv_1_0 := !aVendas^1^0![fi_1_0]
+    For fi_1_0 := 1 To Len(s_1_0)
+      fv_1_0 := s_1_0[fi_1_0]
       fv_1_0 := fv_1_0:nValor
       fo_1_0 := fo_1_0 + fv_1_0
     Next
@@ -130,12 +111,10 @@ user function fechamento(cFilial, aAcoes)
 
   // ---- secao 2: custos. Mesmo slot da secao 1 ----------------------------
   if !empty(cFilial)
-    let aCustos as s_1_0
-    let nSoma as s_1_nSoma
-    !aCustos^1^0! := buscaCustos(cFilial)
+    s_1_0 := buscaCustos(cFilial)
     fo_2_0 := 0
-    For fi_2_0 := 1 To Len(!aCustos^1^0!)
-      fv_2_0 := !aCustos^1^0![fi_2_0]
+    For fi_2_0 := 1 To Len(s_1_0)
+      fv_2_0 := s_1_0[fi_2_0]
       fv_2_0 := fv_2_0:nValor
       fo_2_0 := fo_2_0 + fv_2_0
     Next
@@ -147,17 +126,15 @@ user function fechamento(cFilial, aAcoes)
 
   // ---- secao 3: entregue a uma funcao, e ainda divide o slot -------------
   if nTotal > 0
-    let aLinha as s_1_0
-    !aLinha^1^0! := {cFilial, nTotal}
+    s_1_0 := {cFilial, nTotal}
 
     // aadd entrega o array. Quem recebeu ficou com ele, e reaproveitar o
     // nome depois nao alcanca o que foi entregue.
-    aadd(aAcoes, !aLinha^1^0!)
+    aadd(aAcoes, s_1_0)
   endif
 
   // ---- secao 4: capturada por um bloco, e ai NAO divide -------------------
   if nTotal > 0
-    let nMeta as b_3_nMeta
     b_3_nMeta := calculaMeta(cFilial)
 
     // O bloco le nMeta quando rodar, la na frente. Por isso nMeta ganha

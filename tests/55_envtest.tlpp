@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // 55_envtest.tlpp -- rows(), lines(), using alias e raw, contra dados proprios.
 //
 // 54_selftest cobre o que e computacao pura. Estas quatro precisam de
@@ -53,23 +36,23 @@ user function envtest()
   Local aTmp := {}
   Local lTmp := .F.
 
-  Local b_2_cDentro
-  Local far_0_0
-  Local fn_0_0
-  Local fn_1_0
-  Local fo_0_0
-  Local fo_1_0
-  Local fok_1_0
-  Local frc_0_0
-  Local fs_1_0
-  Local fv_0_0
-  Local fv_1_0
-  Local s_1_usearea
-  Local s_1_userec
-  Local s_2_cLinha
-  Local s_2_each
-  Local s_2_eachi
-  Local s_2_opened
+  Local b_2_cDentro  // o local de bloco 'cDentro', fixado: tem armazenamento so dele
+  Local far_0_0      // a area que estava selecionada antes do percurso
+  Local fn_0_0       // quantos elementos ja passaram
+  Local fn_1_0       // quantos elementos ja passaram
+  Local fo_0_0       // o resultado da cadeia
+  Local fo_1_0       // o resultado da cadeia
+  Local fok_1_0      // se o arquivo abriu
+  Local frc_0_0      // o registro em que a area estava antes do percurso
+  Local fs_1_0       // a colecao ou o caminho percorrido
+  Local fv_0_0       // o elemento em percurso
+  Local fv_1_0       // o elemento em percurso
+  Local s_1_usearea  // o local de bloco 'usearea'
+  Local s_1_userec   // o local de bloco 'userec'
+  Local s_2_cLinha   // o local de bloco 'cLinha'
+  Local s_2_each     // o local de bloco 'each'
+  Local s_2_eachi    // o local de bloco 'eachi'
+  Local s_2_opened   // o local de bloco 'opened'
   Private cEnvNota := ""
 
   // O comando raw escreve aqui. Uma PRIVATE vive enquanto a funcao que a
@@ -336,8 +319,6 @@ user function envtest()
   // ---- using alias -------------------------------------------------------
   ZXTPL->(DbGoTop())
   nTmp := ZXTPL->(RecNo())
-  let usearea as s_1_usearea
-  let userec as s_1_userec
   s_1_usearea := Alias()
   DbSelectArea("ZXTPL")
   s_1_userec := ZXTPL->(RecNo())
@@ -356,10 +337,6 @@ user function envtest()
 
   // ---- lines(): o arquivo texto ------------------------------------------
   if !envTexto(cDir)
-    let each as s_2_each
-    let cLinha as s_2_cLinha
-    let eachi as s_2_eachi
-    let opened as s_2_opened
     conout("envtest: nao consegui escrever o texto")
   else
     fs_1_0 := cDir + "ZXTPL.TXT"
@@ -526,7 +503,6 @@ user function envtest()
 
   // uma variavel declarada continua renomeada dentro do raw
   if .T.
-    let cDentro as b_2_cDentro
     b_2_cDentro := "vem do bloco"
     envZeraNota()
     ANOTE b_2_cDentro
@@ -624,16 +600,12 @@ static function envLinhaAte(cDir, cProcurado)
 
   Local nOnde := 0
 
-  Local s_1_cLinha
-  Local s_1_each
-  Local s_1_nNum
-  Local s_1_opened
+  Local s_1_cLinha  // o local de bloco 'cLinha'
+  Local s_1_each    // o local de bloco 'each'
+  Local s_1_nNum    // o local de bloco 'nNum'
+  Local s_1_opened  // o local de bloco 'opened'
 
-  let each as s_1_each
-  let cLinha as s_1_cLinha
-  let nNum as s_1_nNum
   s_1_each := cDir + "ZXTPL.TXT"
-  let opened as s_1_opened
   s_1_opened := File(s_1_each)
 
   If s_1_opened
@@ -667,13 +639,11 @@ static function envUsingSai()
 
   Local cAntes
 
-  Local s_1_usearea
-  Local s_1_userec
+  Local s_1_usearea  // o local de bloco 'usearea'
+  Local s_1_userec   // o local de bloco 'userec'
 
   cAntes := alias()
 
-  let usearea as s_1_usearea
-  let userec as s_1_userec
   s_1_usearea := Alias()
   DbSelectArea("ZXTPL")
   s_1_userec := ZXTPL->(RecNo())

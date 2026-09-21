@@ -16,13 +16,13 @@ user function testFeed(aOrders, aNums)
   Local nMax := 0
   Local nSafe := 0
 
-  Local b_0_o
-  Local b_0_x
-  Local fi_0_0
-  Local fo_0_0
-  Local fv_0_0
-  Local pt_0_0
-  Local pt_0_1
+  Local b_0_o   // o local de bloco 'o', fixado: tem armazenamento so dele
+  Local b_0_x   // o local de bloco 'x', fixado: tem armazenamento so dele
+  Local fi_0_0  // o indice do percurso
+  Local fo_0_0  // o resultado da cadeia
+  Local fv_0_0  // o elemento em percurso
+  Local pt_0_0  // o resultado de uma etapa que nao fundiu
+  Local pt_0_1  // o resultado de uma etapa que nao fundiu
 
   // chaining runtime functions
   fo_0_0 := {}

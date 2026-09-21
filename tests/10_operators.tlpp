@@ -12,11 +12,11 @@ user function testOperators(nValor, cCodigo, aCodigos, aNums)
   Local lAchou := .F.
   Local cMsg := ""
 
-  Local b_0_acc
-  Local b_0_n
-  Local fi_0_0
-  Local fo_0_0
-  Local fv_0_0
+  Local b_0_acc  // o local de bloco 'acc', fixado: tem armazenamento so dele
+  Local b_0_n    // o local de bloco 'n', fixado: tem armazenamento so dele
+  Local fi_0_0   // o indice do percurso
+  Local fo_0_0   // o resultado da cadeia
+  Local fv_0_0   // o elemento em percurso
 
   // folds: named functions, not operators, so they chain too
   nTotal := u_xtpl_asum(aNums)

@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // notificacao.tlpp -- montar o texto de um aviso de cobranca.
 //
 // Um caso comum: juntar dados num texto legivel, e separar um texto que veio
@@ -113,24 +96,21 @@ user function notificacao(cCliente, nValor, dVenc, cEmails)
   Local cAssunto := ""
   Local nDias
 
-  Local fi_0_0
-  Local fo_0_0
-  Local fs_0_0
-  Local fv_0_0
-  Local pt_1_0
-  Local pt_1_1
-  Local s_1_usearea
-  Local s_1_useord
-  Local s_1_userec
+  Local fi_0_0       // o indice do percurso
+  Local fo_0_0       // o resultado da cadeia
+  Local fs_0_0       // a colecao ou o caminho percorrido
+  Local fv_0_0       // o elemento em percurso
+  Local pt_1_0       // o resultado de uma etapa que nao fundiu
+  Local pt_1_1       // o resultado de uma etapa que nao fundiu
+  Local s_1_usearea  // o local de bloco 'usearea'
+  Local s_1_useord   // o local de bloco 'useord'
+  Local s_1_userec   // o local de bloco 'userec'
 
   nDias := dVenc - date()
 
-  let usearea as s_1_usearea
-  let userec as s_1_userec
   s_1_usearea := Alias()
   DbSelectArea("SA1")
   s_1_userec := SA1->(RecNo())
-  let useord as s_1_useord
   s_1_useord := SA1->(IndexOrd())
   SA1->(DbSetOrder(1))
     SA1->(DbSeek(xFilial("SA1") + cCliente))

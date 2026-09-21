@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // 37_chunkby.tlpp -- grouping consecutive elements by a key.
 //
 // It cuts the sequence where the key changes rather than gathering scattered
@@ -36,42 +19,36 @@ user function testChunkby(aRows, cNum)
   Local aGrupos := {}
   Local aTamanhos := {}
 
-  Local b_0_r
-  Local far_1_0
-  Local fch_0_0
-  Local fch_1_0
-  Local fi_0_0
-  Local fky_0_0
-  Local fky_1_0
-  Local fo_0_0
-  Local fo_1_0
-  Local fop_0_0
-  Local fop_1_0
-  Local frc_1_0
-  Local fsn_0_0
-  Local fsn_1_0
-  Local fv_0_0
-  Local fv_1_0
-  Local pt_0_0
-  Local s_1_usearea
-  Local s_1_useord
-  Local s_1_userec
+  Local b_0_r        // o local de bloco 'r', fixado: tem armazenamento so dele
+  Local fch_0_0      // o pedaco atual de um chunkby
+  Local fch_1_0      // o pedaco atual de um chunkby
+  Local fi_0_0       // o indice do percurso
+  Local fky_0_0      // a chave do pedaco atual de um chunkby
+  Local fky_1_0      // a chave do pedaco atual de um chunkby
+  Local fo_0_0       // o resultado da cadeia
+  Local fo_1_0       // o resultado da cadeia
+  Local fop_0_0      // se ha um pedaco aberto (chunkby)
+  Local fop_1_0      // se ha um pedaco aberto (chunkby)
+  Local frc_1_0      // o registro em que a area estava antes do percurso
+  Local fsn_0_0      // a chave vista nesta volta (chunkby)
+  Local fsn_1_0      // a chave vista nesta volta (chunkby)
+  Local fv_0_0       // o elemento em percurso
+  Local fv_1_0       // o elemento em percurso
+  Local pt_0_0       // o resultado de uma etapa que nao fundiu
+  Local s_1_usearea  // o local de bloco 'usearea'
+  Local s_1_useord   // o local de bloco 'useord'
+  Local s_1_userec   // o local de bloco 'userec'
 
   // one stage on its own stays a call
   pt_0_0 := u_xtpl_chunkby(aRows, {|b_0_r| b_0_r:cPedido})
   aPedidos := pt_0_0
 
   // the header/detail walk: seek to the range, group by the key, one pass
-  let usearea as s_1_usearea
-  let userec as s_1_userec
   s_1_usearea := Alias()
   DbSelectArea("SC6")
   s_1_userec := SC6->(RecNo())
-  let useord as s_1_useord
   s_1_useord := SC6->(IndexOrd())
   SC6->(DbSetOrder(1))
-    far_1_0 := Alias()
-    DbSelectArea("SC6")
     frc_1_0 := SC6->(RecNo())
     SC6->(DbSeek(xFilial("SC6") + cNum))
     fch_1_0 := {}
@@ -97,9 +74,6 @@ user function testChunkby(aRows, cNum)
       AAdd(fo_1_0, fch_1_0)
     EndIf
     SC6->(DbGoto(frc_1_0))
-    If !Empty(far_1_0)
-      DbSelectArea(far_1_0)
-    EndIf
     aGrupos := fo_1_0
 
   SC6->(DbSetOrder(s_1_useord))

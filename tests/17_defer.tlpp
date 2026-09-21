@@ -16,8 +16,8 @@ user function testDefer(aRows, nX, hCfg)
 
   Local nCount := 0
 
-  Local ht_0_0
-  Local pt_0_0
+  Local ht_0_0  // o valor lido de um hash
+  Local pt_0_0  // o resultado de uma etapa que nao fundiu
 
   nCount := 99
 

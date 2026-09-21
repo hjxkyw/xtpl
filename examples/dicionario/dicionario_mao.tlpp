@@ -1,0 +1,135 @@
+#include "totvs.ch"
+#include "tlpp-core.th"
+
+// dicionario_mao.tlpp -- a mesma funcao de dicionario.xtpl, escrita a mao.
+//
+// TAMBEM RODA. As duas fazem a mesma coisa e podem ser comparadas na tela.
+//
+//    appserver.exe -env=SeuAmbiente -run=u_dicionarioMao
+//
+// ============================================================================
+// O QUE E FACIL ERRAR AQUI
+// ============================================================================
+//
+// 1. A LIMPEZA EM TRES SAIDAS DIFERENTES
+//
+//    Na saida 1 nao ha nada aberto. Na 2, so a conexao. Na 3, a conexao e a
+//    area. Na 4, as duas mais a posicao a repor.
+//
+//    Quatro saidas, quatro limpezas, cada uma um pouco diferente da
+//    anterior. Nao da para copiar uma para a outra.
+//
+// 2. O 'DbCloseArea' QUE NAO PODE ACONTECER
+//
+//    Na saida 2 a SX3 nunca foi aberta. Fechar ali quebra. E na saida 3 o
+//    DbUseArea foi chamado mas falhou -- fechar tambem quebra.
+//
+//    Entao nao e so "lembrar da limpeza": e lembrar de QUAL limpeza, em cada
+//    ponto. E o que os 'defer' fazem sozinhos, porque cada um so vale das
+//    linha em que foi registrado para baixo.
+//
+// 3. AS DUAS PASSADAS QUE DIVERGEM
+//
+//    Os dois lacos abaixo tem o mesmo filtro escrito duas vezes:
+//
+//       If AllTrim(SX3->X3_ARQUIVO) == cTabela
+//
+//    Mude a regra -- passe a aceitar tabelas de outro modulo, por exemplo --
+//    e ha dois lugares para mudar. O segundo e o que fica para tras, e o
+//    resultado e uma contagem de campos que nao bate com a soma de bytes.
+//
+//    A versao xtpl tira a soma do array que a primeira passada ja construiu,
+//    e le a tabela uma vez so. Aqui tambem daria -- e um For sobre aCampos.
+//    Esta escrito com dois lacos porque e o que se escreve: o segundo numero
+//    foi pedido depois do primeiro, e copiar o laco de cima e o caminho mais
+//    curto no momento em que se pede.
+//
+//    O ponto nao e que a mao nao da. E que a forma errada e a mais facil de
+//    escrever, e a certa exige lembrar que o array ja esta ali.
+//
+// 4. O 'AllTrim'
+//
+//    'X3_ARQUIVO' e C(10) e vem preenchido com espacos. Comparar sem
+//    AllTrim da .F. sempre, e a lista sai vazia -- sem erro, so vazia. E o
+//    primeiro lugar em que se procura quando isso acontece nao e este.
+//
+// ============================================================================
+
+User Function DicionarioMao()
+
+  Local cTabela  := "SA1"
+  Local nErro    := 0
+  Local aCampos  := {}
+  Local nBytes   := 0
+  Local cAreaAnt := ""
+  Local nRecAnt  := 0
+  Local nX       := 0
+
+  // ---- saida 1: nada aberto -------------------------------------------------
+  nErro := TCLink()
+  If nErro < 0
+    ConOut("dicionario: TCLink falhou com " + cValToChar(nErro))
+    Return 1
+  EndIf
+
+  // ---- saida 2: so a conexao ------------------------------------------------
+  If !TCCanOpen("SX3")
+    ConOut("dicionario: SX3 nao pode ser aberta")
+    TCUnlink()
+    Return 2
+  EndIf
+
+  // ---- saida 3: a conexao, e a area que nao abriu ---------------------------
+  DbUseArea(.T., "TOPCONN", "SX3", "SX3", .F., .F.)
+  If Select("SX3") == 0
+    ConOut("dicionario: SX3 nao abriu")
+    TCUnlink()
+    Return 3
+  EndIf
+
+  cAreaAnt := Alias()
+  DbSelectArea("SX3")
+  nRecAnt := SX3->(RecNo())
+
+  // ---- primeira passada: os campos ------------------------------------------
+  SX3->(DbGoTop())
+  While !SX3->(Eof())
+    If AllTrim(SX3->X3_ARQUIVO) == cTabela
+      AAdd(aCampos, {AllTrim(SX3->X3_CAMPO), ;
+                     SX3->X3_TIPO,           ;
+                     SX3->X3_TAMANHO,        ;
+                     AllTrim(SX3->X3_TITULO)})
+    EndIf
+    SX3->(DbSkip())
+  EndDo
+
+  // ---- segunda passada: os bytes, com o filtro repetido ---------------------
+  SX3->(DbGoTop())
+  While !SX3->(Eof())
+    If AllTrim(SX3->X3_ARQUIVO) == cTabela
+      nBytes += SX3->X3_TAMANHO
+    EndIf
+    SX3->(DbSkip())
+  EndDo
+
+  SX3->(DbGoto(nRecAnt))
+  If !Empty(cAreaAnt)
+    DbSelectArea(cAreaAnt)
+  EndIf
+
+  ConOut(cTabela + " tem " + cValToChar(Len(aCampos)) + " campos, " + ;
+         cValToChar(nBytes) + " bytes por registro")
+
+  For nX := 1 To Len(aCampos)
+    ConOut("  " + PadR(aCampos[nX][1], 15) + " " + aCampos[nX][2] + " " + ;
+           PadL(AllTrim(Str(aCampos[nX][3])), 4) + "   " + aCampos[nX][4])
+  Next
+
+  // ---- saida 4: tudo -------------------------------------------------------
+  SX3->(DbCloseArea())
+  TCUnlink()
+
+Return 0
+
+// --------------------------------------------------------------------------------
+// the end

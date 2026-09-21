@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // modelo.tlpp -- gravar um cliente e seus contatos por um FWModel.
 //
 // Um caso comum: pegar um modelo, pegar os submodelos dele, e chamar dez
@@ -91,13 +74,12 @@ user function modelo(oModel, cCod, cNome, aContatos)
   Local nGravados := 0
   Local cChave := ""
 
-  Local s_1_obj
-  Local s_2_obj
-  Local s_3_each
-  Local s_3_nPos
-  Local s_3_oContato
+  Local s_1_obj       // o local de bloco 'obj'
+  Local s_2_obj       // o local de bloco 'obj'
+  Local s_3_each      // o local de bloco 'each'
+  Local s_3_nPos      // o local de bloco 'nPos'
+  Local s_3_oContato  // o local de bloco 'oContato'
 
-  let obj as s_1_obj
   s_1_obj := oModel:GetModel("SA1MASTER")
 
     s_1_obj:SetValue("A1_COD", cCod)
@@ -108,12 +90,8 @@ user function modelo(oModel, cCod, cNome, aContatos)
     cChave := s_1_obj:GetValue("A1_FILIAL") + s_1_obj:GetValue("A1_COD")
 
     // O bloco de contatos: outro modelo, por dentro.
-    let obj as s_2_obj
     s_2_obj := oModel:GetModel("SA1CONTATO")
 
-      let each as s_3_each
-      let oContato as s_3_oContato
-      let nPos as s_3_nPos
       s_3_each := aContatos
       For s_3_nPos := 1 To Len(s_3_each)
         s_3_oContato := s_3_each[s_3_nPos]

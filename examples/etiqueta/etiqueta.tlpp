@@ -65,7 +65,7 @@ user function etiqueta(oPedido)
   Local cLinha3 := ""
   Local cCompl := ""
 
-  Local et_0_0
+  Local et_0_0  // o valor testado por '?:'
 
   // O nome fantasia e opcional; a razao social nao. Se nao houver fantasia,
   // vale a razao social.

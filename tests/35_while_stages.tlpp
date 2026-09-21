@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // 35_while_stages.tlpp -- takewhile and dropwhile.
 //
 // takewhile stops at the first element that fails and looks no further, which
@@ -41,21 +24,20 @@ user function testWhileStages(aRows, cNum)
   Local aGrupo := {}
   Local aSeek := {}
 
-  Local b_0_r
-  Local far_0_0
-  Local far_1_0
-  Local fdr_0_0
-  Local fi_0_0
-  Local fo_0_0
-  Local fo_1_0
-  Local frc_0_0
-  Local frc_1_0
-  Local fv_0_0
-  Local fv_1_0
-  Local pt_0_0
-  Local s_1_usearea
-  Local s_1_useord
-  Local s_1_userec
+  Local b_0_r        // o local de bloco 'r', fixado: tem armazenamento so dele
+  Local far_0_0      // a area que estava selecionada antes do percurso
+  Local fdr_0_0      // quantos elementos um drop ja descartou
+  Local fi_0_0       // o indice do percurso
+  Local fo_0_0       // o resultado da cadeia
+  Local fo_1_0       // o resultado da cadeia
+  Local frc_0_0      // o registro em que a area estava antes do percurso
+  Local frc_1_0      // o registro em que a area estava antes do percurso
+  Local fv_0_0       // o elemento em percurso
+  Local fv_1_0       // o elemento em percurso
+  Local pt_0_0       // o resultado de uma etapa que nao fundiu
+  Local s_1_usearea  // o local de bloco 'usearea'
+  Local s_1_useord   // o local de bloco 'useord'
+  Local s_1_userec   // o local de bloco 'userec'
 
   // over an ordered work area: stops when the key changes
   far_0_0 := Alias()
@@ -132,16 +114,11 @@ user function testWhileStages(aRows, cNum)
 
   // the way to actually do it: 'using alias' fixes the order, rows() seeks
   // by the index rather than reading up to the group, and takewhile ends it
-  let usearea as s_1_usearea
-  let userec as s_1_userec
   s_1_usearea := Alias()
   DbSelectArea("SC6")
   s_1_userec := SC6->(RecNo())
-  let useord as s_1_useord
   s_1_useord := SC6->(IndexOrd())
   SC6->(DbSetOrder(1))
-    far_1_0 := Alias()
-    DbSelectArea("SC6")
     frc_1_0 := SC6->(RecNo())
     SC6->(DbSeek(xFilial("SC6") + cNum))
     fo_1_0 := {}
@@ -154,9 +131,6 @@ user function testWhileStages(aRows, cNum)
       SC6->(DbSkip())
     EndDo
     SC6->(DbGoto(frc_1_0))
-    If !Empty(far_1_0)
-      DbSelectArea(far_1_0)
-    EndIf
     aSeek := fo_1_0
 
   SC6->(DbSetOrder(s_1_useord))

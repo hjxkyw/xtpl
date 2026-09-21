@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // 15_control.tlpp -- constructs that lower to plain AdvPL, no runtime needed
 // --------------------------------------------------------------------------------
 
@@ -27,78 +10,62 @@ user function testControl(oUser, nLimit, aItens)
   Local cCity
   Local lDone
 
-  Local s_1_0  // lReady, cNode, i, __each, __times, nSubject
-  Local s_1_1  // oItem, __ntimes
-  Local s_1_2  // __eachi, nIndice
+  Local s_1_0  // um slot, dividido por cNode, each, i, lReady, nSubject, times
+  Local s_1_1  // um slot, dividido por ntimes, oItem
+  Local s_1_2  // um slot, dividido por eachi, nIndice
 
   // conditional binding: the value is bound, then tested
-  let lReady as s_1_0
-  !lReady^1^0! := checkReady()
+  s_1_0 := checkReady()
 
-  If !lReady^1^0!
+  If s_1_0
     conout("ready")
   endif
 
-  let cNode as s_1_0
-
-  While (!cNode^1^0! := nextNode()) != Nil
-    conout("node: " + !cNode^1^0!)
+  While (s_1_0 := nextNode()) != Nil
+    conout("node: " + s_1_0)
   enddo
 
-  let i as s_1_0
-
-  for !i^1^0! := 1 to 3
-    nTotal := nTotal + !i^1^0!
+  for s_1_0 := 1 to 3
+    nTotal := nTotal + s_1_0
   next
 
   // 'for' binds the element; the index is optional and only generated
   // when you name it. Both are ordinary block locals of the loop.
-  let each as s_1_0
-  let oItem as s_1_1
-  let eachi as s_1_2
-  !each^1^0! := aItens
+  s_1_0 := aItens
 
-  For !eachi^1^2! := 1 To Len(!each^1^0!)
-    !oItem^1^1! := !each^1^0![!eachi^1^2!]
-    nTotal := nTotal + !oItem^1^1!:nValor
+  For s_1_2 := 1 To Len(s_1_0)
+    s_1_1 := s_1_0[s_1_2]
+    nTotal := nTotal + s_1_1:nValor
   next
 
-  let each as s_1_0
-  let oItem as s_1_1
-  let nIndice as s_1_2
-  !each^1^0! := aItens
+  s_1_0 := aItens
 
-  For !nIndice^1^2! := 1 To Len(!each^1^0!)
-    !oItem^1^1! := !each^1^0![!nIndice^1^2!]
-    conout(cValToChar(!nIndice^1^2!) + ": " + !oItem^1^1!:cCodigo)
+  For s_1_2 := 1 To Len(s_1_0)
+    s_1_1 := s_1_0[s_1_2]
+    conout(cValToChar(s_1_2) + ": " + s_1_1:cCodigo)
   next
 
   // 'for <n> times' repeats without inventing a counter you never read
-  let times as s_1_0
-
-  For !times^1^0! := 1 To 3
+  For s_1_0 := 1 To 3
     conout("linha")
   next
 
-  let times as s_1_0
-  let ntimes as s_1_1
-  !ntimes^1^1! := len(aItens)
+  s_1_1 := len(aItens)
 
-  For !times^1^0! := 1 To !ntimes^1^1!
+  For s_1_0 := 1 To s_1_1
     nTotal := nTotal + 1
   next
 
   // 'do case with' names the subject and evaluates it once. The conditions
   // are ordinary AdvPL, and the variable is an ordinary block local.
-  let nSubject as s_1_0
-  !nSubject^1^0! := calcTotal(nTotal)
+  s_1_0 := calcTotal(nTotal)
 
   Do Case
-    case !nSubject^1^0! == 6
+    case s_1_0 == 6
       conout("exactly six")
-    case !nSubject^1^0! > 3
-      conout("more than three: " + cValToChar(!nSubject^1^0!))
-    case isReady(!nSubject^1^0!)
+    case s_1_0 > 3
+      conout("more than three: " + cValToChar(s_1_0))
+    case isReady(s_1_0)
       conout("ready")
     otherwise
       conout("small")

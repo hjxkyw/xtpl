@@ -18,15 +18,15 @@ user function testFallbackShapes(aNums, hCfg)
   Local nHash := 0
   Local aList := {}
 
-  Local b_0_x
-  Local fi_0_0
-  Local fo_0_0
-  Local fv_0_0
-  Local gt_0_0
-  Local ht_0_0
-  Local pt_0_0
-  Local pt_0_1
-  Local pt_0_2
+  Local b_0_x   // o local de bloco 'x', fixado: tem armazenamento so dele
+  Local fi_0_0  // o indice do percurso
+  Local fo_0_0  // o resultado da cadeia
+  Local fv_0_0  // o elemento em percurso
+  Local gt_0_0  // o valor protegido por 'fallback'
+  Local ht_0_0  // o valor lido de um hash
+  Local pt_0_0  // o resultado de uma etapa que nao fundiu
+  Local pt_0_1  // o resultado de uma etapa que nao fundiu
+  Local pt_0_2  // o resultado de uma etapa que nao fundiu
 
   // a bare call
   nSafe := u_xtpl_safe_pipe({|| riskyCall(1)}, {|| 0})

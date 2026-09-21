@@ -25,11 +25,11 @@ user function testRangeSource(nLo, nHi)
   Local nCalculado := 0
   Local aPrimeiros := {}
 
-  Local fhi_0_0
-  Local fi_0_0
-  Local fn_0_0
-  Local fo_0_0
-  Local fv_0_0
+  Local fhi_0_0  // a ponta de cima de um intervalo
+  Local fi_0_0   // o indice do percurso
+  Local fn_0_0   // quantos elementos ja passaram
+  Local fo_0_0   // o resultado da cadeia
+  Local fv_0_0   // o elemento em percurso
 
   // literal dos dois lados: entra direto no cabecalho
   fo_0_0 := 0

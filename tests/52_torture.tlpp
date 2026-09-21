@@ -1,23 +1,6 @@
 #include "totvs.ch"
 #include "tlpp-core.th"
 
-// Armazenamento dividido por mais de uma variavel de bloco.
-//
-// 'let' marca onde uma variavel de bloco e declarada e qual
-// armazenamento ela recebeu. Nao gera nada.
-//
-// Onde um slot e dividido por mais de uma variavel ele nao tem nome
-// honesto, entao cada linha o escreve com o nome de quem o ocupa ali:
-// '!aTmp^1^0!' e '!cOutro^1^0!' sao o mesmo slot. Os outros nomes ja
-// dizem de quem sao -- 's_1_aTmp', 'b_0_nFator'.
-//
-// Uma regra so, para todos os slots: os marcadores entram no proprio
-// nome do resultado. O '!' na frente impede que a regra case com uma
-// potenciacao de verdade, 'a^2^3'; o '!' no fim fecha o padrao, sem
-// o qual o ultimo marcador engole o que vem depois.
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
-
 // 52_torture.tlpp -- constructs that meet each other in unusual ways.
 //
 // Written adversarially rather than to demonstrate anything: nested walks,
@@ -34,34 +17,33 @@ user function testTorture(hCfg, cNum, aRows, cPath, nX)
   Local aQ := {}
   Local aX := {}
 
-  Local b_0_g
-  Local far_1_0
-  Local fbg_0_0
-  Local fch_0_0
-  Local fi_0_0
-  Local fj_0_0
-  Local fky_0_0
-  Local flm_0_0
-  Local fls_1_0
-  Local fn_0_0
-  Local fo_0_0
-  Local fo_1_0
-  Local fop_0_0
-  Local fop_1_0
-  Local fpb_1_0
-  Local frc_1_0
-  Local fsn_0_0
-  Local fv_0_0
-  Local fv_1_0
-  Local ht_0_0
-  Local ht_1_0
-  Local pt_0_0
-  Local s_1_usearea
-  Local s_1_useord
-  Local s_1_userec
-  Local s_2_usearea
-  Local s_2_useord
-  Local s_2_userec
+  Local b_0_g        // o local de bloco 'g', fixado: tem armazenamento so dele
+  Local fbg_0_0      // o saco de um expand
+  Local fch_0_0      // o pedaco atual de um chunkby
+  Local fi_0_0       // o indice do percurso
+  Local fj_0_0       // o indice de dentro de um expand
+  Local fky_0_0      // a chave do pedaco atual de um chunkby
+  Local flm_0_0      // o limite de um take
+  Local fls_1_0      // o elemento anterior (pairwise)
+  Local fn_0_0       // quantos elementos ja passaram
+  Local fo_0_0       // o resultado da cadeia
+  Local fo_1_0       // o resultado da cadeia
+  Local fop_0_0      // se ha um pedaco aberto (chunkby)
+  Local fop_1_0      // se ha um pedaco aberto (chunkby)
+  Local fpb_1_0      // o valor testado a cada volta
+  Local frc_1_0      // o registro em que a area estava antes do percurso
+  Local fsn_0_0      // a chave vista nesta volta (chunkby)
+  Local fv_0_0       // o elemento em percurso
+  Local fv_1_0       // o elemento em percurso
+  Local ht_0_0       // o valor lido de um hash
+  Local ht_1_0       // o valor lido de um hash
+  Local pt_0_0       // o resultado de uma etapa que nao fundiu
+  Local s_1_usearea  // o local de bloco 'usearea'
+  Local s_1_useord   // o local de bloco 'useord'
+  Local s_1_userec   // o local de bloco 'userec'
+  Local s_2_usearea  // o local de bloco 'usearea'
+  Local s_2_useord   // o local de bloco 'useord'
+  Local s_2_userec   // o local de bloco 'userec'
 
   // a string literal inside an interpolated expression
   ht_0_0 := Nil
@@ -69,26 +51,18 @@ user function testTorture(hCfg, cNum, aRows, cPath, nX)
   cMsg := ("moeda " + cValToChar(ht_0_0) + " fim")
 
   // nested using, both restored at an early return, with a hash in the key
-  let usearea as s_1_usearea
-  let userec as s_1_userec
   s_1_usearea := Alias()
   DbSelectArea("SA1")
   s_1_userec := SA1->(RecNo())
-  let useord as s_1_useord
   s_1_useord := SA1->(IndexOrd())
   SA1->(DbSetOrder(1))
-    let usearea as s_2_usearea
-    let userec as s_2_userec
     s_2_usearea := Alias()
     DbSelectArea("SC6")
     s_2_userec := SC6->(RecNo())
-    let useord as s_2_useord
     s_2_useord := SC6->(IndexOrd())
     SC6->(DbSetOrder(2))
       ht_1_0 := Nil
       hCfg:Get("chave", @ht_1_0)
-      far_1_0 := Alias()
-      DbSelectArea("SC6")
       frc_1_0 := SC6->(RecNo())
       SC6->(DbSeek(ht_1_0))
       fop_1_0 := .F.
@@ -109,9 +83,6 @@ user function testTorture(hCfg, cNum, aRows, cPath, nX)
         SC6->(DbSkip())
       EndDo
       SC6->(DbGoto(frc_1_0))
-      If !Empty(far_1_0)
-        DbSelectArea(far_1_0)
-      EndIf
       aOut := fo_1_0  // split mid-chain // and a block comment
 
       ht_1_0 := Nil

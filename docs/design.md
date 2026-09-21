@@ -77,8 +77,11 @@ O motivo está resumido; o raciocínio completo está no registro interno.
 
 - **Coroutines para concorrência.** O ganho de Erlang e do Loom vem do
   *runtime* ceder em I/O. Um transpilador só cede onde ele mesmo criou o
-  ponto, e o primeiro `DbSeek` bloqueia a thread. *(Um gerador é outra coisa,
-  e está desenhado — veja abaixo.)*
+  ponto, e o primeiro `DbSeek` bloqueia a thread.
+- **Geradores (`yield`).** Chegaram a ser desenhados por inteiro. O que vale
+  iterar sob demanda no Protheus já é retomável — a workarea —, e onde a
+  preguiça paga, na cadeia, a fusão resolve em tempo de compilação sem máquina
+  de estados.
 - **Um interpretador de xtpl.** Jogaria fora tudo que é tempo de compilação,
   que é onde está o valor.
 - **HTTP/2 no AppServer.** Não é problema de linguagem; um proxy reverso é a
@@ -89,32 +92,6 @@ O motivo está resumido; o raciocínio completo está no registro interno.
   sem operador novo.
 - **Lambdas no estilo C++.** Inline perde legibilidade; a forma com estado não
   tinha caso de uso que alguém apresentasse.
-
----
-
-## Desenhado, não construído: geradores
-
-    generator function tokens(cTexto)
-      ...
-      yield {"numero", cChar}
-
-    local gTk := start tokens(cTexto)
-    while local tk := resume gTk, tk != Nil
-
-Serve para manter a **forma sequencial** de um algoritmo que produz resultados
-intermediários — um lexer, um parser SAX. Sem isso, o algoritmo tem de ser
-virado do avesso: cada local içado para uma estrutura, o controle dirigido por
-um `case` sobre uma variável de estado. Que é exatamente a máquina de estados
-que um gerador escreveria sozinho.
-
-De quebra, seria o protocolo de iteração que o AdvPL não tem, e `rows()` e
-`lines()` deixariam de precisar ser embutidos.
-
-**Não foi construído porque o custo não está no recurso, e sim no parser.** O
-transpilador transforma linha a linha; um gerador precisa da estrutura de
-blocos como um grafo. Reconstruir isso a partir de linhas é a maior parte do
-trabalho. Com uma gramática de comandos seria uma caminhada numa árvore — e
-essa gramática é a aposta grande, não o gerador.
 
 ---
 

@@ -195,121 +195,18 @@ function ceiling, which is not a constraint here.
 
 ---
 
-## Designed, not built: generator coroutines
+## Dropped: generator coroutines
 
-Settled in conversation and recorded here so it is not re-derived. **The
-design is finished; the cost is not in the feature.**
+A `generator function` with `yield`, consumed with `start` and `resume`, was
+fully designed and never built: the cost was in the parser, not in the
+feature. It is **dropped**, not deferred -- xc reaching statement-level
+parsing does not bring it back.
 
-### The earlier rejection was of a different thing
-
-Coroutines were turned down twice, on the grounds that Erlang's and Loom's
-scaling comes from the *runtime* yielding on I/O, and a transpiler can only
-yield at points it created -- so the first `DbSeek` blocks the OS thread and
-every coroutine with it.
-
-That argument is about **concurrency**, and it still holds. It says nothing
-about a **generator**, where every `yield` is lexically in the function and
-nothing is asked to run in parallel. Repeating the concurrency answer to a
-generator question was a mistake, made twice.
-
-The right frame is CSP, without the C. Two sequential processes taking turns
-over one channel, no scheduler, no thread ever blocked that was not going to
-be. Protheus already has the heavyweight version -- `StartJob` with
-`IPCGo`/`IPCWaitEx` is CSP with OS threads. A generator is the same
-decoupling, in one thread, for the cases that need the shape rather than the
-parallelism.
-
-### What it is for
-
-Not iteration. **Keeping the sequential shape of an algorithm that produces
-intermediate results.** A lexer is naturally sequential -- read a character,
-read another, decide, emit a token, repeat. Written without coroutines it has
-to be turned inside out: every local hoisted into a structure, the control
-flow driven from a `case` on a state variable. Which is precisely the state
-machine a generator writes for you. SAX versus DOM is the same inversion, and
-the same price: the reading order is lost in a pile of callbacks.
-
-A second thing follows for free. `rows()` and `lines()` are hardcoded because
-AdvPL has **no iterator protocol** -- which is also why `items()` sits held for
-want of a use case. A generator is one. `for x in meuGerador(...)` would work,
-and anyone could write their own source instead of waiting for one to be
-added.
-
-### The design
-
-Marked on the function, not inferred from the body, because the calling
-convention differs and a caller in another file has to know from the
-signature:
-
-    generator function tokens(cTexto)
-      local nPos := 1
-      while nPos <= len(cTexto)
-        ...
-        yield {"numero", cChar}
-        nPos := nPos + 1
-      enddo
-      return nil
-
-Consumed with `start` and `resume` -- `resume` because `next` is already
-AdvPL's loop terminator:
-
-    local gTk := start tokens(cTexto)
-    while local tk := resume gTk, tk != Nil
-      ...
-    enddo
-
-Locals become slots in the state array, which is the whole of the sugar: they
-are written normally and survive a resume without `aState[2]` appearing
-anywhere in the source. The generated form is an ordinary `While .T.` around a
-`Do Case` on the state number, with each `yield` a `Return` that sets the next
-state first. No runtime support is needed.
-
-Settled while designing it: `yield` is just a return, so no expression form is
-needed; recursion is not a problem, since the state is a parameter and a
-recursive call passes a fresh one; `parms...` is ordinary AdvPL variadics.
-
-Open, and to be decided when built: `defer` and `using alias` both promise "at
-every exit from the function", and a `yield` is an exit. Restoring an alias on
-every yield is probably wrong and silently not doing it is worse, so v1 should
-refuse both inside a generator and say why.
-
-### Why it is not built
-
-Not the feature. **The parser.**
-
-The transpiler is line transformation throughout. A generator needs the block
-structure as a graph -- which segment a `yield` splits, where a loop's back
-edge goes, where `exit` and `loop` land. Reconstructing that from lines is
-most of the work: perhaps 120-180 lines of the 400-500 the whole feature would
-take.
-
-With a statement-level grammar it is a tree walk instead, and the feature
-drops to something like 250-300.
-
-That comparison is worth keeping, because it does **not** generalise.
-`fuse_chain` is 581 lines and a real parser would save maybe 20% of it: its
-size comes from breadth -- twelve fusable steps, fifteen terminals, three
-source skeletons, each with its own emission -- and that code has to be
-written either way. The generator is the opposite shape: one construct that
-needs structure. It is the first feature where the line-based architecture is
-the actual cost rather than an inconvenience.
-
-So the prerequisite is a statement-and-block grammar, and that is the larger
-bet. The four grammars done so far all match **within** a line. One for
-statements has to accept everything AdvPL accepts -- every command form, `raw`
-lines, whatever the preprocessor leaves behind -- or it fails on real files,
-which is exactly where every surprise in this project has come from. Perhaps
-600-1000 lines of grammar and a comparable rewrite of the main loop, touching
-every feature already built.
-
-The generator alone does not justify that. If the grammar migration reaches
-statements for its own reasons, this becomes cheap afterwards rather than
-expensive before.
-
-And it sits behind the compiler run either way. This would be the largest and
-most intricate feature in a codebase that **has never been compiled by
-Protheus**, on top of five load-bearing assumptions that are still unverified.
-If one of them fails, there would be that much more to unwind.
+The case against it is the one already made under "Coroutines, revisited"
+below: what is worth iterating lazily in Protheus is already resumable (a
+workarea), and where laziness pays -- the pipeline -- fusion gets it at compile
+time without a state machine. The full design is in the git history, in the
+commit before the one that removed it.
 
 ## Rejected directions, and why
 
@@ -347,10 +244,9 @@ is already shaped to do, and which emits an ordinary `For` loop rather than a
 state machine. Strictly less general than `yield`: it only works on a chain
 visible whole. That covers what people write.
 
-**Coroutines / lightweight processes.** *(Scoped down later -- see
-"Designed, not built: generator coroutines" above. What follows rejects
-coroutines for concurrency, and that still holds; it says nothing about a
-generator, where every yield is lexically in the function.)* Erlang's and Loom's scaling comes from
+**Coroutines / lightweight processes.** *(This rejects coroutines for
+concurrency. Generators were a separate question, answered above and then
+dropped -- see "Dropped: generator coroutines".)* Erlang's and Loom's scaling comes from
 the *runtime* yielding on I/O — BEAM preempts on reductions, Loom unmounts a
 virtual thread when it blocks. A transpiler can build cooperative coroutines
 via CPS, but they can only yield at points it created. The first `DbSeek`,
@@ -801,8 +697,8 @@ Recovering the structure from the text afterwards is the same guessing the
 peepholes do, one level up.
 
 The honest order is: statement-level parsing, then a graph, then the passes.
-The same conclusion this file already reached about generators, arrived at
-from the other end.
+The same conclusion the generator design had reached, arrived at from the
+other end.
 
 The narrow peephole stays, with a comment recording what was tried. It fires
 on one shape -- a record save whose restore was just removed -- and says so.

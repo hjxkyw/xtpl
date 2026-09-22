@@ -103,34 +103,25 @@ variáveis que já usaram um slot, e cada linha diz o que o slot contém naquele
 momento, de modo que um nome no depurador sempre pode ser rastreado até o
 fonte.
 
-Um slot dividido por várias variáveis não tem nome honesto, então recebe uma
-regra do pré-processador e cada linha o escreve com o nome de quem o ocupa:
+Um slot dividido por várias variáveis é declarado uma vez no topo da função,
+numerado, com um comentário que lista todas as que já o ocuparam. Cada linha
+escreve o slot direto:
 
 ```advpl
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
+Local s_1_0   // um slot, dividido por aTmp, cOutro
 
 if nTotal > 0
-  let aTmp as s_1_0
-  !aTmp^1^0! := {}
+  s_1_0 := {}
 endif
 
 if nTotal > 0
-  let cOutro as s_1_0
-  !cOutro^1^0! := "outro tipo, mesmo armazenamento"
+  s_1_0 := "outro tipo, mesmo armazenamento"
 endif
 ```
 
-`#translate`, não `#xtranslate` — os dois não se comportam igual aqui.
-
 **Todo nome gerado é explicado na linha que o declara** — o que ele é, uma
 vez, em vez de uma grafia repetida em cada linha. Cobre também os temporários
-das cadeias, que antes não tinham explicação nenhuma.
-
-Os marcadores entram no próprio nome do resultado. O `!` na frente impede que a regra case com uma potenciação de
-verdade, `a^2^3`; o `!` no fim fecha o padrão, sem o qual o último marcador
-engole o que vem depois — o estrago aparece num cabeçalho `For`, que é onde há
-texto à direita da grafia. `let` marca a declaração sem gerar nada.
+das cadeias.
 
 ### O que não pode ser compartilhado
 
@@ -175,27 +166,23 @@ A decisão é por declaração, não por nome. Dois blocos podem cada um declara
 `aTmp`; são variáveis diferentes que nunca coexistem, então uma ser capturada
 não diz nada sobre a outra.
 
-### `let` — onde uma variável de bloco é declarada
+### Onde uma variável de bloco aparece na saída
 
-Toda declaração de variável de bloco recebe um marcador no código gerado:
+Toda variável de bloco vira um `Local` no topo da função, com um comentário que
+diz o que ela é:
 
 ```advpl
-let nFator as b_1_nFator
-let aTmp as s_1_aTmp
-let cOutro as s_1_0
+Local b_1_nFator   // o local de bloco 'nFator', fixado: tem armazenamento so dele
+Local s_1_nQuadr   // o local de bloco 'nQuadr'
+Local s_1_0        // um slot, dividido por aTmp, cOutro
 ```
 
-Diz o nome que você escreveu e o armazenamento que ele recebeu — privado
-porque foi capturado, um slot só seu, ou um slot dividido. Não gera nada.
+Privada porque foi capturada, um slot só seu, ou um slot dividido — o
+comentário diz qual, e um slot compartilhado lista quem já o ocupou. Assim um
+nome no depurador sempre se rastreia até o fonte.
 
-Os marcadores ficam agrupados no topo do bloco a que pertencem, então o código
-gerado mostra a mesma forma que o xtpl exige do fonte: declarações, depois
-comandos. A exceção é uma variável declarada **pelo** cabeçalho, como em
-`for local nI := 1 to 3`, onde a linha que abre o bloco é a mesma que a usa —
-aí o marcador fica logo acima do cabeçalho.
-
-O parâmetro de um lambda não leva marcador: ele é declarado na própria lista
-de parâmetros do code block, e o nome já aparece por extenso.
+O parâmetro de um lambda não entra aí: ele é declarado na própria lista de
+parâmetros do code block, e o nome já aparece por extenso.
 
 ### Marcadores
 
@@ -381,8 +368,8 @@ cNome := buscaNome(1) ?: "anônimo"
 ```
 
 ```advpl
-__elvis_tmp_0_0 := buscaNome(1)
-cNome := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, "anônimo")
+et_0_0 := buscaNome(1)
+cNome := If(et_0_0 != Nil, et_0_0, "anônimo")
 ```
 
 As cadeias aninham, então cada alternativa só roda se a anterior devolveu Nil, e
@@ -645,8 +632,8 @@ Um corpo que vira vários comandos permanece junto onde quer que seja inserido:
 defer aLinhas |> valida() |> grava()
 ```
 ```advpl
-__pipe_tmp_0_0 := valida(aLinhas)
-grava(__pipe_tmp_0_0)
+pt_0_0 := valida(aLinhas)
+grava(pt_0_0)
 ```
 
 Os nomes são resolvidos onde o `defer` é escrito, não onde ele roda, então os
@@ -691,14 +678,14 @@ hCfg := THashMap():New()
 hCfg:Set("taxa", 0.05)
 hCfg:Set("limite", 1000)
 
-__hash_tmp_0_0 := Nil
-hCfg:Get("taxa", @__hash_tmp_0_0)
-nTotal := nBase * __hash_tmp_0_0
+ht_0_0 := Nil
+hCfg:Get("taxa", @ht_0_0)
+nTotal := nBase * ht_0_0
 
 hCfg:Set("limite", 2000)
 
-__hash_tmp_1_0 := Nil
-If hCfg:Get("taxa", @__hash_tmp_1_0)
+ht_1_0 := Nil
+If hCfg:Get("taxa", @ht_1_0)
 ```
 
 **Chaves indexam um hash, colchetes indexam um array** — a separação do Perl.
@@ -878,12 +865,12 @@ nEuler := 1..999 |> filter([x] x %% 3 .or. x %% 5) |> asum
 ```
 
 ```advpl
-fout_0_0 := 0
+fo_0_0 := 0
 
 For fi_0_0 := 1 To 999
   fv_0_0 := fi_0_0
   If (fv_0_0 % 3) == 0 .or. (fv_0_0 % 5) == 0
-    fout_0_0 := fout_0_0 + fv_0_0
+    fo_0_0 := fo_0_0 + fv_0_0
   EndIf
 Next
 ```
@@ -906,13 +893,13 @@ aCodigos := aPedidos |> meuAuxiliar(3) |> ordenaLinhas
 ```
 
 ```advpl
-__pipe_tmp_0_1 := u_xtpl_filter(aPedidos, {|b_0_o| b_0_o:nValor > 1000})
-__pipe_tmp_0_2 := u_xtpl_map(__pipe_tmp_0_1, {|b_0_o| b_0_o:cCodigo})
-aCodigos := __pipe_tmp_0_2
+pt_0_1 := u_xtpl_filter(aPedidos, {|b_0_o| b_0_o:nValor > 1000})
+pt_0_2 := u_xtpl_map(pt_0_1, {|b_0_o| b_0_o:cCodigo})
+aCodigos := pt_0_2
 
-__pipe_tmp_0_3 := meuAuxiliar(aPedidos, 3)
-__pipe_tmp_0_4 := ordenaLinhas(__pipe_tmp_0_3)
-aCodigos := __pipe_tmp_0_4
+pt_0_3 := meuAuxiliar(aPedidos, 3)
+pt_0_4 := ordenaLinhas(pt_0_3)
+aCodigos := pt_0_4
 ```
 
 Cada etapa cai em seu próprio temporário, então nada é avaliado duas vezes.
@@ -926,8 +913,8 @@ Uma cadeia executada pelos efeitos não precisa de resultado. Sem atribuição n
 aPedidos |> valida() |> grava()
 ```
 ```advpl
-__pipe_tmp_0_0 := valida(aPedidos)
-grava(__pipe_tmp_0_0)
+pt_0_0 := valida(aPedidos)
+grava(pt_0_0)
 ```
 
 Uma cadeia sem atribuição não tem resultado a construir, e por isso **se funde
@@ -937,9 +924,9 @@ sem acumulador** — vira exatamente o laço que alguém escreveria à mão:
 aCobertura |> filter([r] upper(r[1]) == cAlvo) |> tap([r] VarInfo("COBERTURA", r))
 ```
 ```advpl
-fsrc_0_0 := aCobertura
-For fi_0_0 := 1 To Len(fsrc_0_0)
-  fv_0_0 := fsrc_0_0[fi_0_0]
+fs_0_0 := aCobertura
+For fi_0_0 := 1 To Len(fs_0_0)
+  fv_0_0 := fs_0_0[fi_0_0]
   b_0_r := fv_0_0
   If upper(b_0_r[1]) == cAlvo
     b_0_r := fv_0_0
@@ -962,8 +949,8 @@ nTotal := aNums |> filter([x] x > 100) |> asum
 ```advpl
 nTotal := len(u_xtpl_distinct(aNums))
 
-__pipe_tmp_0_0 := u_xtpl_filter(aNums, {|b_0_x| b_0_x > 100})
-nTotal := u_xtpl_asum(__pipe_tmp_0_0)
+pt_0_0 := u_xtpl_filter(aNums, {|b_0_x| b_0_x > 100})
+nTotal := u_xtpl_asum(pt_0_0)
 ```
 
 O içamento é limitado pelos colchetes e vírgulas ao redor da cadeia, então uma
@@ -996,11 +983,11 @@ aTop := aLinhas |> filter([r] r:nSaldo > 0) |> map([r] r:cCod) |> take(10)
 ```
 
 ```advpl
-fsrc_0_0 := aLinhas
-fout_0_0 := {}
+fs_0_0 := aLinhas
+fo_0_0 := {}
 fn_0_0 := 0
-For fi_0_0 := 1 To Len(fsrc_0_0)
-  fv_0_0 := fsrc_0_0[fi_0_0]
+For fi_0_0 := 1 To Len(fs_0_0)
+  fv_0_0 := fs_0_0[fi_0_0]
   b_0_r := fv_0_0
   If b_0_r:nSaldo > 0
     b_0_r := fv_0_0
@@ -1009,10 +996,10 @@ For fi_0_0 := 1 To Len(fsrc_0_0)
       Exit
     EndIf
     fn_0_0 := fn_0_0 + 1
-    AAdd(fout_0_0, fv_0_0)
+    AAdd(fo_0_0, fv_0_0)
   EndIf
 Next
-aTop := fout_0_0
+aTop := fo_0_0
 ```
 
 Nenhum array entre as etapas, e `take` é um `Exit` em vez de uma função que
@@ -1347,23 +1334,23 @@ nTotal := rows("SA1") |> filter([r] r:A1_SALDO > 0) |> map([r] r:A1_VALOR) |> as
 ```
 
 ```advpl
-farea_0_0 := Alias()
+far_0_0 := Alias()
 DbSelectArea("SA1")
-frec_0_0 := SA1->(RecNo())
+frc_0_0 := SA1->(RecNo())
 SA1->(DbGoTop())
-fout_0_0 := 0
+fo_0_0 := 0
 While !SA1->(Eof())
   If SA1->A1_SALDO > 0
     fv_0_0 := SA1->A1_VALOR
-    fout_0_0 := fout_0_0 + fv_0_0
+    fo_0_0 := fo_0_0 + fv_0_0
   EndIf
   SA1->(DbSkip())
 EndDo
-SA1->(DbGoto(frec_0_0))
-If !Empty(farea_0_0)
-  DbSelectArea(farea_0_0)
+SA1->(DbGoto(frc_0_0))
+If !Empty(far_0_0)
+  DbSelectArea(far_0_0)
 EndIf
-nTotal := fout_0_0
+nTotal := fo_0_0
 ```
 
 A área selecionada e o ponteiro de registro são devolvidos depois. Deixar um
@@ -1405,11 +1392,11 @@ aTop := lines("dados.txt") |> filter([l] !empty(l)) |> map([l] alltrim(l)) |> ta
 ```
 
 ```advpl
-fsrc_0_0 := "dados.txt"
-FT_FUse(fsrc_0_0)
+fs_0_0 := "dados.txt"
+FT_FUse(fs_0_0)
 FT_FGoTop()
 fn_0_0 := 0
-fout_0_0 := {}
+fo_0_0 := {}
 While !FT_FEof()
   fv_0_0 := FT_FReadLn()
   b_0_l := fv_0_0
@@ -1420,12 +1407,12 @@ While !FT_FEof()
       Exit
     EndIf
     fn_0_0 := fn_0_0 + 1
-    AAdd(fout_0_0, fv_0_0)
+    AAdd(fo_0_0, fv_0_0)
   EndIf
   FT_FSkip()
 EndDo
 FT_FUse()
-aTop := fout_0_0
+aTop := fo_0_0
 ```
 
 Diferente do `rows`, aqui o elemento **é** um valor — a linha — então um
@@ -1522,8 +1509,8 @@ a cadeia funde normalmente:
 aLista := (chamadaArriscada(2) fallback {}) |> filter([x] x > 1) |> map([x] x * 2)
 ```
 ```advpl
-__guard_tmp_0_0 := u_xtpl_safe_pipe({|| chamadaArriscada(2)}, {|| {}})
-fsrc_0_0 := __guard_tmp_0_0
+gt_0_0 := u_xtpl_safe_pipe({|| chamadaArriscada(2)}, {|| {}})
+fs_0_0 := gt_0_0
 For ...
 ```
 
@@ -1796,9 +1783,9 @@ python3 xtpl_transpiler.py --map pedido.xtpl pedido.tlpp
 ```
 
 ```advpl
-fsrc_0_0 := aNums  // xtpl:11
-For fi_0_0 := 1 To Len(fsrc_0_0)  // xtpl:11
-  fv_0_0 := fsrc_0_0[fi_0_0]  // xtpl:11
+fs_0_0 := aNums  // xtpl:11
+For fi_0_0 := 1 To Len(fs_0_0)  // xtpl:11
+  fv_0_0 := fs_0_0[fi_0_0]  // xtpl:11
 ```
 
 Uma linha de origem vira uma dúzia com frequência, então a marca vai em todas e

@@ -103,36 +103,25 @@ declaration lists every variable that ever uses a slot, and each line names what
 the slot currently holds, so a name in a debugger is always traceable back to
 source.
 
-A slot shared by several variables has no honest name, so it gets a
-preprocessor rule and each line spells it with the name of whatever occupies
-it there:
+A slot shared by several variables is declared once at the top of the
+function, numbered, with a comment listing every variable that has occupied
+it. Each line writes the slot directly:
 
 ```advpl
-#translate let <name1> as <name2> =>
-#translate !<name>^<num1>^<num2>! => s_<num1>_<num2>
+Local s_1_0   // a slot, shared by aTmp, cOther
 
 if nTotal > 0
-  let aTmp as s_1_0
-  !aTmp^1^0! := {}
+  s_1_0 := {}
 endif
 
 if nTotal > 0
-  let cOther as s_1_0
-  !cOther^1^0! := "different type, same storage"
+  s_1_0 := "different type, same storage"
 endif
 ```
 
-`#translate`, not `#xtranslate` -- the two do not behave the same here.
-
 **Every generated name is explained on the line that declares it** -- what it
 is, once, instead of a spelling repeated on every line. It covers the chain
-temporaries too, which had no explanation at all.
-
-The markers substitute into the result's own name. The leading `!` stops it matching a genuine `a^2^3`; the trailing one
-closes the pattern, without which the last marker swallows what follows --
-which shows up as a mangled `For` header, that being the construct with text
-to the right of the spelling. `let` marks the declaration while generating
-nothing.
+temporaries too.
 
 ### What cannot be shared
 
@@ -176,26 +165,22 @@ The decision is made per declaration, not per name. Two blocks may each declare
 an `aTmp`; they are different variables that never coexist, so one being
 captured says nothing about the other.
 
-### `let` -- where a block variable is declared
+### Where a block variable appears in the output
 
-Every block-local declaration gets a marker in the generated code:
+Every block variable becomes a `Local` at the top of the function, with a
+comment saying what it is:
 
 ```advpl
-let nFator as b_1_nFator
-let aTmp as s_1_aTmp
-let cOther as s_1_0
+Local b_1_nFator   // the block local 'nFator', pinned: it has storage of its own
+Local s_1_nQuadr   // the block local 'nQuadr'
+Local s_1_0        // a slot, shared by aTmp, cOther
 ```
 
-It says the name you wrote and the storage it got -- private because it was
-captured, a slot of its own, or a shared one. It generates nothing.
+Private because it was captured, a slot of its own, or a shared one -- the
+comment says which, and a shared slot lists what has occupied it. So a name in
+the debugger always traces back to the source.
 
-The markers group at the top of the block they belong to, so the generated
-code shows the shape xtpl requires of the source: declarations, then
-statements. The exception is a variable declared **by** a header, as in
-`for local nI := 1 to 3`, where the line that opens the block is the line that
-uses it -- there the marker sits immediately above the header.
-
-A lambda's parameter gets no marker: it is declared in the code block's own
+A lambda's parameter does not go there: it is declared in the code block's own
 parameter list, and the name is spelled out there already.
 
 ### Markers
@@ -377,8 +362,8 @@ cName := lookupName(1) ?: "anonymous"
 ```
 
 ```advpl
-__elvis_tmp_0_0 := lookupName(1)
-cName := If(__elvis_tmp_0_0 != Nil, __elvis_tmp_0_0, "anonymous")
+et_0_0 := lookupName(1)
+cName := If(et_0_0 != Nil, et_0_0, "anonymous")
 ```
 
 Chains nest, so each fallback runs only if the previous returned Nil, and works
@@ -633,8 +618,8 @@ body that becomes several statements stays together wherever it is spliced:
 defer aRows |> validate() |> flush()
 ```
 ```advpl
-__pipe_tmp_0_0 := validate(aRows)
-flush(__pipe_tmp_0_0)
+pt_0_0 := validate(aRows)
+flush(pt_0_0)
 ```
 
 Names are resolved where the `defer` is written, not where it runs, so both
@@ -675,14 +660,14 @@ hCfg := THashMap():New()
 hCfg:Set("taxa", 0.05)
 hCfg:Set("limite", 1000)
 
-__hash_tmp_0_0 := Nil
-hCfg:Get("taxa", @__hash_tmp_0_0)
-nTotal := nBase * __hash_tmp_0_0
+ht_0_0 := Nil
+hCfg:Get("taxa", @ht_0_0)
+nTotal := nBase * ht_0_0
 
 hCfg:Set("limite", 2000)
 
-__hash_tmp_1_0 := Nil
-If hCfg:Get("taxa", @__hash_tmp_1_0)
+ht_1_0 := Nil
+If hCfg:Get("taxa", @ht_1_0)
 ```
 
 **Braces subscript a hash, brackets subscript an array** — the Perl split. A
@@ -868,13 +853,13 @@ aCodes := aOrders |> myOwnHelper(3) |> sortRows
 ```
 
 ```advpl
-__pipe_tmp_0_1 := u_xtpl_filter(aOrders, {|b_0_o| b_0_o:nValue > 1000})
-__pipe_tmp_0_2 := u_xtpl_map(__pipe_tmp_0_1, {|b_0_o| b_0_o:cCode})
-aCodes := __pipe_tmp_0_2
+pt_0_1 := u_xtpl_filter(aOrders, {|b_0_o| b_0_o:nValue > 1000})
+pt_0_2 := u_xtpl_map(pt_0_1, {|b_0_o| b_0_o:cCode})
+aCodes := pt_0_2
 
-__pipe_tmp_0_3 := myOwnHelper(aOrders, 3)
-__pipe_tmp_0_4 := sortRows(__pipe_tmp_0_3)
-aCodes := __pipe_tmp_0_4
+pt_0_3 := myOwnHelper(aOrders, 3)
+pt_0_4 := sortRows(pt_0_3)
+aCodes := pt_0_4
 ```
 
 Each stage lands in its own temp, so nothing is evaluated twice. Those temps
@@ -888,8 +873,8 @@ front, the last stage is a statement in its own right:
 aPedidos |> valida() |> grava()
 ```
 ```advpl
-__pipe_tmp_0_0 := valida(aPedidos)
-grava(__pipe_tmp_0_0)
+pt_0_0 := valida(aPedidos)
+grava(pt_0_0)
 ```
 
 A chain with no assignment has no result to build, and so **fuses with no
@@ -899,9 +884,9 @@ accumulator** — it becomes exactly the loop somebody would have written:
 aCobertura |> filter([r] upper(r[1]) == cAlvo) |> tap([r] VarInfo("COBERTURA", r))
 ```
 ```advpl
-fsrc_0_0 := aCobertura
-For fi_0_0 := 1 To Len(fsrc_0_0)
-  fv_0_0 := fsrc_0_0[fi_0_0]
+fs_0_0 := aCobertura
+For fi_0_0 := 1 To Len(fs_0_0)
+  fv_0_0 := fs_0_0[fi_0_0]
   b_0_r := fv_0_0
   If upper(b_0_r[1]) == cAlvo
     b_0_r := fv_0_0
@@ -924,8 +909,8 @@ nTotal := aNums |> filter([x] x > 100) |> asum
 ```advpl
 nTotal := len(u_xtpl_distinct(aNums))
 
-__pipe_tmp_0_0 := u_xtpl_filter(aNums, {|b_0_x| b_0_x > 100})
-nTotal := u_xtpl_asum(__pipe_tmp_0_0)
+pt_0_0 := u_xtpl_filter(aNums, {|b_0_x| b_0_x > 100})
+nTotal := u_xtpl_asum(pt_0_0)
 ```
 
 The lift is bounded by the brackets and commas around the chain, so a chain in
@@ -955,11 +940,11 @@ aTop := aRows |> filter([r] r:nSaldo > 0) |> map([r] r:cCod) |> take(10)
 ```
 
 ```advpl
-fsrc_0_0 := aRows
-fout_0_0 := {}
+fs_0_0 := aRows
+fo_0_0 := {}
 fn_0_0 := 0
-For fi_0_0 := 1 To Len(fsrc_0_0)
-  fv_0_0 := fsrc_0_0[fi_0_0]
+For fi_0_0 := 1 To Len(fs_0_0)
+  fv_0_0 := fs_0_0[fi_0_0]
   b_0_r := fv_0_0
   If b_0_r:nSaldo > 0
     b_0_r := fv_0_0
@@ -968,10 +953,10 @@ For fi_0_0 := 1 To Len(fsrc_0_0)
       Exit
     EndIf
     fn_0_0 := fn_0_0 + 1
-    AAdd(fout_0_0, fv_0_0)
+    AAdd(fo_0_0, fv_0_0)
   EndIf
 Next
-aTop := fout_0_0
+aTop := fo_0_0
 ```
 
 No array between the stages, and `take` is an `Exit` rather than a function
@@ -1284,23 +1269,23 @@ nTotal := rows("SA1") |> filter([r] r:A1_SALDO > 0) |> map([r] r:A1_VALOR) |> as
 ```
 
 ```advpl
-farea_0_0 := Alias()
+far_0_0 := Alias()
 DbSelectArea("SA1")
-frec_0_0 := SA1->(RecNo())
+frc_0_0 := SA1->(RecNo())
 SA1->(DbGoTop())
-fout_0_0 := 0
+fo_0_0 := 0
 While !SA1->(Eof())
   If SA1->A1_SALDO > 0
     fv_0_0 := SA1->A1_VALOR
-    fout_0_0 := fout_0_0 + fv_0_0
+    fo_0_0 := fo_0_0 + fv_0_0
   EndIf
   SA1->(DbSkip())
 EndDo
-SA1->(DbGoto(frec_0_0))
-If !Empty(farea_0_0)
-  DbSelectArea(farea_0_0)
+SA1->(DbGoto(frc_0_0))
+If !Empty(far_0_0)
+  DbSelectArea(far_0_0)
 EndIf
-nTotal := fout_0_0
+nTotal := fo_0_0
 ```
 
 The selected area and the record pointer are put back afterwards. Leaving an
@@ -1342,11 +1327,11 @@ aTop := lines("dados.txt") |> filter([l] !empty(l)) |> map([l] alltrim(l)) |> ta
 ```
 
 ```advpl
-fsrc_0_0 := "dados.txt"
-FT_FUse(fsrc_0_0)
+fs_0_0 := "dados.txt"
+FT_FUse(fs_0_0)
 FT_FGoTop()
 fn_0_0 := 0
-fout_0_0 := {}
+fo_0_0 := {}
 While !FT_FEof()
   fv_0_0 := FT_FReadLn()
   b_0_l := fv_0_0
@@ -1357,12 +1342,12 @@ While !FT_FEof()
       Exit
     EndIf
     fn_0_0 := fn_0_0 + 1
-    AAdd(fout_0_0, fv_0_0)
+    AAdd(fo_0_0, fv_0_0)
   EndIf
   FT_FSkip()
 EndDo
 FT_FUse()
-aTop := fout_0_0
+aTop := fo_0_0
 ```
 
 Unlike `rows`, the element **is** a value — the line — so a lambda parameter
@@ -1456,8 +1441,8 @@ the chain fuses as usual:
 aList := (riskyCall(2) fallback {}) |> filter([x] x > 1) |> map([x] x * 2)
 ```
 ```advpl
-__guard_tmp_0_0 := u_xtpl_safe_pipe({|| riskyCall(2)}, {|| {}})
-fsrc_0_0 := __guard_tmp_0_0
+gt_0_0 := u_xtpl_safe_pipe({|| riskyCall(2)}, {|| {}})
+fs_0_0 := gt_0_0
 For ...
 ```
 
@@ -1730,9 +1715,9 @@ python3 xtpl_transpiler.py --map pedido.xtpl pedido.tlpp
 ```
 
 ```advpl
-fsrc_0_0 := aNums  // xtpl:11
-For fi_0_0 := 1 To Len(fsrc_0_0)  // xtpl:11
-  fv_0_0 := fsrc_0_0[fi_0_0]  // xtpl:11
+fs_0_0 := aNums  // xtpl:11
+For fi_0_0 := 1 To Len(fs_0_0)  // xtpl:11
+  fv_0_0 := fs_0_0[fi_0_0]  // xtpl:11
 ```
 
 One source line often becomes a dozen, so the marker goes on all of them

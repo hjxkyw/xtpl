@@ -1,5 +1,10 @@
 # xtpl
 
+> **Archived project.** xtpl is deprecated and now only serves to bootstrap
+> [xc](https://github.com/hjxkyw/xc), which replaces it: the same dialect,
+> read by a real grammar instead of regular expressions. The tests, errors and
+> runtime here are what xc is built on. The code stays here for reference.
+
 *Versão em português: [README.md](README.md). Essa é a principal.*
 
 An experimental source-to-source compiler: it takes a higher-level dialect of

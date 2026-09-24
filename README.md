@@ -1,5 +1,11 @@
 # xtpl
 
+> **Projeto arquivado.** O xtpl está descontinuado e hoje só serve de apoio
+> para o nascimento do [xc](https://github.com/hjxkyw/xc), que o substitui: o
+> mesmo dialeto, lido por uma gramática de verdade em vez de expressões
+> regulares. Os testes, os erros e o runtime daqui são a base do xc. O código
+> fica aqui para consulta.
+
 *English version: [README.en.md](README.en.md).*
 
 Um compilador experimental de código para código: recebe um dialeto de mais
